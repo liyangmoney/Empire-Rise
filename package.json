@@ -1,0 +1,14 @@
+{
+  "name": "empire-rise",
+  "version": "0.1.0",
+  "description": "《帝国崛起：蛮荒争霸》资源系统 MVP (Node.js)",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"No test specified\" && exit 0"
+  },
+  "keywords": ["strategy", "resource-management", "game-dev"],
+  "author": "liyangmoney",
+  "license": "MIT"
+}
