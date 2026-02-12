@@ -13,7 +13,7 @@
       min-height: 100vh;
       padding: 20px;
     }
-    .container { max-width: 800px; margin: 0 auto; }
+    .container { max-width: 1000px; margin: 0 auto; }
     h1 { text-align: center; margin-bottom: 20px; color: #ffd700; }
     .panel {
       background: rgba(255,255,255,0.1);
@@ -22,6 +22,7 @@
       margin-bottom: 20px;
       backdrop-filter: blur(10px);
     }
+    .panel h3 { margin-bottom: 15px; color: #4CAF50; }
     .resource-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -41,10 +42,10 @@
       background: #4CAF50;
       color: white;
       border: none;
-      padding: 12px 24px;
+      padding: 10px 20px;
       border-radius: 6px;
       cursor: pointer;
-      font-size: 16px;
+      font-size: 14px;
       margin: 5px;
       transition: all 0.3s;
     }
@@ -52,20 +53,12 @@
     button:disabled { background: #666; cursor: not-allowed; }
     .btn-secondary { background: #2196F3; }
     .btn-secondary:hover { background: #1976D2; }
+    .btn-danger { background: #f44336; }
+    .btn-danger:hover { background: #d32f2f; }
     .status { text-align: center; margin: 10px 0; padding: 10px; border-radius: 6px; }
     .status.connected { background: #4CAF50; }
     .status.disconnected { background: #f44336; }
-    .buildings { margin-top: 15px; }
-    .building-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px;
-      background: rgba(0,0,0,0.2);
-      margin: 5px 0;
-      border-radius: 6px;
-    }
-    input {
+    input, select {
       padding: 10px;
       border-radius: 6px;
       border: 1px solid #444;
@@ -73,6 +66,57 @@
       color: #fff;
       width: 100%;
       margin: 5px 0;
+    }
+    .unit-card {
+      background: rgba(0,0,0,0.3);
+      padding: 15px;
+      border-radius: 8px;
+      margin: 10px 0;
+    }
+    .unit-card h4 { color: #ffd700; margin-bottom: 10px; }
+    .unit-stats { display: flex; gap: 15px; font-size: 14px; color: #aaa; }
+    .training-queue {
+      background: rgba(255,193,7,0.1);
+      border: 1px solid #ffc107;
+      padding: 10px;
+      border-radius: 6px;
+      margin: 10px 0;
+    }
+    .morale-bar {
+      height: 20px;
+      background: #333;
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 10px 0;
+    }
+    .morale-fill {
+      height: 100%;
+      transition: width 0.3s, background 0.3s;
+    }
+    .morale-high { background: #4CAF50; }
+    .morale-medium { background: #ffc107; }
+    .morale-low { background: #f44336; }
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .tab {
+      padding: 10px 20px;
+      background: rgba(255,255,255,0.1);
+      border: none;
+      border-radius: 6px;
+      color: #fff;
+      cursor: pointer;
+    }
+    .tab.active { background: #4CAF50; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .formation-card {
+      background: rgba(0,0,0,0.2);
+      padding: 15px;
+      border-radius: 8px;
+      margin: 10px 0;
     }
   </style>
 </head>
@@ -89,29 +133,90 @@
       <div id="connectionStatus" class="status disconnected">未连接</div>
     </div>
 
-    <!-- 资源面板 -->
-    <div class="panel" id="resourcePanel" style="display:none;">
-      <h3>📦 资源仓库</h3>
-      <div class="resource-grid" id="resources">
-        <!-- 动态生成 -->
+    <!-- 游戏主界面 -->
+    <div id="gameUI" style="display:none;">
+      <!-- 标签页切换 -->
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('resources')">📦 资源</button>
+        <button class="tab" onclick="switchTab('buildings')">🏗️ 建筑</button>
+        <button class="tab" onclick="switchTab('army')">⚔️ 军队</button>
       </div>
-      <div style="margin-top: 15px; text-align: center;">
-        <button onclick="collect('wood', 100)">采集木材 +100</button>
-        <button onclick="collect('food', 50)">采集粮食 +50</button>
-        <button onclick="collect('iron', 20)">开采铁矿 +20</button>
-      </div>
-    </div>
 
-    <!-- 建筑面板 -->
-    <div class="panel" id="buildingPanel" style="display:none;">
-      <h3>🏗️ 建筑管理</h3>
-      <div class="buildings" id="buildings">
-        <!-- 动态生成 -->
+      <!-- 资源面板 -->
+      <div id="resourcesTab" class="tab-content active">
+        <div class="panel">
+          <h3>资源仓库</h3>
+          <div class="resource-grid" id="resources"></div>
+          <div style="margin-top: 15px; text-align: center;">
+            <button onclick="collect('wood', 100)">采集木材 +100</button>
+            <button onclick="collect('food', 50)">采集粮食 +50</button>
+            <button onclick="collect('iron', 20)">开采铁矿 +20</button>
+          </div>
+        </div>
       </div>
-      <div style="margin-top: 15px; text-align: center;">
-        <button class="btn-secondary" onclick="upgradeBuilding('warehouse_basic')">升级基础仓库</button>
-        <button class="btn-secondary" onclick="upgradeBuilding('farm')">建造/升级农场</button>
-        <button class="btn-secondary" onclick="upgradeBuilding('lumber_mill')">建造/升级伐木场</button>
+
+      <!-- 建筑面板 -->
+      <div id="buildingsTab" class="tab-content">
+        <div class="panel">
+          <h3>建筑管理</h3>
+          <div id="buildings"></div>
+          <div style="margin-top: 15px; text-align: center;">
+            <button class="btn-secondary" onclick="upgradeBuilding('warehouse_basic')">升级基础仓库</button>
+            <button class="btn-secondary" onclick="upgradeBuilding('farm')">建造/升级农场</button>
+            <button class="btn-secondary" onclick="upgradeBuilding('lumber_mill')">建造/升级伐木场</button>
+            <button class="btn-secondary" onclick="upgradeBuilding('barracks')">建造/升级兵营</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 军队面板 -->
+      <div id="armyTab" class="tab-content">
+        <!-- 军队概览 -->
+        <div class="panel">
+          <h3>军队概览</h3>
+          <div id="armyOverview">
+            <p>总兵力: <span id="totalUnits">0</span> / <span id="maxUnits">50</span></p>
+            <p>粮食消耗: <span id="foodConsumption">0</span>/小时</p>
+            <div>
+              <p>军队士气: <span id="moraleValue">100</span>% (<span id="moraleEffect">+20%</span> 战斗力)</p>
+              <div class="morale-bar">
+                <div id="moraleBar" class="morale-fill morale-high" style="width: 100%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 训练士兵 -->
+        <div class="panel">
+          <h3>训练士兵</h3>
+          <div id="unitTypes"></div>
+          <div style="margin-top: 15px;">
+            <label>选择兵种:</label>
+            <select id="trainUnitType">
+              <option value="infantry">步兵 (粮食×20)</option>
+              <option value="archer">弓兵 (粮食×25 + 木材×10)</option>
+              <option value="cavalry">骑兵 (粮食×40 + 木材×20)</option>
+            </select>
+            <label>数量:</label>
+            <input type="number" id="trainCount" value="10" min="1" max="100">
+            
+            <button onclick="previewTraining()">预览</button>
+            <button class="btn-secondary" onclick="startTraining()">开始训练</button>
+          </div>
+          <div id="trainingPreview"></div>
+          <div id="trainingQueue" class="training-queue" style="display:none;">
+            <h4>训练队列</h4>
+            <div id="queueList"></div>
+          </div>
+        </div>
+
+        <!-- 编队信息 -->
+        <div class="panel">
+          <h3>编队信息</h3>
+          <div id="formations">
+            <p style="text-align:center;color:#888;">暂无编队信息</p>
+          </div>
+        </div>
       </div>
     </div>
   </div>

@@ -2,11 +2,17 @@
 import { SOCKET_EVENTS } from '../../../../shared/constants.js';
 import { ResourceComponent } from '../../core/components/ResourceComponent.js';
 import { BuildingComponent } from '../../core/components/BuildingComponent.js';
+import { ArmyComponent } from '../../core/components/ArmyComponent.js';
+import { TrainingSystem } from '../../core/systems/TrainingSystem.js';
+import { UNIT_TYPES } from '../../../../shared/unitTypes.js';
 
 /**
  * 注册所有 Socket.io 事件处理器
  */
 export function registerSocketHandlers(io, gameWorld) {
+  // 初始化训练系统
+  const trainingSystem = new TrainingSystem(gameWorld);
+
   io.on('connection', (socket) => {
     console.log(`👤 Client connected: ${socket.id}`);
 
@@ -25,11 +31,13 @@ export function registerSocketHandlers(io, gameWorld) {
         empire._io = io;
       }
 
-      // 发送初始数据
+      // 发送初始数据（包含军队）
       socket.emit('empire:init', {
         playerId,
         resources: empire.resources.getSnapshot(),
-        buildings: empire.buildings.getSnapshot()
+        buildings: empire.buildings.getSnapshot(),
+        army: empire.army.getSnapshot(),
+        maxArmySize: trainingSystem.calculateMaxArmySize(empire),
       });
     });
 
@@ -93,6 +101,105 @@ export function registerSocketHandlers(io, gameWorld) {
       });
     });
 
+    // ==================== 军队系统事件 ====================
+
+    // 获取兵种信息
+    socket.on('army:getUnitTypes', () => {
+      socket.emit('army:unitTypes', UNIT_TYPES);
+    });
+
+    // 获取训练预览
+    socket.on('army:trainingPreview', (data) => {
+      const { playerId, unitTypeId, count } = data;
+      const empire = gameWorld.empires.get(playerId);
+      
+      if (!empire) {
+        socket.emit(SOCKET_EVENTS.S_ERROR, { message: 'Empire not found' });
+        return;
+      }
+
+      const barracksLevel = empire.buildings?.getLevel('barracks') || 1;
+      const preview = trainingSystem.getTrainingPreview(unitTypeId, count, barracksLevel);
+      const maxSize = trainingSystem.calculateMaxArmySize(empire);
+      const currentSize = empire.army.getTotalCount();
+
+      socket.emit('army:trainingPreview', {
+        preview,
+        currentArmySize: currentSize,
+        maxArmySize: maxSize,
+        canTrain: currentSize + count <= maxSize
+      });
+    });
+
+    // 训练士兵
+    socket.on('army:train', (data) => {
+      const { playerId, unitTypeId, count } = data;
+      const empire = gameWorld.empires.get(playerId);
+      
+      if (!empire) {
+        socket.emit(SOCKET_EVENTS.S_ERROR, { message: 'Empire not found' });
+        return;
+      }
+
+      const result = trainingSystem.train(empire, unitTypeId, count);
+      
+      if (result.success) {
+        socket.emit('army:trainStarted', {
+          task: result.task,
+          cost: result.cost,
+          resources: empire.resources.getSnapshot(),
+          queue: empire.army.trainingQueue,
+        });
+      } else {
+        socket.emit(SOCKET_EVENTS.S_ERROR, { message: result.error });
+      }
+    });
+
+    // 取消训练
+    socket.on('army:cancelTraining', (data) => {
+      const { playerId, taskId } = data;
+      const empire = gameWorld.empires.get(playerId);
+      
+      if (!empire) {
+        socket.emit(SOCKET_EVENTS.S_ERROR, { message: 'Empire not found' });
+        return;
+      }
+
+      const result = trainingSystem.cancelTraining(empire, taskId);
+      
+      if (result.success) {
+        socket.emit('army:trainCancelled', {
+          refundRatio: result.refundRatio,
+          resources: empire.resources.getSnapshot(),
+          queue: empire.army.trainingQueue,
+        });
+      } else {
+        socket.emit(SOCKET_EVENTS.S_ERROR, { message: result.error });
+      }
+    });
+
+    // 查询军队状态
+    socket.on('army:getStatus', (data) => {
+      const { playerId } = data;
+      const empire = gameWorld.empires.get(playerId);
+      
+      if (!empire) {
+        socket.emit(SOCKET_EVENTS.S_ERROR, { message: 'Empire not found' });
+        return;
+      }
+
+      socket.emit('army:status', {
+        army: empire.army.getSnapshot(),
+        maxArmySize: trainingSystem.calculateMaxArmySize(empire),
+        formations: Array.from(empire.army.formations.entries()).map(([id, f]) => ({
+          id,
+          name: f.name,
+          units: f.units,
+          power: empire.army.calculateFormationPower(id)
+        }))
+      });
+    });
+
     socket.on('disconnect', () => {
       console.log(`👋 Client disconnected: ${socket.id}`);
       // 可选：标记玩家离线，保留数据
@@ -112,7 +219,8 @@ function createNewEmpire(playerId, playerName, socketId, io) {
     _io: io,
     createdAt: Date.now(),
     resources: new ResourceComponent(),
-    buildings: new BuildingComponent()
+    buildings: new BuildingComponent(),
+    army: new ArmyComponent(), // 新增军队组件
   };
 
   // 初始建筑：基础仓库 Lv1
