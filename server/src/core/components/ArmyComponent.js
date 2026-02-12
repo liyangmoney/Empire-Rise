@@ -15,8 +15,8 @@ export class ArmyComponent {
     
     // 士兵等级经验（全局平均或按兵种）
     this.unitLevels = {};
-    for (const typeId of Object.keys(UNIT_TYPES)) {
-      this.unitLevels[typeId] = { level: 1, exp: 0 };
+    for (const unitType of Object.values(UNIT_TYPES)) {
+      this.unitLevels[unitType.id] = { level: 1, exp: 0 };
     }
     
     // 士气 (0-100)
@@ -30,8 +30,8 @@ export class ArmyComponent {
     
     // 伤病士兵（在医院中恢复）
     this.woundedUnits = {};
-    for (const typeId of Object.keys(UNIT_TYPES)) {
-      this.woundedUnits[typeId] = 0;
+    for (const unitType of Object.values(UNIT_TYPES)) {
+      this.woundedUnits[unitType.id] = 0;
     }
   }
 
@@ -66,7 +66,8 @@ export class ArmyComponent {
    * @param {string} formationId 编队ID（默认'default'）
    */
   addUnits(unitTypeId, count, formationId = 'default') {
-    if (!UNIT_TYPES[unitTypeId]) {
+    const unitType = Object.values(UNIT_TYPES).find(u => u.id === unitTypeId);
+    if (!unitType) {
       throw new Error(`Unknown unit type: ${unitTypeId}`);
     }
     if (count <= 0) return false;
@@ -134,9 +135,9 @@ export class ArmyComponent {
    */
   calculateFoodConsumption() {
     let consumption = 0;
-    for (const typeId of Object.keys(UNIT_TYPES)) {
-      const count = this.getUnitCount(typeId);
-      const upkeep = UNIT_TYPES[typeId].upkeep?.food || 0;
+    for (const unitType of Object.values(UNIT_TYPES)) {
+      const count = this.getUnitCount(unitType.id);
+      const upkeep = unitType.upkeep?.food || 0;
       consumption += count * upkeep;
     }
     return consumption;
@@ -166,7 +167,7 @@ export class ArmyComponent {
    * 添加训练任务到队列
    */
   enqueueTraining(unitTypeId, count, barracksLevel = 1) {
-    const unitType = UNIT_TYPES[unitTypeId];
+    const unitType = Object.values(UNIT_TYPES).find(u => u.id === unitTypeId);
     if (!unitType) return null;
 
     // 计算训练时间（军营等级可加速）
@@ -242,7 +243,7 @@ export class ArmyComponent {
 
     let power = 0;
     for (const [unitTypeId, count] of Object.entries(formation.units)) {
-      const unitType = UNIT_TYPES[unitTypeId];
+      const unitType = Object.values(UNIT_TYPES).find(u => u.id === unitTypeId);
       if (unitType) {
         // 简单战力公式：攻击+防御+HP/10
         const unitPower = unitType.stats.attack + unitType.stats.defense + unitType.stats.hp / 10;
