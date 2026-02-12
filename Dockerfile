@@ -4,8 +4,9 @@ FROM node:20-alpine
 # 设置工作目录
 WORKDIR /app
 
-# 复制整个项目（确保目录结构完整）
+# 复制服务端、客户端、共享代码
 COPY server/ ./server/
+COPY client/ ./client/
 COPY shared/ ./shared/
 
 # 进入 server 目录安装依赖
@@ -19,5 +20,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000', (r) => r.statusCode === 200 ? process.exit(0) : process.exit(1))"
 
-# 启动命令（注意工作目录已是 /app/server）
+# 启动命令
 CMD ["node", "src/index.js"]
