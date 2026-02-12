@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>帝国崛起 - H5客户端</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: #fff;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container { max-width: 800px; margin: 0 auto; }
+    h1 { text-align: center; margin-bottom: 20px; color: #ffd700; }
+    .panel {
+      background: rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      backdrop-filter: blur(10px);
+    }
+    .resource-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      margin-top: 15px;
+    }
+    .resource-card {
+      background: rgba(0,0,0,0.3);
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .resource-name { font-size: 14px; color: #aaa; margin-bottom: 5px; }
+    .resource-value { font-size: 24px; font-weight: bold; color: #ffd700; }
+    .resource-max { font-size: 12px; color: #888; }
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 5px;
+      transition: all 0.3s;
+    }
+    button:hover { background: #45a049; transform: translateY(-2px); }
+    button:disabled { background: #666; cursor: not-allowed; }
+    .btn-secondary { background: #2196F3; }
+    .btn-secondary:hover { background: #1976D2; }
+    .status { text-align: center; margin: 10px 0; padding: 10px; border-radius: 6px; }
+    .status.connected { background: #4CAF50; }
+    .status.disconnected { background: #f44336; }
+    .buildings { margin-top: 15px; }
+    .building-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      background: rgba(0,0,0,0.2);
+      margin: 5px 0;
+      border-radius: 6px;
+    }
+    input {
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #444;
+      background: rgba(0,0,0,0.3);
+      color: #fff;
+      width: 100%;
+      margin: 5px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🏰 帝国崛起</h1>
+    
+    <!-- 连接面板 -->
+    <div class="panel" id="connectPanel">
+      <h3>连接服务器</h3>
+      <input type="text" id="serverUrl" placeholder="服务器地址 (默认: 当前)" value="">
+      <input type="text" id="playerName" placeholder="你的名字" value="玩家">
+      <button onclick="connect()">连接并创建帝国</button>
+      <div id="connectionStatus" class="status disconnected">未连接</div>
+    </div>
+
+    <!-- 资源面板 -->
+    <div class="panel" id="resourcePanel" style="display:none;">
+      <h3>📦 资源仓库</h3>
+      <div class="resource-grid" id="resources">
+        <!-- 动态生成 -->
+      </div>
+      <div style="margin-top: 15px; text-align: center;">
+        <button onclick="collect('wood', 100)">采集木材 +100</button>
+        <button onclick="collect('food', 50)">采集粮食 +50</button>
+        <button onclick="collect('iron', 20)">开采铁矿 +20</button>
+      </div>
+    </div>
+
+    <!-- 建筑面板 -->
+    <div class="panel" id="buildingPanel" style="display:none;">
+      <h3>🏗️ 建筑管理</h3>
+      <div class="buildings" id="buildings">
+        <!-- 动态生成 -->
+      </div>
+      <div style="margin-top: 15px; text-align: center;">
+        <button class="btn-secondary" onclick="upgradeBuilding('warehouse_basic')">升级基础仓库</button>
+        <button class="btn-secondary" onclick="upgradeBuilding('farm')">建造/升级农场</button>
+        <button class="btn-secondary" onclick="upgradeBuilding('lumber_mill')">建造/升级伐木场</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+  <script src="src/main.js"></script>
+</body>
+</html>
