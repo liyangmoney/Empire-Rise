@@ -63,6 +63,11 @@ function connect() {
       renderGenerals(data.generals);
       updateGeneralSelect(data.generals);
     }
+    
+    // 时间数据
+    if (data.time) {
+      updateTimeDisplay(data.time);
+    }
   });
 
   // 资源更新
@@ -1092,3 +1097,46 @@ switchTab = function(tabName) {
     socket.emit('task:getList', { playerId });
   }
 };
+
+// ==================== 时间系统功能 ====================
+
+let currentTimeData = null;
+
+// 时间更新事件
+socket.on('time:update', (data) => {
+  console.log('Time update:', data);
+  updateTimeDisplay(data);
+});
+
+function updateTimeDisplay(timeData) {
+  currentTimeData = timeData;
+  
+  const gameDateEl = document.getElementById('gameDate');
+  const timeOfDayEl = document.getElementById('timeOfDay');
+  
+  if (gameDateEl) {
+    gameDateEl.textContent = timeData.gameDate || '第1年 1月 1日';
+  }
+  
+  if (timeOfDayEl) {
+    timeOfDayEl.textContent = timeData.timeOfDayName || '☀️ 早晨';
+  }
+}
+
+// 控制时间速度
+function setTimeSpeed(speed) {
+  if (!socket || !playerId) {
+    showError('请先连接服务器');
+    return;
+  }
+  socket.emit('time:setSpeed', { playerId, speed });
+}
+
+// 暂停/恢复时间
+function toggleTimePause() {
+  if (!socket || !playerId) {
+    showError('请先连接服务器');
+    return;
+  }
+  socket.emit('time:togglePause', { playerId });
+}
