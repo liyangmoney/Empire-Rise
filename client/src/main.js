@@ -41,7 +41,7 @@ function connect() {
 
   socket.on('error', (err) => {
     console.error('Server error:', err);
-    alert('错误: ' + err.message);
+    showError(err.message || '服务器错误');
   });
 
   // 接收帝国初始数据
@@ -87,13 +87,13 @@ function connect() {
     console.log('Training started:', data);
     renderResources(data.resources);
     updateTrainingQueue(data.queue);
-    alert(`开始训练! 预计${Math.ceil(data.task.duration / 1000)}秒完成`);
+    showSuccess(`开始训练! 预计${Math.ceil(data.task.duration / 1000)}秒完成`);
   });
 
   socket.on('army:trainingCompleted', (data) => {
     console.log('Training completed:', data);
     renderArmy(data.army);
-    alert(`${data.task.count}名士兵训练完成!`);
+    showSuccess(`${data.task.count}名士兵训练完成!`);
   });
 
   socket.on('army:update', (data) => {
@@ -121,7 +121,7 @@ function connect() {
 
   socket.on('battle:started', (data) => {
     console.log('Battle started:', data);
-    alert(`战斗开始！对阵 ${data.npc.name} (战力:${data.npc.power})`);
+    showInfo(`战斗开始！对阵 ${data.npc.name} (战力:${data.npc.power})`);
   });
 
   socket.on('battle:finished', (data) => {
@@ -336,7 +336,7 @@ function updateMyBattleInfo(army) {
 
 function loadNpcList() {
   if (!socket || !playerId) {
-    alert('请先连接服务器');
+    showError('请先连接服务器');
     return;
   }
   
@@ -383,7 +383,7 @@ function renderNpcList(npcs) {
 
 function startBattle(npcTypeId) {
   if (!socket || !playerId) {
-    alert('请先连接服务器');
+    showError('请先连接服务器');
     return;
   }
   
@@ -464,7 +464,7 @@ function closeBattleResult() {
 
 function viewLastBattleDetail() {
   if (!lastBattleResult) {
-    alert('暂无战斗记录');
+    showWarning('暂无战斗记录');
     return;
   }
   showBattleResult(lastBattleResult);
@@ -474,7 +474,7 @@ function viewLastBattleDetail() {
 
 function collect(resourceType, amount) {
   if (!socket || !playerId) {
-    alert('请先连接服务器');
+    showError('请先连接服务器');
     return;
   }
   socket.emit('resource:collect', { playerId, resourceType, amount });
@@ -482,7 +482,7 @@ function collect(resourceType, amount) {
 
 function upgradeBuilding(buildingTypeId) {
   if (!socket || !playerId) {
-    alert('请先连接服务器');
+    showError('请先连接服务器');
     return;
   }
 
@@ -495,7 +495,7 @@ function upgradeBuilding(buildingTypeId) {
 
   const cost = costs[buildingTypeId];
   if (!cost) {
-    alert('未知的建筑类型');
+    showError('未知的建筑类型');
     return;
   }
 
@@ -504,7 +504,7 @@ function upgradeBuilding(buildingTypeId) {
 
 function previewTraining() {
   if (!socket || !playerId) {
-    alert('请先连接服务器');
+    showError('请先连接服务器');
     return;
   }
   
@@ -516,7 +516,7 @@ function previewTraining() {
 
 function startTraining() {
   if (!socket || !playerId) {
-    alert('请先连接服务器');
+    showError('请先连接服务器');
     return;
   }
   
