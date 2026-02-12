@@ -55,6 +55,8 @@
     .btn-secondary:hover { background: #1976D2; }
     .btn-danger { background: #f44336; }
     .btn-danger:hover { background: #d32f2f; }
+    .btn-warning { background: #ff9800; }
+    .btn-warning:hover { background: #f57c00; }
     .status { text-align: center; margin: 10px 0; padding: 10px; border-radius: 6px; }
     .status.connected { background: #4CAF50; }
     .status.disconnected { background: #f44336; }
@@ -112,12 +114,56 @@
     .tab.active { background: #4CAF50; }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
-    .formation-card {
-      background: rgba(0,0,0,0.2);
+    .npc-card {
+      background: rgba(0,0,0,0.3);
       padding: 15px;
       border-radius: 8px;
       margin: 10px 0;
+      border-left: 4px solid #f44336;
     }
+    .npc-card.easy { border-left-color: #4CAF50; }
+    .npc-card.medium { border-left-color: #ff9800; }
+    .npc-card.hard { border-left-color: #f44336; }
+    .npc-card.extreme { border-left-color: #9c27b0; }
+    .npc-card.recommended {
+      box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+    }
+    .difficulty-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      margin-left: 10px;
+    }
+    .difficulty-easy { background: #4CAF50; }
+    .difficulty-medium { background: #ff9800; }
+    .difficulty-hard { background: #f44336; }
+    .difficulty-extreme { background: #9c27b0; }
+    .battle-result {
+      background: rgba(0,0,0,0.4);
+      padding: 20px;
+      border-radius: 8px;
+      margin: 15px 0;
+    }
+    .battle-log {
+      max-height: 300px;
+      overflow-y: auto;
+      background: rgba(0,0,0,0.3);
+      padding: 10px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 13px;
+    }
+    .log-entry {
+      margin: 5px 0;
+      padding: 5px;
+      border-left: 3px solid #666;
+      padding-left: 10px;
+    }
+    .log-entry.battle_start { border-left-color: #4CAF50; }
+    .log-entry.battle_end { border-left-color: #ffd700; }
+    .victory { color: #4CAF50; font-size: 24px; font-weight: bold; }
+    .defeat { color: #f44336; font-size: 24px; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -140,6 +186,7 @@
         <button class="tab active" onclick="switchTab('resources')">📦 资源</button>
         <button class="tab" onclick="switchTab('buildings')">🏗️ 建筑</button>
         <button class="tab" onclick="switchTab('army')">⚔️ 军队</button>
+        <button class="tab" onclick="switchTab('battle')">🎯 战斗</button>
       </div>
 
       <!-- 资源面板 -->
@@ -171,7 +218,6 @@
 
       <!-- 军队面板 -->
       <div id="armyTab" class="tab-content">
-        <!-- 军队概览 -->
         <div class="panel">
           <h3>军队概览</h3>
           <div id="armyOverview">
@@ -186,7 +232,6 @@
           </div>
         </div>
 
-        <!-- 训练士兵 -->
         <div class="panel">
           <h3>训练士兵</h3>
           <div id="unitTypes"></div>
@@ -199,7 +244,6 @@
             </select>
             <label>数量:</label>
             <input type="number" id="trainCount" value="10" min="1" max="100">
-            
             <button onclick="previewTraining()">预览</button>
             <button class="btn-secondary" onclick="startTraining()">开始训练</button>
           </div>
@@ -210,11 +254,45 @@
           </div>
         </div>
 
-        <!-- 编队信息 -->
         <div class="panel">
           <h3>编队信息</h3>
           <div id="formations">
             <p style="text-align:center;color:#888;">暂无编队信息</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 战斗面板 -->
+      <div id="battleTab" class="tab-content">
+        <!-- 我的战力 -->
+        <div class="panel">
+          <h3>🛡️ 我的军队</h3>
+          <div id="myBattleInfo">
+            <p>总战力: <span id="myPower">0</span></p>
+            <p>当前编队: <span id="currentFormation">默认编队</span></p>
+            <p>军队状态: <span id="armyStatus">空闲</span></p>
+          </div>
+        </div>
+
+        <!-- 可挑战的NPC -->
+        <div class="panel">
+          <h3>🎯 可挑战的敌人</h3>
+          <div id="npcList">
+            <p style="text-align:center;color:#888;">加载中...</p>
+          </div>
+          <div style="margin-top: 15px; text-align: center;">
+            <button class="btn-secondary" onclick="loadNpcList()">刷新列表</button>
+          </div>
+        </div>
+
+        <!-- 战斗结果 -->
+        <div id="battleResultPanel" class="panel" style="display:none;">
+          <h3>⚔️ 战斗结果</h3>
+          <div id="battleResult"></div>
+          <div id="battleLog" class="battle-log"></div>
+          <div style="margin-top: 15px;">
+            <button onclick="closeBattleResult()">关闭</button>
+            <button class="btn-secondary" onclick="viewLastBattleDetail()">查看详细战报</button>
           </div>
         </div>
       </div>

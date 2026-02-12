@@ -1,7 +1,7 @@
 // client/src/main.js
 /**
- * 《帝国崛起》H5 客户端 v0.2
- * 支持：资源、建筑、军队系统
+ * 《帝国崛起》H5 客户端 v0.3
+ * 支持：资源、建筑、军队、战斗系统
  */
 
 let socket = null;
@@ -9,6 +9,7 @@ let playerId = null;
 let playerName = null;
 let empireData = null;
 let unitTypesData = null;
+let lastBattleResult = null;
 
 // 生成唯一玩家ID
 function generateId() {
@@ -30,8 +31,6 @@ function connect() {
     updateStatus('connected', '已连接');
     
     socket.emit('empire:connect', { playerId, playerName });
-    
-    // 获取兵种信息
     socket.emit('army:getUnitTypes');
   });
 
@@ -53,6 +52,7 @@ function connect() {
     renderResources(data.resources);
     renderBuildings(data.buildings);
     renderArmy(data.army, data.maxArmySize);
+    updateMyBattleInfo(data.army);
   });
 
   // 资源更新
@@ -74,18 +74,15 @@ function connect() {
 
   // ==================== 军队系统事件 ====================
   
-  // 兵种信息
   socket.on('army:unitTypes', (data) => {
     unitTypesData = data;
     console.log('Unit types loaded:', data);
   });
 
-  // 训练预览
   socket.on('army:trainingPreview', (data) => {
     renderTrainingPreview(data);
   });
 
-  // 训练开始
   socket.on('army:trainStarted', (data) => {
     console.log('Training started:', data);
     renderResources(data.resources);
@@ -93,28 +90,48 @@ function connect() {
     alert(`开始训练! 预计${Math.ceil(data.task.duration / 1000)}秒完成`);
   });
 
-  // 训练完成
   socket.on('army:trainingCompleted', (data) => {
     console.log('Training completed:', data);
     renderArmy(data.army);
     alert(`${data.task.count}名士兵训练完成!`);
   });
 
-  // 军队更新
   socket.on('army:update', (data) => {
     renderArmy(data);
+    updateMyBattleInfo(data);
   });
 
-  // 士气警告
   socket.on('army:moraleWarning', (data) => {
     console.warn('Morale warning:', data);
     document.getElementById('moraleValue').style.color = '#f44336';
   });
 
-  // 军队状态
   socket.on('army:status', (data) => {
     renderArmy(data.army, data.maxArmySize);
     renderFormations(data.formations);
+    updateMyBattleInfo(data.army);
+  });
+
+  // ==================== 战斗系统事件 ====================
+  
+  socket.on('battle:availableNpcs', (data) => {
+    console.log('Available NPCs:', data);
+    renderNpcList(data);
+  });
+
+  socket.on('battle:started', (data) => {
+    console.log('Battle started:', data);
+    alert(`战斗开始！对阵 ${data.npc.name} (战力:${data.npc.power})`);
+  });
+
+  socket.on('battle:finished', (data) => {
+    console.log('Battle finished:', data);
+    lastBattleResult = data;
+    showBattleResult(data);
+  });
+
+  socket.on('battle:status', (data) => {
+    console.log('Battle status:', data);
   });
 }
 
@@ -139,8 +156,12 @@ function switchTab(tabName) {
   event.target.classList.add('active');
   document.getElementById(tabName + 'Tab').classList.add('active');
   
-  // 如果切换到军队标签，刷新军队状态
   if (tabName === 'army' && socket && playerId) {
+    socket.emit('army:getStatus', { playerId });
+  }
+  
+  if (tabName === 'battle' && socket && playerId) {
+    loadNpcList();
     socket.emit('army:getStatus', { playerId });
   }
 }
@@ -211,7 +232,6 @@ function renderArmy(army, maxSize) {
   const effect = army.moraleMultiplier >= 1.2 ? '+20%' : army.moraleMultiplier >= 1.1 ? '+10%' : army.moraleMultiplier >= 1.0 ? '正常' : army.moraleMultiplier >= 0.8 ? '-20%' : '-40%';
   document.getElementById('moraleEffect').textContent = effect;
   
-  // 显示训练队列
   if (army.trainingQueue > 0) {
     document.getElementById('trainingQueue').style.display = 'block';
   }
@@ -287,6 +307,169 @@ function updateTrainingQueue(queue) {
   }
 }
 
+// ==================== 战斗系统 ====================
+
+function updateMyBattleInfo(army) {
+  if (!army) return;
+  
+  // 计算总战力
+  let power = 0;
+  if (army.formations && army.formations.default) {
+    const formation = army.formations.default;
+    for (const [unitId, count] of Object.entries(formation.units || {})) {
+      // 简化战力计算
+      power += count * 20;
+    }
+  }
+  
+  document.getElementById('myPower').textContent = power;
+  
+  // 军队状态
+  const statusMap = {
+    idle: '空闲',
+    fighting: '战斗中',
+    marching: '行军中',
+    recovering: '恢复中'
+  };
+  document.getElementById('armyStatus').textContent = statusMap[army.status] || army.status;
+}
+
+function loadNpcList() {
+  if (!socket || !playerId) {
+    alert('请先连接服务器');
+    return;
+  }
+  
+  socket.emit('battle:getAvailableNpcs', { playerId });
+}
+
+function renderNpcList(npcs) {
+  const container = document.getElementById('npcList');
+  container.innerHTML = '';
+  
+  const categoryNames = {
+    wild: '野生怪物',
+    outpost: 'NPC据点',
+    city: 'NPC城邦'
+  };
+  
+  const difficultyNames = {
+    easy: '简单',
+    medium: '中等',
+    hard: '困难',
+    extreme: '极难'
+  };
+  
+  for (const npc of npcs) {
+    const card = document.createElement('div');
+    card.className = `npc-card ${npc.difficulty} ${npc.recommended ? 'recommended' : ''}`;
+    
+    card.innerHTML = `
+      <h4>
+        ${npc.name} (Lv.${npc.level})
+        <span class="difficulty-badge difficulty-${npc.difficulty}">${difficultyNames[npc.difficulty]}</span>
+        ${npc.recommended ? '<span class="difficulty-badge" style="background:#4CAF50;">推荐</span>' : ''}
+      </h4>
+      <p>类型: ${categoryNames[npc.category]}</p>
+      <p>战力: ${npc.power}</p>
+      <button class="btn-danger" onclick="startBattle('${npc.id}')" ${!npc.recommended ? 'disabled' : ''}>
+        发起攻击
+      </button>
+    `;
+    
+    container.appendChild(card);
+  }
+}
+
+function startBattle(npcTypeId) {
+  if (!socket || !playerId) {
+    alert('请先连接服务器');
+    return;
+  }
+  
+  if (!confirm('确定要发起攻击吗？战斗中可能有士兵伤亡！')) {
+    return;
+  }
+  
+  socket.emit('battle:start', { playerId, npcTypeId, formationId: 'default' });
+}
+
+function showBattleResult(data) {
+  const panel = document.getElementById('battleResultPanel');
+  const resultDiv = document.getElementById('battleResult');
+  const logDiv = document.getElementById('battleLog');
+  
+  panel.style.display = 'block';
+  
+  const result = data.result;
+  const isVictory = result.winner === 'attacker';
+  
+  // 战斗结果摘要
+  let lootText = '';
+  if (result.loot) {
+    lootText = '<h4>战利品:</h4><ul>';
+    for (const [res, amount] of Object.entries(result.loot)) {
+      lootText += `<li>${res}: +${amount}</li>`;
+    }
+    lootText += '</ul>';
+  }
+  
+  let casualtiesText = '<h4>伤亡情况:</h4><ul>';
+  for (const [unit, count] of Object.entries(result.casualties.attacker)) {
+    if (count > 0) {
+      casualtiesText += `<li>${unit}: ${count}人阵亡</li>`;
+    }
+  }
+  casualtiesText += '</ul>';
+  
+  resultDiv.innerHTML = `
+    <div class="${isVictory ? 'victory' : 'defeat'}">
+      ${isVictory ? '🎉 胜利！' : '💀 战败...'}
+    </div>
+    <p>战斗回合: ${result.totalRounds}</p>
+    <p>剩余HP: ${result.attackerHp.current}/${result.attackerHp.total}</p>
+    ${isVictory ? `<p>获得经验: ${result.exp || 0}</p>` : ''}
+    ${isVictory && result.drops && result.drops.length > 0 ? `<p>掉落物品: ${result.drops.join(', ')}</p>` : ''}
+    ${isVictory ? lootText : ''}
+    ${casualtiesText}
+  `;
+  
+  // 战斗日志
+  logDiv.innerHTML = '';
+  if (result.battleLog) {
+    for (const log of result.battleLog) {
+      const entry = document.createElement('div');
+      entry.className = 'log-entry ' + log.type;
+      entry.textContent = `[${new Date(log.timestamp).toLocaleTimeString()}] ${log.message}`;
+      logDiv.appendChild(entry);
+    }
+  }
+  
+  // 更新资源和军队显示
+  if (data.resources) {
+    renderResources(data.resources);
+  }
+  if (data.army) {
+    renderArmy(data.army);
+    updateMyBattleInfo(data.army);
+  }
+  
+  // 滚动到结果面板
+  panel.scrollIntoView({ behavior: 'smooth' });
+}
+
+function closeBattleResult() {
+  document.getElementById('battleResultPanel').style.display = 'none';
+}
+
+function viewLastBattleDetail() {
+  if (!lastBattleResult) {
+    alert('暂无战斗记录');
+    return;
+  }
+  showBattleResult(lastBattleResult);
+}
+
 // ==================== 交互功能 ====================
 
 function collect(resourceType, amount) {
@@ -319,7 +502,6 @@ function upgradeBuilding(buildingTypeId) {
   socket.emit('building:upgrade', { playerId, buildingTypeId, cost });
 }
 
-// 军队系统交互
 function previewTraining() {
   if (!socket || !playerId) {
     alert('请先连接服务器');
@@ -346,5 +528,5 @@ function startTraining() {
 
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('🎮 Empire Rise Client v0.2 initialized');
+  console.log('🎮 Empire Rise Client v0.3 initialized');
 });

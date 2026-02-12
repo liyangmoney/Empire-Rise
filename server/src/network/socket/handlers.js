@@ -4,14 +4,17 @@ import { ResourceComponent } from '../../core/components/ResourceComponent.js';
 import { BuildingComponent } from '../../core/components/BuildingComponent.js';
 import { ArmyComponent } from '../../core/components/ArmyComponent.js';
 import { TrainingSystem } from '../../core/systems/TrainingSystem.js';
+import { BattleSystem } from '../../core/systems/BattleSystem.js';
 import { UNIT_TYPES } from '../../../../shared/unitTypes.js';
+import { NPC_TYPES } from '../../../../shared/npcTypes.js';
 
 /**
  * 注册所有 Socket.io 事件处理器
  */
 export function registerSocketHandlers(io, gameWorld) {
-  // 初始化训练系统
+  // 初始化系统
   const trainingSystem = new TrainingSystem(gameWorld);
+  const battleSystem = new BattleSystem(gameWorld);
 
   io.on('connection', (socket) => {
     console.log(`👤 Client connected: ${socket.id}`);
@@ -200,6 +203,58 @@ export function registerSocketHandlers(io, gameWorld) {
       });
     });
 
+    // ==================== 战斗系统事件 ====================
+
+    // 获取可挑战的NPC列表
+    socket.on('battle:getAvailableNpcs', (data) => {
+      const { playerId } = data;
+      const npcs = battleSystem.getAvailableNpcs(playerId);
+      socket.emit('battle:availableNpcs', npcs);
+    });
+
+    // 发起战斗
+    socket.on('battle:start', (data) => {
+      const { playerId, npcTypeId, formationId = 'default' } = data;
+      
+      const result = battleSystem.startBattle(playerId, npcTypeId, formationId);
+      
+      if (result.success) {
+        socket.emit('battle:started', {
+          battleId: result.battleId,
+          npc: result.npc,
+          message: `战斗开始！对阵 ${result.npc.name}`,
+        });
+      } else {
+        socket.emit(SOCKET_EVENTS.S_ERROR, { message: result.error });
+      }
+    });
+
+    // 查询战斗状态
+    socket.on('battle:getStatus', (data) => {
+      const { battleId } = data;
+      const battle = battleSystem.activeBattles.get(battleId);
+      
+      if (!battle) {
+        socket.emit(SOCKET_EVENTS.S_ERROR, { message: '战斗不存在或已结束' });
+        return;
+      }
+      
+      socket.emit('battle:status', battle.getSnapshot());
+    });
+
+    // 获取战斗结果
+    socket.on('battle:getResult', (data) => {
+      const { playerId } = data;
+      const battle = battleSystem.getPlayerBattle(playerId);
+      
+      if (!battle || !battle.result) {
+        socket.emit(SOCKET_EVENTS.S_ERROR, { message: '没有已结束的战斗' });
+        return;
+      }
+      
+      socket.emit('battle:result', battle.getResult());
+    });
+
     socket.on('disconnect', () => {
       console.log(`👋 Client disconnected: ${socket.id}`);
       // 可选：标记玩家离线，保留数据
@@ -220,7 +275,7 @@ function createNewEmpire(playerId, playerName, socketId, io) {
     createdAt: Date.now(),
     resources: new ResourceComponent(),
     buildings: new BuildingComponent(),
-    army: new ArmyComponent(), // 新增军队组件
+    army: new ArmyComponent(),
   };
 
   // 初始建筑：基础仓库 Lv1
