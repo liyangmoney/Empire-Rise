@@ -332,9 +332,10 @@ function renderTrainingPreview(data) {
   
   const div = document.getElementById('trainingPreview');
   
+  const resourceNames = { wood: '木材', stone: '石材', food: '粮食', iron: '铁矿', crystal: '水晶', gold: '金币' };
   let costText = '';
   for (const [res, amount] of Object.entries(preview.cost)) {
-    costText += `${res}: ${amount} `;
+    costText += `${resourceNames[res] || res}: ${amount} `;
   }
   
   div.innerHTML = `
@@ -461,11 +462,14 @@ function showBattleResult(data) {
   const isVictory = result.winner === 'attacker';
   
   // 战斗结果摘要
+  const resourceNames = { wood: '木材', stone: '石材', food: '粮食', iron: '铁矿', crystal: '水晶', gold: '金币' };
+  const unitNames = { infantry: '步兵', archer: '弓兵', cavalry: '骑兵', mage: '魔法兵' };
+  
   let lootText = '';
   if (result.loot) {
     lootText = '<h4>战利品:</h4><ul>';
     for (const [res, amount] of Object.entries(result.loot)) {
-      lootText += `<li>${res}: +${amount}</li>`;
+      lootText += `<li>${resourceNames[res] || res}: +${amount}</li>`;
     }
     lootText += '</ul>';
   }
@@ -473,7 +477,7 @@ function showBattleResult(data) {
   let casualtiesText = '<h4>伤亡情况:</h4><ul>';
   for (const [unit, count] of Object.entries(result.casualties.attacker)) {
     if (count > 0) {
-      casualtiesText += `<li>${unit}: ${count}人阵亡</li>`;
+      casualtiesText += `<li>${unitNames[unit] || unit}: ${count}人阵亡</li>`;
     }
   }
   casualtiesText += '</ul>';
@@ -700,6 +704,15 @@ function renderRecruitOptions(config) {
   container.innerHTML = '';
   const typeNames = { basic: '普通招募', advanced: '高级招募', legendary: '传说招募' };
   
+  const resourceNames = {
+    wood: '木材',
+    stone: '石材',
+    food: '粮食',
+    iron: '铁矿',
+    crystal: '水晶',
+    gold: '金币'
+  };
+  
   for (const [type, cfg] of Object.entries(config)) {
     const div = document.createElement('div');
     div.className = 'recruit-option';
@@ -707,7 +720,7 @@ function renderRecruitOptions(config) {
     // 消耗显示
     let costHtml = '';
     for (const [res, amount] of Object.entries(cfg.cost)) {
-      costHtml += `${res}: ${amount} `;
+      costHtml += `${resourceNames[res] || res}: ${amount} `;
     }
     
     // 概率显示
@@ -1010,8 +1023,9 @@ function createTaskCard(task) {
   }
   
   let rewardsHtml = '<div style="margin-top:10px;">奖励: ';
+  const resourceNames = { wood: '木材', stone: '石材', food: '粮食', iron: '铁矿', crystal: '水晶', gold: '金币', exp: '经验' };
   for (const [res, amount] of Object.entries(task.rewards)) {
-    rewardsHtml += `${res}:${amount} `;
+    rewardsHtml += `${resourceNames[res] || res}:${amount} `;
   }
   rewardsHtml += '</div>';
   
