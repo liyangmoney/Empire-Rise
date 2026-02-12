@@ -5,6 +5,7 @@ import { BuildingComponent } from '../../core/components/BuildingComponent.js';
 import { ArmyComponent } from '../../core/components/ArmyComponent.js';
 import { GeneralComponent } from '../../core/components/GeneralComponent.js';
 import { TaskComponent } from '../../core/components/TaskComponent.js';
+import { TimeComponent } from '../../core/components/TimeComponent.js';
 import { TrainingSystem } from '../../core/systems/TrainingSystem.js';
 import { BattleSystem } from '../../core/systems/BattleSystem.js';
 import { RecruitSystem } from '../../core/systems/RecruitSystem.js';
@@ -47,6 +48,7 @@ export function registerSocketHandlers(io, gameWorld) {
         army: empire.army.getSnapshot(),
         generals: empire.generals.getSnapshot(),
         tasks: empire.tasks.getSnapshot(empire),
+        time: empire.time.getSnapshot(), // 添加时间数据
         maxArmySize: trainingSystem.calculateMaxArmySize(empire),
       });
     });
@@ -191,6 +193,51 @@ export function registerSocketHandlers(io, gameWorld) {
       }
     });
 
+    // ==================== 时间系统事件 ====================
+
+    // 获取时间信息
+    socket.on('time:get', (data) => {
+      const { playerId } = data;
+      const empire = gameWorld.empires.get(playerId);
+      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: 'Empire not found' });
+      
+      socket.emit('time:update', empire.time.getSnapshot());
+    });
+
+    // 设置时间速度
+    socket.on('time:setSpeed', (data) => {
+      const { playerId, speed } = data;
+      const empire = gameWorld.empires.get(playerId);
+      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: 'Empire not found' });
+      
+      const success = empire.time.setSpeed(speed);
+      if (success) {
+        socket.emit('time:update', empire.time.getSnapshot());
+      } else {
+        socket.emit(SOCKET_EVENTS.S_ERROR, { message: '无效的时间速度' });
+      }
+    });
+
+    // 暂停/恢复时间
+    socket.on('time:togglePause', (data) => {
+      const { playerId } = data;
+      const empire = gameWorld.empires.get(playerId);
+      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: 'Empire not found' });
+      
+      empire.time.togglePause();
+      socket.emit('time:update', empire.time.getSnapshot());
+    });
+
+    // 快进时间（测试用）
+    socket.on('time:fastForward', (data) => {
+      const { playerId, seconds } = data;
+      const empire = gameWorld.empires.get(playerId);
+      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: 'Empire not found' });
+      
+      const snapshot = empire.time.fastForward(seconds);
+      socket.emit('time:update', snapshot);
+    });
+
     // ==================== 将领系统事件 ====================
 
     // 获取将领列表
@@ -312,7 +359,8 @@ function createNewEmpire(playerId, playerName, socketId, io) {
     buildings: new BuildingComponent(),
     army: new ArmyComponent(),
     generals: new GeneralComponent(),
-    tasks: new TaskComponent(), // 新增任务组件
+    tasks: new TaskComponent(),
+    time: new TimeComponent(), // 新增时间组件
   };
 
   empire.buildings.add('warehouse_basic');
