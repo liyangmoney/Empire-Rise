@@ -113,16 +113,34 @@ export class GameLoop {
    */
   updateArmy(empire, deltaTime) {
     const army = empire.army;
+    const timeScale = empire.time?.speed || 1;
     
-    // 1. 处理训练队列
-    const completedTasks = army.processTrainingQueue();
-    if (completedTasks.length > 0 && empire.socketId && empire._io) {
-      for (const task of completedTasks) {
-        empire._io.to(empire.socketId).emit('army:trainingCompleted', {
-          task,
-          army: army.getSnapshot(),
-        });
+    // 1. 处理训练队列（考虑时间加速）
+    // 时间加速时，训练进度也加快
+    if (army.trainingQueue.length > 0) {
+      for (const task of army.trainingQueue) {
+        if (!task.completed) {
+          // 根据时间加速推进训练进度
+          // 实际经过的时间 × 时间倍率 = 游戏内经过的时间
+          const gameTimeElapsed = deltaTime * timeScale * 1000; // 转换为毫秒
+          task._progress = (task._progress || 0) + gameTimeElapsed;
+          
+          if (task._progress >= task.duration) {
+            task.completed = true;
+            army.addUnits(task.unitTypeId, task.count);
+            
+            // 通知客户端
+            if (empire.socketId && empire._io) {
+              empire._io.to(empire.socketId).emit('army:trainingCompleted', {
+                task,
+                army: army.getSnapshot(),
+              });
+            }
+          }
+        }
       }
+      // 清理已完成的任务
+      army.trainingQueue = army.trainingQueue.filter(t => !t.completed);
     }
 
     // 2. 计算军队粮食消耗
