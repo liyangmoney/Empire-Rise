@@ -427,16 +427,22 @@ function renderNpcList(npcs) {
     const card = document.createElement('div');
     card.className = `npc-card ${npc.difficulty} ${npc.recommended ? 'recommended' : ''}`;
     
+    const btnText = npc.recommended ? '发起攻击' : '⚠️ 强行攻击';
+    const btnClass = npc.recommended ? 'btn-danger' : 'btn-danger';
+    const riskBadge = npc.recommended 
+      ? '<span class="difficulty-badge" style="background:#4CAF50;">推荐</span>' 
+      : '<span class="difficulty-badge" style="background:#f44336;">高风险</span>';
+    
     card.innerHTML = `
       <h4>
         ${npc.name} (Lv.${npc.level})
         <span class="difficulty-badge difficulty-${npc.difficulty}">${difficultyNames[npc.difficulty]}</span>
-        ${npc.recommended ? '<span class="difficulty-badge" style="background:#4CAF50;">推荐</span>' : ''}
+        ${riskBadge}
       </h4>
       <p>类型: ${categoryNames[npc.category]}</p>
       <p>战力: ${npc.power}</p>
-      <button class="btn-danger" onclick="startBattle('${npc.id}')" ${!npc.recommended ? 'disabled' : ''}>
-        发起攻击
+      <button class="${btnClass}" onclick="startBattle('${npc.id}', ${npc.recommended})">
+        ${btnText}
       </button>
     `;
     
@@ -881,10 +887,16 @@ function showCostConfirm(title, cost, onConfirm) {
 }
 
 // 修改开始战斗函数，加入将领选择
-function startBattle(npcTypeId) {
+function startBattle(npcTypeId, isRecommended = true) {
   if (!socket || !playerId) {
     showError('请先连接服务器');
     return;
+  }
+  
+  // 高风险警告
+  if (!isRecommended) {
+    const confirmed = confirm('⚠️ 警告：此敌人战力远高于你的军队，强行攻击可能导致严重伤亡！\n\n确定要继续吗？');
+    if (!confirmed) return;
   }
   
   // 获取选择的将领
