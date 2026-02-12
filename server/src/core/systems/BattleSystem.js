@@ -246,7 +246,13 @@ export class BattleSystem {
       }
     }
 
-    // 5. 恢复军队状态
+    // 5. 更新任务进度
+    empire.tasks.updateProgress('battle', 1);
+    if (winner === 'attacker') {
+      empire.tasks.updateProgress('battleWin', 1);
+    }
+
+    // 6. 恢复军队状态
     empire.army.status = 'idle';
 
     // 6. 通知客户端

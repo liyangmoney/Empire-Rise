@@ -83,6 +83,9 @@ export class TrainingSystem {
 
     // 添加到训练队列
     const task = empire.army.enqueueTraining(unitTypeId, count, barracksLevel);
+    
+    // 更新任务进度
+    empire.tasks.updateProgress('train', { [unitTypeId]: count });
 
     return { success: true, task, cost: validation.cost };
   }

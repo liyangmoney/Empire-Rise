@@ -7,7 +7,7 @@ import { GENERAL_TEMPLATES, GENERAL_RARITIES, createGeneral } from '../../../../
 export class RecruitSystem {
   constructor(gameWorld) {
     this.gameWorld = gameWorld;
-    
+
     // 招募配置
     this.recruitConfig = {
       basic: {
@@ -72,24 +72,27 @@ export class RecruitSystem {
 
     // 随机品质
     const rarity = this.randomRarity(config.probabilities);
-    
+
     // 从该品质中随机选择一个将领
     const availableGenerals = Object.values(GENERAL_TEMPLATES).filter(
       g => g.rarity === rarity
     );
-    
+
     if (availableGenerals.length === 0) {
       return { success: false, error: '招募失败，请重试' };
     }
-    
+
     const template = availableGenerals[Math.floor(Math.random() * availableGenerals.length)];
-    
+
     // 创建将领实例
     const general = createGeneral(template.id);
-    
+
     // 添加到玩家
     empire.generals.recruit(template.id);
     
+    // 更新任务进度
+    empire.tasks.updateProgress('recruitGeneral', 1);
+
     return {
       success: true,
       general: {
@@ -111,14 +114,14 @@ export class RecruitSystem {
   randomRarity(probabilities) {
     const rand = Math.random();
     let cumulative = 0;
-    
+
     for (const [rarity, prob] of Object.entries(probabilities)) {
       cumulative += prob;
       if (rand < cumulative) {
         return rarity;
       }
     }
-    
+
     return 'common';
   }
 

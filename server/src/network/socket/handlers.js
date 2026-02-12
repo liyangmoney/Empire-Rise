@@ -4,6 +4,7 @@ import { ResourceComponent } from '../../core/components/ResourceComponent.js';
 import { BuildingComponent } from '../../core/components/BuildingComponent.js';
 import { ArmyComponent } from '../../core/components/ArmyComponent.js';
 import { GeneralComponent } from '../../core/components/GeneralComponent.js';
+import { TaskComponent } from '../../core/components/TaskComponent.js';
 import { TrainingSystem } from '../../core/systems/TrainingSystem.js';
 import { BattleSystem } from '../../core/systems/BattleSystem.js';
 import { RecruitSystem } from '../../core/systems/RecruitSystem.js';
@@ -36,12 +37,16 @@ export function registerSocketHandlers(io, gameWorld) {
         empire._io = io;
       }
 
+      // 刷新日常任务
+      empire.tasks.refreshDailyTasks();
+
       socket.emit('empire:init', {
         playerId,
         resources: empire.resources.getSnapshot(),
         buildings: empire.buildings.getSnapshot(),
         army: empire.army.getSnapshot(),
         generals: empire.generals.getSnapshot(),
+        tasks: empire.tasks.getSnapshot(empire),
         maxArmySize: trainingSystem.calculateMaxArmySize(empire),
       });
     });
@@ -55,6 +60,10 @@ export function registerSocketHandlers(io, gameWorld) {
         return;
       }
       const result = empire.resources.add(resourceType, amount);
+      
+      // 更新任务进度
+      empire.tasks.updateProgress('collect', { [resourceType]: amount });
+      
       socket.emit(SOCKET_EVENTS.S_RESOURCE_UPDATE, {
         resourceId: resourceType,
         result,
@@ -78,6 +87,10 @@ export function registerSocketHandlers(io, gameWorld) {
       }
       const building = empire.buildings.upgrade(buildingTypeId);
       if (!building) empire.buildings.add(buildingTypeId);
+      
+      // 更新任务进度
+      empire.tasks.updateProgress('upgradeBuilding', 1);
+      
       if (buildingTypeId === 'warehouse_basic') {
         const level = empire.buildings.getLevel('warehouse_basic');
         for (const resId of ['wood', 'stone', 'food']) {
@@ -141,6 +154,41 @@ export function registerSocketHandlers(io, gameWorld) {
           power: empire.army.calculateFormationPower(id)
         }))
       });
+    });
+
+    // ==================== 任务系统事件 ====================
+
+    // 获取任务列表
+    socket.on('task:getList', (data) => {
+      const { playerId } = data;
+      const empire = gameWorld.empires.get(playerId);
+      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: 'Empire not found' });
+      
+      // 刷新日常任务
+      empire.tasks.refreshDailyTasks();
+      
+      socket.emit('task:list', empire.tasks.getSnapshot(empire));
+    });
+
+    // 领取任务奖励
+    socket.on('task:claimReward', (data) => {
+      const { playerId, taskId } = data;
+      const empire = gameWorld.empires.get(playerId);
+      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: 'Empire not found' });
+      
+      const result = empire.tasks.claimReward(taskId, empire);
+      
+      if (result.success) {
+        socket.emit('task:rewardClaimed', {
+          taskId,
+          rewards: result.rewards,
+          resources: empire.resources.getSnapshot(),
+          tasks: empire.tasks.getSnapshot(empire)
+        });
+        showSuccess(`领取奖励成功！`);
+      } else {
+        socket.emit(SOCKET_EVENTS.S_ERROR, { message: result.error });
+      }
     });
 
     // ==================== 将领系统事件 ====================
@@ -263,7 +311,8 @@ function createNewEmpire(playerId, playerName, socketId, io) {
     resources: new ResourceComponent(),
     buildings: new BuildingComponent(),
     army: new ArmyComponent(),
-    generals: new GeneralComponent(), // 新增将领组件
+    generals: new GeneralComponent(),
+    tasks: new TaskComponent(), // 新增任务组件
   };
 
   empire.buildings.add('warehouse_basic');
