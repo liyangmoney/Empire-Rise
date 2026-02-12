@@ -79,3 +79,60 @@ window.showError = showError;
 window.showSuccess = showSuccess;
 window.showWarning = showWarning;
 window.showInfo = showInfo;
+
+/**
+ * 显示模态错误弹窗（类似资源消耗确认弹窗样式）
+ * @param {string} title 标题
+ * @param {string} message 错误内容
+ */
+function showErrorModal(title, message) {
+  // 创建弹窗
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+  `;
+  
+  modal.innerHTML = `
+    <div style="
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      border: 2px solid #f44336;
+      border-radius: 12px;
+      padding: 30px;
+      max-width: 400px;
+      width: 90%;
+      text-align: center;
+    ">
+      <h3 style="color: #f44336; margin-bottom: 15px;">❌ ${title}</h3>
+      
+      <div style="margin: 15px 0; padding: 15px; background: rgba(244,67,54,0.1); border-radius: 8px;">
+        <p style="color: #fff; font-size: 16px;">${message}</p>
+      </div>
+      
+      <div style="margin-top: 20px;">
+        <button onclick="this.closest('.error-modal').remove()" 
+                style="background: #f44336; padding: 12px 40px; font-size: 16px;">确定</button>
+      </div>
+    </div>
+  `;
+  
+  modal.className = 'error-modal';
+  document.body.appendChild(modal);
+  
+  // 点击背景关闭
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.remove();
+    }
+  });
+}
+
+window.showErrorModal = showErrorModal;

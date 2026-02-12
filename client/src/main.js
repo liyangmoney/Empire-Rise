@@ -44,7 +44,7 @@ function connect() {
 
   socket.on('error', (err) => {
     console.error('Server error:', err);
-    showError(err.message || '服务器错误');
+    showErrorModal('操作失败', err.message || '服务器错误');
   });
 
   // 接收帝国初始数据
