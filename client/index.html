@@ -331,7 +331,7 @@
         <button class="tab" onclick="switchTab('buildings')">🏗️ 建筑</button>
         <button class="tab" onclick="switchTab('army')">⚔️ 军队</button>
         <button class="tab" onclick="switchTab('generals')">🎖️ 将领</button>
-        <button class="tab" onclick="switchTab('battle')">🎯 战斗</button>
+        <button class="tab" onclick="switchTab('tasks')">📋 任务</button>
       </div>
 
       <!-- 资源面板 -->
@@ -406,6 +406,33 @@
           <h3>编队信息</h3>
           <div id="formations">
             <p style="text-align:center;color:#888;">暂无编队信息</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 任务面板 -->
+      <div id="tasksTab" class="tab-content">
+        <!-- 主线任务 -->
+        <div class="panel">
+          <h3>🎯 主线任务</h3>
+          <div id="mainTasks">
+            <p style="text-align:center;color:#888;">加载中...</p>
+          </div>
+        </div>
+
+        <!-- 日常任务 -->
+        <div class="panel">
+          <h3>📅 日常任务</h3>
+          <div id="dailyTasks">
+            <p style="text-align:center;color:#888;">加载中...</p>
+          </div>
+        </div>
+
+        <!-- 成就任务 -->
+        <div class="panel">
+          <h3>🏆 成就任务</h3>
+          <div id="achievementTasks">
+            <p style="text-align:center;color:#888;">加载中...</p>
           </div>
         </div>
       </div>

@@ -940,3 +940,141 @@ function startBattle(npcTypeId, isRecommended = true) {
 document.addEventListener('DOMContentLoaded', () => {
   console.log('🎮 Empire Rise Client v0.3 initialized');
 });
+// ==================== 任务系统功能 ====================
+
+let tasksData = null;
+
+function renderTasks(data) {
+  if (!data) return;
+  
+  // 主线任务
+  const mainContainer = document.getElementById('mainTasks');
+  mainContainer.innerHTML = '';
+  if (data.main && data.main.length > 0) {
+    for (const task of data.main.filter(t => t.status !== 'claimed')) {
+      mainContainer.appendChild(createTaskCard(task));
+    }
+  } else {
+    mainContainer.innerHTML = '<p style="text-align:center;color:#888;">暂无主线任务</p>';
+  }
+  
+  // 日常任务
+  const dailyContainer = document.getElementById('dailyTasks');
+  dailyContainer.innerHTML = '';
+  if (data.daily && data.daily.length > 0) {
+    for (const task of data.daily) {
+      dailyContainer.appendChild(createTaskCard(task));
+    }
+  } else {
+    dailyContainer.innerHTML = '<p style="text-align:center;color:#888;">暂无日常任务</p>';
+  }
+  
+  // 成就任务
+  const achievementContainer = document.getElementById('achievementTasks');
+  achievementContainer.innerHTML = '';
+  if (data.achievements && data.achievements.length > 0) {
+    for (const task of data.achievements.filter(t => t.status !== 'claimed')) {
+      achievementContainer.appendChild(createTaskCard(task));
+    }
+  } else {
+    achievementContainer.innerHTML = '<p style="text-align:center;color:#888;">暂无成就任务</p>';
+  }
+}
+
+function createTaskCard(task) {
+  const card = document.createElement('div');
+  card.className = 'unit-card';
+  card.style.borderLeft = task.status === 'completed' ? '4px solid #4CAF50' : '4px solid #ffd700';
+  
+  const statusText = {
+    pending: '进行中',
+    completed: '已完成（可领取）',
+    claimed: '已领取'
+  };
+  
+  let progressHtml = '';
+  if (task.progress) {
+    progressHtml = '<div style="margin-top:10px;font-size:13px;color:#888;">';
+    for (const [key, value] of Object.entries(task.progress)) {
+      if (typeof value === 'object') {
+        for (const [subKey, subValue] of Object.entries(value)) {
+          const required = task.requirements[key]?.[subKey] || 0;
+          progressHtml += `<p>${subKey}: ${subValue}/${required}</p>`;
+        }
+      } else {
+        const required = task.requirements[key] || 0;
+        progressHtml += `<p>${key}: ${value}/${required}</p>`;
+      }
+    }
+    progressHtml += '</div>';
+  }
+  
+  let rewardsHtml = '<div style="margin-top:10px;">奖励: ';
+  for (const [res, amount] of Object.entries(task.rewards)) {
+    rewardsHtml += `${res}:${amount} `;
+  }
+  rewardsHtml += '</div>';
+  
+  card.innerHTML = `
+    <h4>${task.title} <span style="font-size:12px;color:#888;">(${statusText[task.status]})</span></h4>
+    <p style="color:#aaa;font-size:14px;">${task.description}</p>
+    ${progressHtml}
+    ${rewardsHtml}
+    ${task.status === 'completed' ? `<button onclick="claimTaskReward('${task.id}')" style="margin-top:10px;">领取奖励</button>` : ''}
+  `;
+  
+  return card;
+}
+
+function claimTaskReward(taskId) {
+  if (!socket || !playerId) {
+    showError('请先连接服务器');
+    return;
+  }
+  
+  socket.emit('task:claimReward', { playerId, taskId });
+}
+
+// 添加 Socket 事件监听
+socket.on('task:list', (data) => {
+  console.log('Tasks:', data);
+  tasksData = data;
+  renderTasks(data);
+});
+
+socket.on('task:rewardClaimed', (data) => {
+  showSuccess('任务奖励领取成功！');
+  renderResources(data.resources);
+  renderTasks(data.tasks);
+});
+
+// 在 switchTab 中添加任务标签
+const originalSwitchTab = switchTab;
+switchTab = function(tabName) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  
+  event.target.classList.add('active');
+  document.getElementById(tabName + 'Tab').classList.add('active');
+  
+  if (tabName === 'army' && socket && playerId) {
+    socket.emit('army:getStatus', { playerId });
+  }
+  
+  if (tabName === 'battle' && socket && playerId) {
+    loadNpcList();
+    socket.emit('army:getStatus', { playerId });
+    if (generalsData) {
+      updateGeneralSelect(generalsData);
+    }
+  }
+  
+  if (tabName === 'generals' && socket && playerId) {
+    socket.emit('general:getList', { playerId });
+    socket.emit('general:getRecruitConfig');
+  }
+  
+  if (tabName === 'tasks' && socket && playerId) {
+    socket.emit('task:getList', { playerId });
+  }
+};
