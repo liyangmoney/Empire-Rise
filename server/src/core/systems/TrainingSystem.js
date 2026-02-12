@@ -159,7 +159,7 @@ export class TrainingSystem {
 
     // 返还资源（已开始的不返还，最多返还80%）
     const refundRatio = Math.max(0, 0.8 - progress * 0.8);
-    const unitType = UNIT_TYPES[task.unitTypeId];
+    const unitType = Object.values(UNIT_TYPES).find(u => u.id === task.unitTypeId);
     
     for (const [resourceId, amount] of Object.entries(unitType.training.cost)) {
       const refund = Math.floor(amount * task.count * refundRatio);

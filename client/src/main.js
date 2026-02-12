@@ -825,13 +825,24 @@ function onBattleGeneralChange() {
 
 // 显示资源消耗确认弹窗
 function showCostConfirm(title, cost, onConfirm) {
+  // 资源名称映射
+  const resourceNames = {
+    wood: '木材',
+    stone: '石材', 
+    food: '粮食',
+    iron: '铁矿',
+    crystal: '水晶',
+    gold: '金币'
+  };
+  
   // 构建资源消耗详情
   let costHtml = '<div style="margin: 15px 0; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 8px;">';
   costHtml += '<h4 style="margin-bottom: 10px; color: #ffd700;">资源消耗:</h4><ul style="list-style: none; padding: 0;">';
   
   for (const [resource, amount] of Object.entries(cost)) {
+    const resourceName = resourceNames[resource] || resource;
     costHtml += `<li style="padding: 5px 0; display: flex; justify-content: space-between;">
-      <span>${resource}:</span>
+      <span>${resourceName}:</span>
       <span style="color: #f44336; font-weight: bold;">-${amount}</span>
     </li>`;
   }
