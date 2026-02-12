@@ -235,6 +235,20 @@ function renderResources(resources) {
     `;
     container.appendChild(card);
   }
+  
+  // 同时更新全局资源栏
+  updateGlobalResources(resources);
+}
+
+// 更新全局资源栏
+function updateGlobalResources(resources) {
+  const resourceIds = ['wood', 'stone', 'food', 'iron', 'crystal', 'gold'];
+  for (const id of resourceIds) {
+    const element = document.getElementById(`global${id.charAt(0).toUpperCase() + id.slice(1)}`);
+    if (element && resources[id]) {
+      element.textContent = Math.floor(resources[id].amount);
+    }
+  }
 }
 
 // 渲染建筑
@@ -535,7 +549,16 @@ function upgradeBuilding(buildingTypeId) {
     return;
   }
 
-  socket.emit('building:upgrade', { playerId, buildingTypeId, cost });
+  const buildingNames = {
+    warehouse_basic: '基础仓库',
+    farm: '农场',
+    lumber_mill: '伐木场',
+    barracks: '兵营'
+  };
+
+  showCostConfirm(`升级${buildingNames[buildingTypeId]}`, cost, () => {
+    socket.emit('building:upgrade', { playerId, buildingTypeId, cost });
+  });
 }
 
 function previewTraining() {
@@ -559,7 +582,24 @@ function startTraining() {
   const unitTypeId = document.getElementById('trainUnitType').value;
   const count = parseInt(document.getElementById('trainCount').value);
   
-  socket.emit('army:train', { playerId, unitTypeId, count });
+  // 获取成本
+  const costs = {
+    infantry: { food: 20 },
+    archer: { food: 25, wood: 10 },
+    cavalry: { food: 40, wood: 20 }
+  };
+  
+  const baseCost = costs[unitTypeId];
+  const totalCost = {};
+  for (const [res, amount] of Object.entries(baseCost)) {
+    totalCost[res] = amount * count;
+  }
+  
+  const unitNames = { infantry: '步兵', archer: '弓兵', cavalry: '骑兵' };
+  
+  showCostConfirm(`训练${unitNames[unitTypeId]} x${count}`, totalCost, () => {
+    socket.emit('army:train', { playerId, unitTypeId, count });
+  });
 }
 
 // ==================== 将领系统功能 ====================
@@ -690,7 +730,22 @@ function recruitGeneral(type) {
     return;
   }
   
-  socket.emit('general:recruit', { playerId, recruitType: type });
+  const costs = {
+    basic: { gold: 100 },
+    advanced: { gold: 500, crystal: 10 },
+    legendary: { gold: 2000, crystal: 100 }
+  };
+  
+  const names = {
+    basic: '普通招募',
+    advanced: '高级招募',
+    legendary: '传说招募'
+  };
+  
+  const cost = costs[type];
+  showCostConfirm(names[type], cost, () => {
+    socket.emit('general:recruit', { playerId, recruitType: type });
+  });
 }
 
 function showRecruitResult(data) {
@@ -760,6 +815,69 @@ function updateGeneralSelect(data) {
 function onBattleGeneralChange() {
   const select = document.getElementById('battleGeneralSelect');
   selectedGeneralId = select.value || null;
+}
+
+// 显示资源消耗确认弹窗
+function showCostConfirm(title, cost, onConfirm) {
+  // 构建资源消耗详情
+  let costHtml = '<div style="margin: 15px 0; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 8px;">';
+  costHtml += '<h4 style="margin-bottom: 10px; color: #ffd700;">资源消耗:</h4><ul style="list-style: none; padding: 0;">';
+  
+  for (const [resource, amount] of Object.entries(cost)) {
+    costHtml += `<li style="padding: 5px 0; display: flex; justify-content: space-between;">
+      <span>${resource}:</span>
+      <span style="color: #f44336; font-weight: bold;">-${amount}</span>
+    </li>`;
+  }
+  costHtml += '</ul></div>';
+  
+  // 创建弹窗
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+  `;
+  
+  modal.innerHTML = `
+    <div style="
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      border: 2px solid #ffd700;
+      border-radius: 12px;
+      padding: 30px;
+      max-width: 400px;
+      width: 90%;
+      text-align: center;
+    ">
+      <h3 style="color: #ffd700; margin-bottom: 15px;">${title}</h3>
+      ${costHtml}
+      
+      <p style="color: #888; font-size: 14px; margin: 15px 0;">确定要执行此操作吗？</p>
+      
+      <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: center;">
+        <button onclick="this.closest('.cost-confirm-modal').remove()" 
+                style="background: #666; padding: 12px 30px;">取消</button>
+        <button id="costConfirmBtn" 
+                style="background: #4CAF50; padding: 12px 30px;">确定</button>
+      </div>
+    </div>
+  `;
+  
+  modal.className = 'cost-confirm-modal';
+  document.body.appendChild(modal);
+  
+  // 绑定确认按钮
+  document.getElementById('costConfirmBtn').addEventListener('click', () => {
+    modal.remove();
+    onConfirm();
+  });
 }
 
 // 修改开始战斗函数，加入将领选择

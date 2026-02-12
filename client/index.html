@@ -245,6 +245,40 @@
       background: #4CAF50;
       transition: width 0.3s;
     }
+    
+    /* 全局资源栏 */
+    .global-resource-bar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(26, 26, 46, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 10px 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      border: 1px solid rgba(255,215,0,0.3);
+    }
+    .global-resource-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 10px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 6px;
+    }
+    .global-resource-icon {
+      font-size: 18px;
+    }
+    .global-resource-value {
+      font-weight: bold;
+      color: #ffd700;
+      min-width: 50px;
+      text-align: right;
+    }
   </style>
 </head>
 <body>
@@ -262,6 +296,35 @@
 
     <!-- 游戏主界面 -->
     <div id="gameUI" style="display:none;">
+
+      <!-- 全局资源栏 -->
+      <div class="global-resource-bar">
+        <div class="global-resource-item" title="木材">
+          <span class="global-resource-icon">🌲</span>
+          <span class="global-resource-value" id="globalWood">0</span>
+        </div>
+        <div class="global-resource-item" title="石材">
+          <span class="global-resource-icon">🪨</span>
+          <span class="global-resource-value" id="globalStone">0</span>
+        </div>
+        <div class="global-resource-item" title="粮食">
+          <span class="global-resource-icon">🌾</span>
+          <span class="global-resource-value" id="globalFood">0</span>
+        </div>
+        <div class="global-resource-item" title="铁矿">
+          <span class="global-resource-icon">⛏️</span>
+          <span class="global-resource-value" id="globalIron">0</span>
+        </div>
+        <div class="global-resource-item" title="水晶">
+          <span class="global-resource-icon">💎</span>
+          <span class="global-resource-value" id="globalCrystal">0</span>
+        </div>
+        <div class="global-resource-item" title="金币">
+          <span class="global-resource-icon">🪙</span>
+          <span class="global-resource-value" id="globalGold">0</span>
+        </div>
+      </div>
+
       <!-- 标签页切换 -->
       <div class="tabs">
         <button class="tab active" onclick="switchTab('resources')">📦 资源</button>
