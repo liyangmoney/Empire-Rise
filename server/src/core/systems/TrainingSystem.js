@@ -18,7 +18,8 @@ export class TrainingSystem {
    * @returns {Object} { success, error, maxPossible }
    */
   canTrain(empire, unitTypeId, count) {
-    const unitType = UNIT_TYPES[unitTypeId];
+    // 通过 id 查找兵种（UNIT_TYPES 键是大写，但传入的是小写 id）
+    const unitType = Object.values(UNIT_TYPES).find(u => u.id === unitTypeId);
     if (!unitType) {
       return { success: false, error: '未知的兵种类型' };
     }
@@ -113,7 +114,7 @@ export class TrainingSystem {
    * 获取训练预览（前端显示用）
    */
   getTrainingPreview(unitTypeId, count, barracksLevel = 1) {
-    const unitType = UNIT_TYPES[unitTypeId];
+    const unitType = Object.values(UNIT_TYPES).find(u => u.id === unitTypeId);
     if (!unitType) return null;
 
     const cost = {};
