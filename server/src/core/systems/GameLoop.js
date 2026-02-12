@@ -93,16 +93,33 @@ export class GameLoop {
       this.updateArmy(empire, adjustedDelta);
     }
 
+    // 触发资源和时间更新事件（每秒）
+    if (this.gameWorld.tick % 1 === 0) { // 每秒更新
+      for (const empire of this.gameWorld.empires.values()) {
+        if (empire.socketId) {
+          const io = empire._io;
+          if (io) {
+            const timeSnapshot = empire.time?.getSnapshot();
+            if (timeSnapshot) {
+              io.to(empire.socketId).emit('time:update', timeSnapshot);
+            }
+          }
+        }
+      }
+    }
+    
     // 触发资源更新事件（每5秒）
-    if (this.gameWorld.tick % 5 === 0 && empire.socketId) {
-      const io = empire._io;
-      if (io) {
-        const timeSnapshot = empire.time?.getSnapshot();
-        io.to(empire.socketId).emit('time:update', timeSnapshot);
-        io.to(empire.socketId).emit('resource:update', empire.resources.getSnapshot());
-        
-        if (empire.army) {
-          io.to(empire.socketId).emit('army:update', empire.army.getSnapshot());
+    if (this.gameWorld.tick % 5 === 0) {
+      for (const empire of this.gameWorld.empires.values()) {
+        if (empire.socketId) {
+          const io = empire._io;
+          if (io) {
+            io.to(empire.socketId).emit('resource:update', empire.resources.getSnapshot());
+            
+            if (empire.army) {
+              io.to(empire.socketId).emit('army:update', empire.army.getSnapshot());
+            }
+          }
         }
       }
     }

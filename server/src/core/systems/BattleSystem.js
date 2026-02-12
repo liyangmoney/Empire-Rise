@@ -30,10 +30,16 @@ export class BattleSystem {
       return { success: false, error: '您正在进行另一场战斗' };
     }
 
-    // 检查编队是否存在且有士兵
+    // 检查编队是否存在且有士兵（严格检查总士兵数 > 0）
     const formation = empire.army.formations.get(formationId);
-    if (!formation || Object.keys(formation.units).length === 0) {
-      return { success: false, error: '编队不存在或没有士兵' };
+    if (!formation) {
+      return { success: false, error: '编队不存在' };
+    }
+    
+    // 计算编队总士兵数
+    const totalUnits = Object.values(formation.units).reduce((sum, count) => sum + count, 0);
+    if (totalUnits === 0) {
+      return { success: false, error: '编队中没有士兵，请先训练军队' };
     }
 
     // 检查军队状态
@@ -255,7 +261,10 @@ export class BattleSystem {
     // 6. 恢复军队状态
     empire.army.status = 'idle';
 
-    // 6. 通知客户端
+    // 7. 立即清理玩家战斗映射（允许发起新战斗）
+    this.playerBattleMap.delete(battle.attackerId);
+
+    // 8. 通知客户端
     if (empire.socketId && empire._io) {
       empire._io.to(empire.socketId).emit('battle:finished', {
         battleId,
@@ -266,10 +275,10 @@ export class BattleSystem {
       });
     }
 
-    // 6. 清理战斗（延迟清理，让玩家查看战报）
+    // 9. 延迟清理战斗记录（5分钟后，保留战报查看）
     setTimeout(() => {
-      this.cleanupBattle(battleId);
-    }, 300000); // 5分钟后清理
+      this.activeBattles.delete(battleId);
+    }, 300000);
   }
 
   /**

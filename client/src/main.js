@@ -32,6 +32,7 @@ function connect() {
   socket.on('connect', () => {
     console.log('✅ Connected to server');
     updateStatus('connected', '已连接');
+    updateConnectionStatus(true);
     
     socket.emit('empire:connect', { playerId, playerName });
     socket.emit('army:getUnitTypes');
@@ -40,6 +41,7 @@ function connect() {
   socket.on('disconnect', () => {
     console.log('❌ Disconnected from server');
     updateStatus('disconnected', '连接断开');
+    updateConnectionStatus(false);
   });
 
   socket.on('error', (err) => {
