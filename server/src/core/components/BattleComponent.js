@@ -1,47 +1,48 @@
 // server/src/core/components/BattleComponent.js
 import { getCounterMultiplier } from '../../../../shared/unitTypes.js';
+import { SKILL_TYPES } from '../../../../shared/generalTypes.js';
 
 /**
  * 战斗组件 - 管理一场战斗的完整状态
- * 由 BattleSystem 创建和管理生命周期
+ * 支持将领技能系统
  */
 export class BattleComponent {
   constructor(battleId, attackerId, defenderId, battleType = 'pve') {
     this.id = battleId;
-    this.attackerId = attackerId;  // 玩家ID
-    this.defenderId = defenderId;  // NPC ID或玩家ID
-    this.battleType = battleType;  // 'pve' | 'pvp'
+    this.attackerId = attackerId;
+    this.defenderId = defenderId;
+    this.battleType = battleType;
     
-    this.status = 'preparing'; // preparing | active | finished
+    this.status = 'preparing';
     this.currentRound = 0;
     this.maxRounds = 10;
     
-    // 战斗双方数据（深拷贝，避免修改原始数据）
-    this.attacker = null;  // { empireId, army: {...}, formation: 'default', power }
-    this.defender = null;  // NPC或敌方数据
+    this.attacker = null;
+    this.defender = null;
     
-    // 战斗日志
+    // 战斗效果（增益/减益）
+    this.effects = {
+      attacker: [], // { type, power, duration, source }
+      defender: [],
+    };
+    
     this.battleLog = [];
-    
-    // 结果
-    this.result = null;  // { winner: 'attacker'|'defender', loot, exp, casualties }
+    this.result = null;
     
     this.createdAt = Date.now();
     this.startedAt = null;
     this.finishedAt = null;
   }
 
-  /**
-   * 初始化战斗双方
-   */
   init(attackerData, defenderData) {
     this.attacker = {
       empireId: attackerData.empireId,
       playerName: attackerData.playerName,
-      army: JSON.parse(JSON.stringify(attackerData.army)), // 深拷贝
+      army: JSON.parse(JSON.stringify(attackerData.army)),
       formation: attackerData.formation || 'default',
       morale: attackerData.morale || 100,
       power: attackerData.power || 0,
+      general: attackerData.general || null, // 将领数据
       totalHp: 0,
       currentHp: 0,
     };
@@ -57,30 +58,36 @@ export class BattleComponent {
       currentHp: 0,
     };
     
-    // 计算初始总HP
     this.calculateInitialHp();
     
     this.status = 'active';
     this.startedAt = Date.now();
     
     this.addLog('battle_start', `战斗开始！${this.attacker.playerName} VS ${this.defender.name}`);
+    
+    // 显示将领信息
+    if (this.attacker.general) {
+      this.addLog('general', `${this.attacker.general.name}加入战斗！`, {
+        generalName: this.attacker.general.name,
+        generalRarity: this.attacker.general.rarity,
+      });
+    }
   }
 
-  /**
-   * 计算初始HP（简化版：战力 = HP）
-   */
   calculateInitialHp() {
-    this.attacker.totalHp = this.attacker.power;
-    this.attacker.currentHp = this.attacker.power;
+    // 将领加成HP（每点智力+5 HP）
+    let generalBonus = 0;
+    if (this.attacker.general) {
+      generalBonus = this.attacker.general.stats.intelligence * 5;
+    }
+    
+    this.attacker.totalHp = this.attacker.power + generalBonus;
+    this.attacker.currentHp = this.attacker.totalHp;
     
     this.defender.totalHp = this.defender.power;
-    this.defender.currentHp = this.defender.power;
+    this.defender.currentHp = this.defender.totalHp;
   }
 
-  /**
-   * 执行一个回合
-   * @returns {Object} 回合结果
-   */
   executeRound() {
     if (this.status !== 'active') return null;
     
@@ -90,56 +97,210 @@ export class BattleComponent {
       actions: [],
     };
     
-    // 双方轮流攻击（简化：同时攻击）
-    const attackerDamage = this.calculateDamage(this.attacker, this.defender);
-    const defenderDamage = this.calculateDamage(this.defender, this.attacker);
+    // 1. 处理技能触发
+    this.processSkillTriggers(roundLog);
     
-    // 应用伤害
-    this.defender.currentHp -= attackerDamage.total;
-    this.attacker.currentHp -= defenderDamage.total;
+    // 2. 更新效果持续时间
+    this.updateEffects();
     
-    // 记录日志
+    // 3. 计算普通攻击伤害
+    const attackerDamage = this.calculateDamage(this.attacker, this.defender, 'attacker');
+    const defenderDamage = this.calculateDamage(this.defender, this.attacker, 'defender');
+    
+    // 4. 应用增益效果
+    const finalAttackerDamage = this.applyDamageBuffs(attackerDamage.total, 'attacker');
+    const finalDefenderDamage = this.applyDamageBuffs(defenderDamage.total, 'defender');
+    
+    // 5. 应用伤害
+    this.defender.currentHp -= finalAttackerDamage;
+    this.attacker.currentHp -= finalDefenderDamage;
+    
+    // 6. 记录日志
     roundLog.actions.push({
       side: 'attacker',
       type: 'attack',
-      damage: attackerDamage.total,
+      damage: finalAttackerDamage,
       details: attackerDamage.details,
     });
     
     roundLog.actions.push({
       side: 'defender',
       type: 'attack',
-      damage: defenderDamage.total,
+      damage: finalDefenderDamage,
       details: defenderDamage.details,
     });
     
     this.battleLog.push(roundLog);
     
-    // 检查战斗结束条件
+    // 7. 检查战斗结束
     this.checkBattleEnd();
     
     return roundLog;
   }
 
   /**
-   * 计算伤害（GDD公式简化版）
-   * 伤害 = (攻击力 + 将领加成) × 克制系数 × 士气系数 - 防御
+   * 处理技能触发
    */
-  calculateDamage(attacker, defender) {
+  processSkillTriggers(roundLog) {
+    // 进攻方将领技能
+    if (this.attacker.general) {
+      for (const skill of this.attacker.general.skills) {
+        // 检查冷却
+        if (skill.currentCooldown > 0) {
+          skill.currentCooldown--;
+          continue;
+        }
+        
+        // 触发概率判定
+        if (Math.random() < skill.triggerRate) {
+          this.triggerSkill(skill, 'attacker', roundLog);
+          skill.currentCooldown = skill.cooldown;
+        }
+      }
+    }
+  }
+
+  /**
+   * 触发技能效果
+   */
+  triggerSkill(skill, side, roundLog) {
+    const isAttacker = side === 'attacker';
+    const target = isAttacker ? this.defender : this.attacker;
+    const self = isAttacker ? this.attacker : this.defender;
+    
+    switch (skill.type) {
+      case SKILL_TYPES.AOE_DAMAGE: {
+        // 群体伤害
+        const damage = Math.floor(self.power * skill.power * 0.5); // 技能伤害基于战力
+        target.currentHp -= damage;
+        
+        roundLog.actions.push({
+          side,
+          type: 'skill_damage',
+          skillName: skill.name,
+          damage,
+          target: 'all',
+        });
+        
+        this.addLog('skill', `${self.general?.name || side}释放【${skill.name}】，造成${damage}点伤害！`);
+        break;
+      }
+      
+      case SKILL_TYPES.HEAL: {
+        // 治疗
+        const heal = Math.floor(self.totalHp * skill.power);
+        self.currentHp = Math.min(self.totalHp, self.currentHp + heal);
+        
+        roundLog.actions.push({
+          side,
+          type: 'skill_heal',
+          skillName: skill.name,
+          heal,
+        });
+        
+        this.addLog('skill', `${self.general?.name || side}释放【${skill.name}】，恢复${heal}点生命！`);
+        break;
+      }
+      
+      case SKILL_TYPES.BUFF_ATTACK: {
+        // 攻击增益
+        this.effects[side].push({
+          type: 'attack_buff',
+          power: skill.power,
+          duration: skill.duration,
+          source: skill.name,
+        });
+        
+        roundLog.actions.push({
+          side,
+          type: 'skill_buff',
+          skillName: skill.name,
+          buffType: 'attack',
+          power: skill.power,
+        });
+        
+        this.addLog('skill', `${self.general?.name || side}释放【${skill.name}】，攻击力提升${Math.floor(skill.power * 100)}%！`);
+        break;
+      }
+      
+      case SKILL_TYPES.BUFF_DEFENSE: {
+        // 防御增益
+        this.effects[side].push({
+          type: 'defense_buff',
+          power: skill.power,
+          duration: skill.duration,
+          source: skill.name,
+        });
+        
+        this.addLog('skill', `${self.general?.name || side}释放【${skill.name}】，防御力提升${Math.floor(skill.power * 100)}%！`);
+        break;
+      }
+      
+      case SKILL_TYPES.MORALE_BOOST: {
+        // 士气提升
+        self.morale = 100;
+        
+        roundLog.actions.push({
+          side,
+          type: 'skill_morale',
+          skillName: skill.name,
+          newMorale: 100,
+        });
+        
+        this.addLog('skill', `${self.general?.name || side}释放【${skill.name}】，士气大振！`);
+        break;
+      }
+    }
+  }
+
+  /**
+   * 更新效果持续时间
+   */
+  updateEffects() {
+    for (const side of ['attacker', 'defender']) {
+      this.effects[side] = this.effects[side].filter(effect => {
+        effect.duration--;
+        return effect.duration > 0;
+      });
+    }
+  }
+
+  /**
+   * 应用伤害增益
+   */
+  applyDamageBuffs(baseDamage, side) {
+    let multiplier = 1.0;
+    
+    for (const effect of this.effects[side]) {
+      if (effect.type === 'attack_buff') {
+        multiplier += effect.power;
+      }
+    }
+    
+    return Math.floor(baseDamage * multiplier);
+  }
+
+  calculateDamage(attacker, defender, side) {
     let totalDamage = 0;
     const details = [];
     
-    // 士气系数：士气100 = 1.2，50 = 1.0，<50递减
     const moraleMultiplier = this.calculateMoraleMultiplier(attacker.morale);
     
-    // 遍历攻击方所有兵种
+    // 计算防御增益
+    let defenseMultiplier = 1.0;
+    const opponentSide = side === 'attacker' ? 'defender' : 'attacker';
+    for (const effect of this.effects[opponentSide]) {
+      if (effect.type === 'defense_buff') {
+        defenseMultiplier -= effect.power;
+      }
+    }
+    defenseMultiplier = Math.max(0.5, defenseMultiplier);
+    
     for (const [unitType, count] of Object.entries(attacker.army)) {
       if (count <= 0) continue;
       
-      // 每个士兵基础攻击力 = 15（简化）
       const baseAttack = 15 * count;
       
-      // 对防守方每个兵种计算克制
       let bestMultiplier = 1.0;
       let targetUnit = 'infantry';
       
@@ -153,9 +314,14 @@ export class BattleComponent {
         }
       }
       
-      // 计算最终伤害
-      const damageBeforeDefense = baseAttack * bestMultiplier * moraleMultiplier;
-      const defense = 5; // 简化防御
+      // 将领攻击加成
+      let generalBonus = 0;
+      if (attacker.general) {
+        generalBonus = attacker.general.stats.attack * 0.1; // 每点攻击+10%伤害
+      }
+      
+      const damageBeforeDefense = baseAttack * bestMultiplier * moraleMultiplier * (1 + generalBonus);
+      const defense = 5 * defenseMultiplier;
       const finalDamage = Math.max(1, Math.floor(damageBeforeDefense - defense));
       
       totalDamage += finalDamage;
@@ -169,16 +335,9 @@ export class BattleComponent {
       });
     }
     
-    return {
-      total: totalDamage,
-      details,
-      moraleMultiplier,
-    };
+    return { total: totalDamage, details };
   }
 
-  /**
-   * 计算士气系数
-   */
   calculateMoraleMultiplier(morale) {
     if (morale >= 100) return 1.2;
     if (morale >= 80) return 1.1;
@@ -187,11 +346,7 @@ export class BattleComponent {
     return 0.6;
   }
 
-  /**
-   * 检查战斗是否结束
-   */
   checkBattleEnd() {
-    // 条件1：一方HP归零
     if (this.attacker.currentHp <= 0) {
       this.finishBattle('defender');
       return;
@@ -201,7 +356,6 @@ export class BattleComponent {
       return;
     }
     
-    // 条件2：达到最大回合数，比较剩余HP比例
     if (this.currentRound >= this.maxRounds) {
       const attackerRatio = this.attacker.currentHp / this.attacker.totalHp;
       const defenderRatio = this.defender.currentHp / this.defender.totalHp;
@@ -214,12 +368,13 @@ export class BattleComponent {
     }
   }
 
-  /**
-   * 结束战斗
-   */
   finishBattle(winner) {
     this.status = 'finished';
     this.finishedAt = Date.now();
+    
+    // 将领获得经验（胜利+50，失败+20）
+    const generalExp = winner === 'attacker' ? 50 : 20;
+    
     this.result = {
       winner,
       totalRounds: this.currentRound,
@@ -232,51 +387,37 @@ export class BattleComponent {
         total: this.defender.totalHp,
       },
       casualties: this.calculateCasualties(winner),
+      generalExp, // 将领获得的经验
     };
     
     this.addLog('battle_end', `战斗结束！${winner === 'attacker' ? '进攻方' : '防守方'}胜利！`);
+    
+    if (this.attacker.general) {
+      this.addLog('exp', `${this.attacker.general.name}获得${generalExp}点经验！`);
+    }
   }
 
-  /**
-   * 计算伤亡（简化版）
-   */
   calculateCasualties(winner) {
     const attackerCasualties = {};
     const defenderCasualties = {};
     
-    // 进攻方伤亡：失败方损失30%，胜利方损失10%
     const attackerLossRate = winner === 'attacker' ? 0.1 : 0.3;
     for (const [unitType, count] of Object.entries(this.attacker.army)) {
       attackerCasualties[unitType] = Math.floor(count * attackerLossRate);
     }
     
-    // 防守方伤亡
     const defenderLossRate = winner === 'defender' ? 0.1 : 0.5;
     for (const [unitType, count] of Object.entries(this.defender.army)) {
       defenderCasualties[unitType] = Math.floor(count * defenderLossRate);
     }
     
-    return {
-      attacker: attackerCasualties,
-      defender: defenderCasualties,
-    };
+    return { attacker: attackerCasualties, defender: defenderCasualties };
   }
 
-  /**
-   * 添加战斗日志
-   */
   addLog(type, message, data = {}) {
-    this.battleLog.push({
-      timestamp: Date.now(),
-      type,
-      message,
-      ...data,
-    });
+    this.battleLog.push({ timestamp: Date.now(), type, message, ...data });
   }
 
-  /**
-   * 获取战斗快照（发送给客户端）
-   */
   getSnapshot() {
     return {
       id: this.id,
@@ -288,6 +429,10 @@ export class BattleComponent {
         currentHp: this.attacker?.currentHp,
         totalHp: this.attacker?.totalHp,
         morale: this.attacker?.morale,
+        general: this.attacker?.general ? {
+          name: this.attacker.general.name,
+          rarity: this.attacker.general.rarity,
+        } : null,
       },
       defender: {
         name: this.defender?.name,
@@ -295,17 +440,11 @@ export class BattleComponent {
         totalHp: this.defender?.totalHp,
         morale: this.defender?.morale,
       },
-      log: this.battleLog.slice(-5), // 最近5条日志
+      log: this.battleLog.slice(-5),
     };
   }
 
-  /**
-   * 获取完整结果（战斗结束后）
-   */
   getResult() {
-    return {
-      ...this.result,
-      battleLog: this.battleLog,
-    };
+    return { ...this.result, battleLog: this.battleLog };
   }
 }

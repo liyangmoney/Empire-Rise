@@ -94,6 +94,70 @@ export class BattleSystem {
   }
 
   /**
+   * 发起战斗（带将领）
+   */
+  startBattleWithGeneral(playerId, npcTypeId, formationId, general) {
+    const empire = this.gameWorld.empires.get(playerId);
+    if (!empire) {
+      return { success: false, error: '帝国不存在' };
+    }
+
+    if (this.playerBattleMap.has(playerId)) {
+      return { success: false, error: '您正在进行另一场战斗' };
+    }
+
+    const formation = empire.army.formations.get(formationId);
+    if (!formation || Object.keys(formation.units).length === 0) {
+      return { success: false, error: '编队不存在或没有士兵' };
+    }
+
+    if (empire.army.status !== 'idle') {
+      return { success: false, error: `军队当前状态: ${empire.army.status}，无法出征` };
+    }
+
+    const attackerPower = empire.army.calculateFormationPower(formationId);
+    const npc = generateNpc(npcTypeId, attackerPower);
+    if (!npc) {
+      return { success: false, error: '无效的NPC类型' };
+    }
+
+    const battleId = `battle_${Date.now()}_${playerId}`;
+    const battle = new BattleComponent(battleId, playerId, npc.id, 'pve');
+
+    battle.init(
+      {
+        empireId: empire.id,
+        playerName: empire.playerName,
+        army: formation.units,
+        formation: formationId,
+        morale: empire.army.morale,
+        power: attackerPower,
+        general: general,
+      },
+      {
+        id: npc.id,
+        name: npc.name,
+        type: 'npc',
+        army: npc.army,
+        morale: 100,
+        power: npc.power,
+      }
+    );
+
+    this.activeBattles.set(battleId, battle);
+    this.playerBattleMap.set(playerId, battleId);
+    empire.army.status = 'fighting';
+
+    this.executeBattleInstantly(battleId);
+
+    return {
+      success: true,
+      battleId,
+      npc: { name: npc.name, level: npc.level, power: npc.power },
+    };
+  }
+
+  /**
    * 瞬间执行完整战斗（自动战斗模式）
    */
   executeBattleInstantly(battleId) {
@@ -173,16 +237,26 @@ export class BattleSystem {
       }
     }
 
-    // 4. 恢复军队状态
+    // 4. 将领获得经验
+    if (battle.attacker.general && battle.result.generalExp) {
+      const general = empire.generals.get(battle.attacker.general.id);
+      if (general) {
+        const levelUpResult = empire.generals.addExpToGeneral(general.id, battle.result.generalExp);
+        battle.result.generalLevelUp = levelUpResult;
+      }
+    }
+
+    // 5. 恢复军队状态
     empire.army.status = 'idle';
 
-    // 5. 通知客户端
+    // 6. 通知客户端
     if (empire.socketId && empire._io) {
       empire._io.to(empire.socketId).emit('battle:finished', {
         battleId,
         result: battle.getResult(),
         army: empire.army.getSnapshot(),
         resources: empire.resources.getSnapshot(),
+        generals: empire.generals.getSnapshot(),
       });
     }
 
