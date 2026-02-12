@@ -10,6 +10,9 @@ let playerName = null;
 let empireData = null;
 let unitTypesData = null;
 let lastBattleResult = null;
+let generalsData = null; // 将领数据
+let generalTemplates = null; // 将领模板
+let selectedGeneralId = null; // 当前选择的将领
 
 // 生成唯一玩家ID
 function generateId() {
@@ -53,6 +56,13 @@ function connect() {
     renderBuildings(data.buildings);
     renderArmy(data.army, data.maxArmySize);
     updateMyBattleInfo(data.army);
+    
+    // 将领数据
+    if (data.generals) {
+      generalsData = data.generals;
+      renderGenerals(data.generals);
+      updateGeneralSelect(data.generals);
+    }
   });
 
   // 资源更新
@@ -112,7 +122,37 @@ function connect() {
     updateMyBattleInfo(data.army);
   });
 
-  // ==================== 战斗系统事件 ====================
+  // ==================== 将领系统事件 ====================
+  
+  socket.on('general:list', (data) => {
+    console.log('Generals list:', data);
+    generalsData = data.generals;
+    generalTemplates = data.templates;
+    renderGenerals(data.generals);
+    renderGeneralTemplates(data.templates);
+    updateGeneralSelect(data.generals);
+  });
+
+  socket.on('general:recruited', (data) => {
+    console.log('General recruited:', data);
+    showRecruitResult(data);
+    renderResources(data.resources);
+    // 刷新将领列表
+    socket.emit('general:getList', { playerId });
+  });
+
+  socket.on('general:assigned', (data) => {
+    console.log('General assigned:', data);
+    showSuccess('将领分配成功！');
+    generalsData = data.generals;
+    renderGenerals(data.generals);
+    updateGeneralSelect(data.generals);
+  });
+
+  socket.on('general:recruitConfig', (data) => {
+    console.log('Recruit config:', data);
+    renderRecruitOptions(data);
+  });
   
   socket.on('battle:availableNpcs', (data) => {
     console.log('Available NPCs:', data);
@@ -163,6 +203,15 @@ function switchTab(tabName) {
   if (tabName === 'battle' && socket && playerId) {
     loadNpcList();
     socket.emit('army:getStatus', { playerId });
+    // 刷新将领选择列表
+    if (generalsData) {
+      updateGeneralSelect(generalsData);
+    }
+  }
+  
+  if (tabName === 'generals' && socket && playerId) {
+    socket.emit('general:getList', { playerId });
+    socket.emit('general:getRecruitConfig');
   }
 }
 
@@ -381,19 +430,6 @@ function renderNpcList(npcs) {
   }
 }
 
-function startBattle(npcTypeId) {
-  if (!socket || !playerId) {
-    showError('请先连接服务器');
-    return;
-  }
-  
-  if (!confirm('确定要发起攻击吗？战斗中可能有士兵伤亡！')) {
-    return;
-  }
-  
-  socket.emit('battle:start', { playerId, npcTypeId, formationId: 'default' });
-}
-
 function showBattleResult(data) {
   const panel = document.getElementById('battleResultPanel');
   const resultDiv = document.getElementById('battleResult');
@@ -524,6 +560,239 @@ function startTraining() {
   const count = parseInt(document.getElementById('trainCount').value);
   
   socket.emit('army:train', { playerId, unitTypeId, count });
+}
+
+// ==================== 将领系统功能 ====================
+
+function renderGenerals(data) {
+  const container = document.getElementById('myGenerals');
+  if (!data || !data.generals || data.generals.length === 0) {
+    container.innerHTML = '<p style="text-align:center;color:#888;">暂无将领，请前往招募</p>';
+    return;
+  }
+  
+  container.innerHTML = '';
+  const rarityNames = {
+    common: '普通',
+    rare: '稀有', 
+    epic: '史诗',
+    legendary: '传说'
+  };
+  
+  for (const general of data.generals) {
+    const card = document.createElement('div');
+    card.className = `general-card ${general.rarity}`;
+    
+    // 技能信息
+    let skillsHtml = '';
+    if (general.skills && general.skills.length > 0) {
+      skillsHtml = '<div class="general-skills"><strong>技能:</strong>';
+      for (const skill of general.skills) {
+        skillsHtml += `
+          <div class="skill-item">
+            <strong>${skill.name}</strong> - ${skill.description}<br/>
+            <small>冷却: ${skill.cooldown}回合</small>
+          </div>
+        `;
+      }
+      skillsHtml += '</div>';
+    }
+    
+    // 经验条
+    const expPercent = (general.exp / general.expToNext) * 100;
+    
+    card.innerHTML = `
+      <div class="general-name">
+        ${general.name}
+        <span class="general-rarity rarity-${general.rarity}">${rarityNames[general.rarity]}</span>
+      </div>
+      <p>等级: ${general.level} <span style="color:#888;">(${general.assignedTo ? '已分配至' + general.assignedTo + '编队' : '未分配'})</span></p>
+      <div class="exp-bar">
+        <div class="exp-fill" style="width: ${expPercent}%"></div>
+      </div>
+      <p style="font-size:12px; color:#888;">经验: ${general.exp}/${general.expToNext}</p>
+      <div class="general-stats">
+        <span>⚔️ 攻击: ${general.stats.attack}</span>
+        <span>🛡️ 防御: ${general.stats.defense}</span>
+        <span>📖 智力: ${general.stats.intelligence}</span>
+      </div>
+      ${skillsHtml}
+      <div style="margin-top: 10px;">
+        <button onclick="assignGeneral('${general.id}', 'default')">分配至默认编队</button>
+      </div>
+    `;
+    
+    container.appendChild(card);
+  }
+}
+
+function renderGeneralTemplates(templates) {
+  const container = document.getElementById('generalTemplates');
+  if (!templates) return;
+  
+  container.innerHTML = '';
+  const rarityNames = { common: '普通', rare: '稀有', epic: '史诗', legendary: '传说' };
+  
+  for (const template of templates) {
+    const div = document.createElement('div');
+    div.className = `general-card ${template.rarity}`;
+    div.innerHTML = `
+      <div class="general-name">
+        ${template.name}
+        <span class="general-rarity rarity-${template.rarity}">${rarityNames[template.rarity]}</span>
+      </div>
+      <p style="color:#888; font-size:14px;">${template.description}</p>
+    `;
+    container.appendChild(div);
+  }
+}
+
+function renderRecruitOptions(config) {
+  const container = document.getElementById('recruitOptions');
+  if (!config) return;
+  
+  container.innerHTML = '';
+  const typeNames = { basic: '普通招募', advanced: '高级招募', legendary: '传说招募' };
+  
+  for (const [type, cfg] of Object.entries(config)) {
+    const div = document.createElement('div');
+    div.className = 'recruit-option';
+    
+    // 消耗显示
+    let costHtml = '';
+    for (const [res, amount] of Object.entries(cfg.cost)) {
+      costHtml += `${res}: ${amount} `;
+    }
+    
+    // 概率显示
+    const prob = cfg.probabilities;
+    const probHtml = `
+      传说: ${(prob.legendary * 100).toFixed(0)}% 
+      史诗: ${(prob.epic * 100).toFixed(0)}% 
+      稀有: ${(prob.rare * 100).toFixed(0)}% 
+      普通: ${(prob.common * 100).toFixed(0)}%
+    `;
+    
+    div.innerHTML = `
+      <h4>${typeNames[type]}</h4>
+      <div class="recruit-cost">消耗: ${costHtml}</div>
+      <button class="btn-secondary" onclick="recruitGeneral('${type}')">立即招募</button>
+      <div class="recruit-probability">概率: ${probHtml}</div>
+    `;
+    
+    container.appendChild(div);
+  }
+}
+
+function recruitGeneral(type) {
+  if (!socket || !playerId) {
+    showError('请先连接服务器');
+    return;
+  }
+  
+  socket.emit('general:recruit', { playerId, recruitType: type });
+}
+
+function showRecruitResult(data) {
+  const panel = document.getElementById('recruitResultPanel');
+  const resultDiv = document.getElementById('recruitResult');
+  
+  panel.style.display = 'block';
+  
+  const rarityNames = { common: '普通', rare: '稀有', epic: '史诗', legendary: '传说' };
+  const general = data.general;
+  
+  resultDiv.innerHTML = `
+    <div class="general-card ${general.rarity}" style="text-align:center;">
+      <h2 style="color:${data.rarity.color};">🎉 招募成功！</h2>
+      <div class="general-name" style="font-size:24px; margin:20px 0;">
+        ${general.name}
+        <span class="general-rarity rarity-${general.rarity}">${rarityNames[general.rarity]}</span>
+      </div>
+      <div class="general-stats" style="justify-content:center;">
+        <span>⚔️ 攻击: ${general.stats.attack}</span>
+        <span>🛡️ 防御: ${general.stats.defense}</span>
+        <span>📖 智力: ${general.stats.intelligence}</span>
+      </div>
+      ${general.skills.length > 0 ? `<p style="margin-top:15px;"><strong>技能: </strong>${general.skills.map(s => s.name).join(', ')}</p>` : ''}
+    </div>
+  `;
+  
+  panel.scrollIntoView({ behavior: 'smooth' });
+}
+
+function closeRecruitResult() {
+  document.getElementById('recruitResultPanel').style.display = 'none';
+}
+
+function assignGeneral(generalId, formationId) {
+  if (!socket || !playerId) {
+    showError('请先连接服务器');
+    return;
+  }
+  
+  socket.emit('general:assign', { playerId, generalId, formationId });
+}
+
+function updateGeneralSelect(data) {
+  const select = document.getElementById('battleGeneralSelect');
+  if (!select || !data || !data.generals) return;
+  
+  // 保存当前选择
+  const currentValue = select.value;
+  
+  // 重新填充选项
+  select.innerHTML = '<option value="">不携带将领</option>';
+  
+  for (const general of data.generals) {
+    const option = document.createElement('option');
+    option.value = general.id;
+    option.textContent = `${general.name} (Lv.${general.level})`;
+    select.appendChild(option);
+  }
+  
+  // 恢复选择
+  if (currentValue) {
+    select.value = currentValue;
+  }
+}
+
+function onBattleGeneralChange() {
+  const select = document.getElementById('battleGeneralSelect');
+  selectedGeneralId = select.value || null;
+}
+
+// 修改开始战斗函数，加入将领选择
+function startBattle(npcTypeId) {
+  if (!socket || !playerId) {
+    showError('请先连接服务器');
+    return;
+  }
+  
+  // 获取选择的将领
+  const generalSelect = document.getElementById('battleGeneralSelect');
+  const selectedGeneralId = generalSelect ? generalSelect.value : null;
+  
+  // 查找将领信息
+  let generalInfo = null;
+  if (selectedGeneralId && generalsData && generalsData.generals) {
+    generalInfo = generalsData.generals.find(g => g.id === selectedGeneralId);
+  }
+  
+  const confirmMsg = generalInfo 
+    ? `确定要让 ${generalInfo.name} 率军攻打吗？战斗中可能有士兵伤亡！`
+    : '确定要发起攻击吗？战斗中可能有士兵伤亡！';
+  
+  if (!confirm(confirmMsg)) {
+    return;
+  }
+  
+  socket.emit('battle:start', { 
+    playerId, 
+    npcTypeId, 
+    formationId: 'default',
+    generalId: selectedGeneralId 
+  });
 }
 
 // 页面加载完成后初始化
