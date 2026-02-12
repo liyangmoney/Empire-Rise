@@ -1,6 +1,8 @@
 # 🏰 帝国崛起：蛮荒争霸
 
 > 前后端分离的 SLG 游戏 - Node.js + Socket.io + H5客户端
+> 
+> 🐳 **支持 Docker 一键部署**
 
 ## ✨ 已实现功能
 
@@ -15,7 +17,7 @@
 - 建筑等级影响产出/容量
 - 升级消耗资源
 
-### ✅ 军队系统 (NEW!)
+### ✅ 军队系统
 - 3种基础兵种：步兵/弓兵/骑兵
 - **兵种克制关系**：步兵→骑兵→弓兵→步兵
 - 训练消耗粮食/木材
@@ -24,43 +26,51 @@
 - 训练队列（异步完成）
 - 粮食消耗与士气惩罚
 
-## 📁 项目结构
-```
-Empire-Rise/
-├── server/
-│   ├── src/
-│   │   ├── core/
-│   │   │   ├── components/
-│   │   │   │   ├── ResourceComponent.js
-│   │   │   │   ├── BuildingComponent.js
-│   │   │   │   └── ArmyComponent.js      # 军队组件
-│   │   │   └── systems/
-│   │   │       ├── GameLoop.js           # 游戏循环
-│   │   │       └── TrainingSystem.js     # 训练系统
-│   │   └── network/socket/handlers.js
-│   └── package.json
-├── client/
-│   ├── index.html
-│   └── src/main.js
-└── shared/
-    ├── constants.js
-    └── unitTypes.js                      # 兵种配置
-```
+---
 
-## 🚀 快速开始
+## 🚀 快速开始（推荐：Docker）
+
+### 方式一：Docker Compose（最简单，一键启动）
 
 ```bash
-# 1. 安装依赖
+# 1. 克隆代码
+git clone https://github.com/liyangmoney/Empire-Rise.git
+cd Empire-Rise
+
+# 2. 一键启动（构建+运行）
+docker-compose up --build
+
+# 3. 打开浏览器访问
+# http://localhost:3000
+```
+
+停止服务：
+```bash
+docker-compose down
+```
+
+### 方式二：Docker 手动构建
+
+```bash
+# 构建镜像
+docker build -t empire-rise .
+
+# 运行容器
+docker run -d -p 3000:3000 --name empire-rise-server empire-rise
+
+# 查看日志
+docker logs -f empire-rise-server
+```
+
+### 方式三：本地 Node.js 运行
+
+```bash
 cd server
 npm install
-
-# 2. 启动服务端
 npm start
-# 服务运行在 http://localhost:3000
-
-# 3. 打开客户端
-# 浏览器访问 http://localhost:3000
 ```
+
+---
 
 ## 🎮 游戏指南
 
@@ -81,17 +91,56 @@ npm start
 - 兵营：每级 +30
 - 民居：每级 +10
 
-## 🔌 Socket.io 事件
+---
 
-### 资源/建筑
-- `resource:collect` - 手动采集
-- `building:upgrade` - 升级建筑
+## 🔌 API 文档
 
-### 军队系统
-- `army:train` - 训练士兵
-- `army:trainingPreview` - 训练预览
-- `army:getStatus` - 获取军队状态
-- `army:trainingCompleted` - 训练完成通知
+### Socket.io 事件
+
+#### 资源/建筑
+| 事件 | 方向 | 参数 | 说明 |
+|------|------|------|------|
+| `resource:collect` | C→S | `{playerId, resourceType, amount}` | 手动采集资源 |
+| `building:upgrade` | C→S | `{playerId, buildingTypeId, cost}` | 升级建筑 |
+
+#### 军队系统
+| 事件 | 方向 | 参数 | 说明 |
+|------|------|------|------|
+| `army:train` | C→S | `{playerId, unitTypeId, count}` | 训练士兵 |
+| `army:trainingPreview` | C→S | `{playerId, unitTypeId, count}` | 训练预览 |
+| `army:getStatus` | C→S | `{playerId}` | 获取军队状态 |
+| `army:trainingCompleted` | S→C | `{task, army}` | 训练完成通知 |
+| `army:update` | S→C | `{...}` | 军队状态更新 |
+
+---
+
+## 📁 项目结构
+```
+Empire-Rise/
+├── server/
+│   ├── src/
+│   │   ├── core/
+│   │   │   ├── components/    # ECS组件
+│   │   │   │   ├── ResourceComponent.js
+│   │   │   │   ├── BuildingComponent.js
+│   │   │   │   └── ArmyComponent.js
+│   │   │   └── systems/       # 游戏系统
+│   │   │       ├── GameLoop.js
+│   │   │       └── TrainingSystem.js
+│   │   └── network/socket/handlers.js
+│   └── package.json
+├── client/                    # H5客户端
+│   ├── index.html
+│   └── src/main.js
+├── shared/                    # 前后端共享
+│   ├── constants.js
+│   └── unitTypes.js
+├── Dockerfile                 # Docker配置
+├── docker-compose.yml         # 一键编排
+└── README.md
+```
+
+---
 
 ## ⏭️ 开发计划
 
@@ -102,6 +151,8 @@ npm start
 | P2 | 将领系统 | 🚧 待开发 |
 | P3 | 科技系统 | 🚧 待开发 |
 
+---
+
 ## 📝 更新日志
 
 ### v0.2.0 (2024-02-12)
@@ -109,7 +160,29 @@ npm start
 - ✅ 兵种克制关系
 - ✅ 士气与粮食消耗
 - ✅ 训练队列
+- ✅ Docker 支持
 
 ### v0.1.0
 - ✅ 资源系统 MVP
 - ✅ 建筑系统 MVP
+
+---
+
+## 🐳 Docker 命令速查
+
+```bash
+# 启动
+docker-compose up -d
+
+# 停止
+docker-compose down
+
+# 查看日志
+docker-compose logs -f
+
+# 重启
+docker-compose restart
+
+# 重建（代码更新后）
+docker-compose up --build -d
+```

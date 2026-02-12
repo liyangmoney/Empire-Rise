@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  empire-rise-server:
+    build: .
+    container_name: empire-rise-server
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    restart: unless-stopped
+    networks:
+      - empire-network
+
+  # 可选：添加 MongoDB 服务（用于数据持久化）
+  # 目前使用内存存储，如需持久化取消注释下面部分
+  
+  # mongodb:
+  #   image: mongo:7-jammy
+  #   container_name: empire-rise-mongo
+  #   ports:
+  #     - "27017:27017"
+  #   volumes:
+  #     - mongo-data:/data/db
+  #   restart: unless-stopped
+  #   networks:
+  #     - empire-network
+
+networks:
+  empire-network:
+    driver: bridge
+
+# volumes:
+#   mongo-data:
