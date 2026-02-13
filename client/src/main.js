@@ -1153,8 +1153,19 @@ let currentTimeData = null;
 // 时间更新事件
 socket.on('time:update', (data) => {
   console.log('Time update:', data);
-  updateTimeDisplay(data);
+  if (data && data.gameDate) {
+    updateTimeDisplay(data);
+  }
 });
+
+// 自动修复：如果10秒后时间仍显示默认值，请求重新同步
+setTimeout(() => {
+  const gameDateEl = document.getElementById('gameDate');
+  if (gameDateEl && gameDateEl.textContent === '第1年 1月 1日' && socket && playerId) {
+    console.log('时间显示异常，请求重新同步...');
+    socket.emit('time:get', { playerId });
+  }
+}, 5000);
 
 function updateTimeDisplay(timeData) {
   currentTimeData = timeData;

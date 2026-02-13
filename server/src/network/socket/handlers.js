@@ -222,6 +222,11 @@ export function registerSocketHandlers(io, gameWorld) {
       const empire = gameWorld.empires.get(playerId);
       if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '帝国不存在' });
       
+      // 兼容旧玩家：补充 time 组件
+      if (!empire.time) {
+        empire.time = new TimeComponent();
+      }
+      
       socket.emit('time:update', empire.time.getSnapshot());
     });
 
