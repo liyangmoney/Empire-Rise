@@ -136,3 +136,84 @@ function showErrorModal(title, message) {
 }
 
 window.showErrorModal = showErrorModal;
+
+/**
+ * 显示确认弹窗（自定义确认对话框）
+ * @param {string} title 标题
+ * @param {string} message 提示内容
+ * @param {Function} onConfirm 确认回调
+ * @param {Function} onCancel 取消回调（可选）
+ * @param {Object} options 配置选项
+ */
+function showConfirmModal(title, message, onConfirm, onCancel = null, options = {}) {
+  const { confirmText = '确定', cancelText = '取消', isDanger = false } = options;
+  
+  // 创建弹窗
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+  `;
+  
+  const borderColor = isDanger ? '#f44336' : '#4CAF50';
+  const titleColor = isDanger ? '#f44336' : '#4CAF50';
+  
+  modal.innerHTML = `
+    <div style="
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      border: 2px solid ${borderColor};
+      border-radius: 12px;
+      padding: 30px;
+      max-width: 450px;
+      width: 90%;
+      text-align: center;
+    ">
+      <h3 style="color: ${titleColor}; margin-bottom: 15px;">${title}</h3>
+      
+      <div style="margin: 15px 0; padding: 15px; background: rgba(${isDanger ? '244,67,54' : '76,175,80'},0.1); border-radius: 8px;">
+        <p style="color: #fff; font-size: 16px; line-height: 1.6;">${message}</p>
+      </div>
+      
+      <div style="margin-top: 20px; display: flex; gap: 15px; justify-content: center;">
+        <button class="btn-secondary" onclick="this.closest('.confirm-modal').dispatchEvent(new CustomEvent('modal-cancel'))" 
+                style="padding: 12px 30px; font-size: 16px;">${cancelText}</button>
+        <button onclick="this.closest('.confirm-modal').dispatchEvent(new CustomEvent('modal-confirm'))" 
+                style="background: ${isDanger ? '#f44336' : '#4CAF50'}; padding: 12px 30px; font-size: 16px;">${confirmText}</button>
+      </div>
+    </div>
+  `;
+  
+  modal.className = 'confirm-modal';
+  document.body.appendChild(modal);
+  
+  // 确认事件
+  modal.addEventListener('modal-confirm', () => {
+    modal.remove();
+    if (onConfirm) onConfirm();
+  });
+  
+  // 取消事件
+  modal.addEventListener('modal-cancel', () => {
+    modal.remove();
+    if (onCancel) onCancel();
+  });
+  
+  // 点击背景关闭
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.dispatchEvent(new CustomEvent('modal-cancel'));
+    }
+  });
+  
+  return modal;
+}
+
+window.showConfirmModal = showConfirmModal;

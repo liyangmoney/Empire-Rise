@@ -924,12 +924,29 @@ function startBattle(npcTypeId, isRecommended = true) {
     return;
   }
   
-  // 高风险警告
+  // 高风险警告 - 使用自定义弹窗
   if (!isRecommended) {
-    const confirmed = confirm('⚠️ 警告：此敌人战力远高于你的军队，强行攻击可能导致严重伤亡！\n\n确定要继续吗？');
-    if (!confirmed) return;
+    showConfirmModal(
+      '⚠️ 高风险警告',
+      '此敌人战力远高于你的军队，强行攻击可能导致严重伤亡！\n\n建议提升军队实力后再来挑战。',
+      () => {
+        // 确认后继续执行攻击
+        proceedBattle(npcTypeId);
+      },
+      null,
+      { confirmText: '强行攻击', cancelText: '取消', isDanger: true }
+    );
+    return;
   }
   
+  // 推荐目标直接执行
+  proceedBattle(npcTypeId);
+}
+
+/**
+ * 继续执行战斗
+ */
+function proceedBattle(npcTypeId) {
   // 获取选择的将领
   const generalSelect = document.getElementById('battleGeneralSelect');
   const selectedGeneralId = generalSelect ? generalSelect.value : null;
@@ -940,19 +957,35 @@ function startBattle(npcTypeId, isRecommended = true) {
     generalInfo = generalsData.generals.find(g => g.id === selectedGeneralId);
   }
   
+  // 显示攻击确认
   const confirmMsg = generalInfo 
     ? `确定要让 ${generalInfo.name} 率军攻打吗？战斗中可能有士兵伤亡！`
     : '确定要发起攻击吗？战斗中可能有士兵伤亡！';
   
-  if (!confirm(confirmMsg)) {
-    return;
-  }
+  showConfirmModal(
+    '确认出征',
+    confirmMsg,
+    () => {
+      // 执行攻击
+      executeBattleStart(npcTypeId, generalInfo);
+    },
+    null,
+    { confirmText: '出征', cancelText: '取消', isDanger: false }
+  );
+}
+
+/**
+ * 执行战斗开始
+ */
+function executeBattleStart(npcTypeId, generalInfo) {
+  const generalSelect = document.getElementById('battleGeneralSelect');
+  const generalId = generalSelect ? generalSelect.value : null;
   
   socket.emit('battle:start', { 
     playerId, 
     npcTypeId, 
     formationId: 'default',
-    generalId: selectedGeneralId 
+    generalId: generalId 
   });
 }
 
