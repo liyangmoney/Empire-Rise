@@ -94,36 +94,65 @@ export function registerSocketHandlers(io, gameWorld) {
     });
 
     socket.on(SOCKET_EVENTS.C_BUILDING_UPGRADE, (data) => {
-      const { playerId, buildingTypeId, cost } = data;
+      const { playerId, buildingTypeId } = data;
       const empire = gameWorld.empires.get(playerId);
       if (!empire) {
         socket.emit(SOCKET_EVENTS.S_ERROR, { message: '帝国不存在' });
         return;
       }
-      if (!empire.resources.hasAll(cost)) {
+      
+      // 获取升级预览
+      const preview = empire.buildings.getUpgradePreview(buildingTypeId);
+      if (!preview) {
+        socket.emit(SOCKET_EVENTS.S_ERROR, { message: '该建筑无法升级或已达到最高等级' });
+        return;
+      }
+      
+      // 检查资源
+      if (!empire.resources.hasAll(preview.cost)) {
         socket.emit(SOCKET_EVENTS.S_ERROR, { message: '资源不足' });
         return;
       }
-      for (const [resId, amount] of Object.entries(cost)) {
+      
+      // 扣除资源
+      for (const [resId, amount] of Object.entries(preview.cost)) {
         empire.resources.consume(resId, amount);
       }
-      const building = empire.buildings.upgrade(buildingTypeId);
-      if (!building) empire.buildings.add(buildingTypeId);
       
-      // 更新任务进度
-      empire.tasks.updateProgress('upgradeBuilding', 1);
-      
-      if (buildingTypeId === 'warehouse_basic') {
-        const level = empire.buildings.getLevel('warehouse_basic');
-        for (const resId of ['wood', 'stone', 'food']) {
-          empire.resources.storage[resId].maxCapacity = 1000 * Math.pow(1.5, level - 1);
+      // 开始升级（加入队列）
+      const task = empire.buildings.startUpgrade(buildingTypeId);
+      if (!task) {
+        // 返还资源
+        for (const [resId, amount] of Object.entries(preview.cost)) {
+          empire.resources.add(resId, amount);
         }
+        socket.emit(SOCKET_EVENTS.S_ERROR, { message: '该建筑正在升级中' });
+        return;
       }
-      socket.emit(SOCKET_EVENTS.S_BUILDING_UPDATE, {
+      
+      socket.emit('building:upgradeStarted', {
         buildingId: buildingTypeId,
-        buildings: empire.buildings.getSnapshot(),
+        task: {
+          id: task.id,
+          fromLevel: task.fromLevel,
+          toLevel: task.toLevel,
+          duration: task.duration,
+          durationFormatted: formatDuration(task.duration / 1000)
+        },
         resources: empire.resources.getSnapshot()
       });
+      
+      showSuccess(`开始升级建筑！预计${formatDuration(task.duration / 1000)}完成`);
+    });
+    
+    // 获取升级预览
+    socket.on('building:upgradePreview', (data) => {
+      const { playerId, buildingTypeId } = data;
+      const empire = gameWorld.empires.get(playerId);
+      if (!empire) return;
+      
+      const preview = empire.buildings.getUpgradePreview(buildingTypeId);
+      socket.emit('building:upgradePreview', preview);
     });
 
     // 军队系统事件
@@ -397,4 +426,13 @@ function createNewEmpire(playerId, playerName, socketId, io) {
   empire.resources.setProductionRate('food', 30);
 
   return empire;
+}
+
+/**
+ * 格式化时间显示
+ */
+function formatDuration(seconds) {
+  if (seconds < 60) return `${Math.ceil(seconds)}秒`;
+  if (seconds < 3600) return `${Math.ceil(seconds / 60)}分钟`;
+  return `${Math.floor(seconds / 3600)}小时${Math.ceil((seconds % 3600) / 60)}分钟`;
 }

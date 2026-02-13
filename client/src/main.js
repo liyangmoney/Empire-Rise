@@ -566,29 +566,71 @@ function upgradeBuilding(buildingTypeId) {
     return;
   }
 
-  const costs = {
-    warehouse_basic: { wood: 200, stone: 100 },
-    farm: { wood: 150, food: 50 },
-    lumber_mill: { wood: 100, stone: 50 },
-    barracks: { wood: 300, stone: 150, food: 100 }
-  };
+  // 从服务器获取升级预览
+  socket.emit('building:upgradePreview', { playerId, buildingTypeId });
+}
 
-  const cost = costs[buildingTypeId];
-  if (!cost) {
-    showError('未知的建筑类型');
+// 监听升级预览
+socket.on('building:upgradePreview', (preview) => {
+  if (!preview) {
+    showError('该建筑无法升级');
     return;
   }
-
+  
   const buildingNames = {
     warehouse_basic: '基础仓库',
     farm: '农场',
     lumber_mill: '伐木场',
-    barracks: '兵营'
+    quarry: '采石场',
+    iron_mine: '铁矿场',
+    crystal_mine: '水晶矿',
+    barracks: '兵营',
+    hospital: '医院',
+    wall: '城墙',
+    tower: '箭塔',
+    house: '民居',
+    imperial_palace: '皇宫',
+    general_camp: '将领营',
+    tech_institute: '科技院'
   };
+  
+  const durationText = preview.duration < 60 
+    ? `${preview.duration}秒` 
+    : preview.duration < 3600 
+      ? `${Math.ceil(preview.duration / 60)}分钟`
+      : `${Math.floor(preview.duration / 3600)}小时${Math.ceil((preview.duration % 3600) / 60)}分钟`;
+  
+  showCostConfirm(
+    `升级${buildingNames[preview.buildingTypeId] || preview.buildingTypeId} (Lv.${preview.currentLevel} → Lv.${preview.nextLevel})`,
+    preview.cost,
+    () => {
+      socket.emit('building:upgrade', { playerId, buildingTypeId: preview.buildingTypeId });
+    },
+    `预计升级时间: ${durationText}`
+  );
+});
 
-  showCostConfirm(`升级${buildingNames[buildingTypeId]}`, cost, () => {
-    socket.emit('building:upgrade', { playerId, buildingTypeId, cost });
-  });
+// 监听升级开始
+socket.on('building:upgradeStarted', (data) => {
+  console.log('Building upgrade started:', data);
+  renderResources(data.resources);
+  updateBuildingQueue([data.task]);
+  showSuccess(`开始升级建筑！预计${data.task.durationFormatted}完成`);
+});
+
+// 监听升级完成
+socket.on('building:upgradeCompleted', (data) => {
+  console.log('Building upgrade completed:', data);
+  renderBuildings(data.buildings);
+  renderResources(data.resources);
+  showSuccess(`建筑升级完成！升级至Lv.${data.task.toLevel}`);
+});
+
+// 更新建筑升级队列显示
+function updateBuildingQueue(queue) {
+  // 可以在建筑面板显示升级进度
+  // 类似训练队列的显示方式
+  console.log('Building upgrade queue:', queue);
 }
 
 function previewTraining() {
@@ -857,7 +899,7 @@ function onBattleGeneralChange() {
 }
 
 // 显示资源消耗确认弹窗
-function showCostConfirm(title, cost, onConfirm) {
+function showCostConfirm(title, cost, onConfirm, extraInfo = null) {
   // 资源名称映射
   const resourceNames = {
     wood: '木材',
@@ -870,6 +912,12 @@ function showCostConfirm(title, cost, onConfirm) {
   
   // 构建资源消耗详情
   let costHtml = '<div style="margin: 15px 0; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 8px;">';
+  
+  // 如果有额外信息，先显示
+  if (extraInfo) {
+    costHtml += `<p style="margin-bottom: 10px; color: #4CAF50; font-weight: bold;">${extraInfo}</p>`;
+  }
+  
   costHtml += '<h4 style="margin-bottom: 10px; color: #ffd700;">资源消耗:</h4><ul style="list-style: none; padding: 0;">';
   
   for (const [resource, amount] of Object.entries(cost)) {

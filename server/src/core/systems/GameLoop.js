@@ -93,6 +93,35 @@ export class GameLoop {
     // 执行产出（考虑时间加速）
     empire.resources.produce(adjustedDelta / 3600);
 
+    // ===== 建筑系统更新 =====
+    if (empire.buildings) {
+      const completedUpgrades = empire.buildings.processUpgradeQueue(deltaTime, timeScale);
+      
+      // 通知客户端升级完成
+      if (completedUpgrades.length > 0 && empire.socketId && empire._io) {
+        for (const task of completedUpgrades) {
+          // 更新仓库容量
+          if (task.buildingTypeId === 'warehouse_basic') {
+            const level = empire.buildings.getLevel('warehouse_basic');
+            for (const resId of ['wood', 'stone', 'food']) {
+              empire.resources.storage[resId].maxCapacity = 1000 * Math.pow(1.5, level - 1);
+            }
+          }
+          
+          // 更新任务进度
+          if (empire.tasks) {
+            empire.tasks.updateProgress('upgradeBuilding', 1);
+          }
+          
+          empire._io.to(empire.socketId).emit('building:upgradeCompleted', {
+            task,
+            buildings: empire.buildings.getSnapshot(),
+            resources: empire.resources.getSnapshot()
+          });
+        }
+      }
+    }
+
     // ===== 军队系统更新 =====
     if (empire.army) {
       this.updateArmy(empire, adjustedDelta);
