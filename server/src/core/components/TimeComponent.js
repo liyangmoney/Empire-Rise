@@ -45,22 +45,33 @@ export class TimeComponent {
   }
 
   /**
-   * 获取游戏时间快照
+   * 获取游戏时间快照（时分秒与现实时间同步）
    */
   getSnapshot() {
-    const gameTime = this.getCurrentGameTime();
-    const timeOfDay = getTimeOfDay(gameTime);
+    // 使用现实时间的时分秒，但日期从游戏起始日开始
+    const now = new Date();
+    const realHours = now.getHours();
+    const realMinutes = now.getMinutes();
+    const realSeconds = now.getSeconds();
+    
+    // 计算游戏内总秒数（从起始日期开始 + 今天的时间）
+    const todaySeconds = realHours * 3600 + realMinutes * 60 + realSeconds;
+    const gameTime = this.getCurrentGameTime() + todaySeconds;
+    
+    const timeOfDay = getTimeOfDay(todaySeconds); // 基于现实时间判断时间段
     
     return {
-      gameTime,                           // 总游戏秒数
-      gameDate: formatGameDate(gameTime),        // 格式化日期
-      gameDateTime: formatGameDateTime(gameTime), // 完整时间
-      timeOfDay,                          // 时间段
+      gameTime,
+      gameDate: formatGameDate(gameTime),
+      gameDateTime: formatGameDateTime(gameTime),
+      timeOfDay,
       timeOfDayName: this.getTimeOfDayName(timeOfDay),
-      speed: this.speed,                  // 当前倍率
+      speed: this.speed,
       speedName: this.getSpeedName(this.speed),
       isPaused: this.isPaused,
-      dayCount: Math.floor(gameTime / GAME_TIME.DAY), // 第几天
+      dayCount: Math.floor(gameTime / GAME_TIME.DAY),
+      // 添加现实时间信息
+      realTime: `${realHours.toString().padStart(2, '0')}:${realMinutes.toString().padStart(2, '0')}:${realSeconds.toString().padStart(2, '0')}`
     };
   }
 

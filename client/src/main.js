@@ -1231,11 +1231,14 @@ function updateTimeDisplay(timeData) {
   const timeOfDayEl = document.getElementById('timeOfDay');
   
   if (gameDateEl) {
-    gameDateEl.textContent = timeData.gameDate || '第1年 1月 1日';
+    gameDateEl.textContent = timeData.gameDate || '第2026年 2月 13日';
   }
   
   if (timeOfDayEl) {
-    timeOfDayEl.textContent = timeData.timeOfDayName || '☀️ 早晨';
+    // 显示时间段 + 现实时分秒
+    const timeOfDay = timeData.timeOfDayName || '☀️ 早晨';
+    const realTime = timeData.realTime || '';
+    timeOfDayEl.textContent = realTime ? `${timeOfDay} ${realTime}` : timeOfDay;
   }
 }
 
