@@ -38,6 +38,16 @@ function connect() {
     socket.emit('army:getUnitTypes');
   });
 
+  // 通用成功提示
+  socket.on('success', (data) => {
+    showSuccess(data.message);
+  });
+
+  // 通用错误提示  
+  socket.on('error', (data) => {
+    showError(data.message);
+  });
+
   socket.on('disconnect', () => {
     console.log('❌ Disconnected from server');
     updateStatus('disconnected', '连接断开');

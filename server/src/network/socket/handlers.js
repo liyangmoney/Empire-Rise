@@ -142,7 +142,10 @@ export function registerSocketHandlers(io, gameWorld) {
         resources: empire.resources.getSnapshot()
       });
       
-      showSuccess(`开始升级建筑！预计${formatDuration(task.duration / 1000)}完成`);
+      // 发送成功提示给客户端
+      socket.emit('success', { 
+        message: `开始升级建筑！预计${formatDuration(task.duration / 1000)}完成` 
+      });
     });
     
     // 获取升级预览
@@ -237,7 +240,7 @@ export function registerSocketHandlers(io, gameWorld) {
           resources: empire.resources.getSnapshot(),
           tasks: empire.tasks.getSnapshot(empire)
         });
-        showSuccess(`领取奖励成功！`);
+        socket.emit('success', { message: '领取奖励成功！' });
       } else {
         socket.emit(SOCKET_EVENTS.S_ERROR, { message: result.error });
       }
