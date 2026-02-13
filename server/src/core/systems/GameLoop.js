@@ -109,13 +109,11 @@ export class GameLoop {
     // 触发资源和时间更新事件（每秒）
     if (this.gameWorld.tick % 1 === 0) { // 每秒更新
       for (const empire of this.gameWorld.empires.values()) {
-        if (empire.socketId) {
+        if (empire.socketId && empire.time) {
           const io = empire._io;
           if (io) {
-            const timeSnapshot = empire.time?.getSnapshot();
-            if (timeSnapshot) {
-              io.to(empire.socketId).emit('time:update', timeSnapshot);
-            }
+            const timeSnapshot = empire.time.getSnapshot();
+            io.to(empire.socketId).emit('time:update', timeSnapshot);
           }
         }
       }

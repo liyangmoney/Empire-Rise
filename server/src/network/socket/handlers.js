@@ -36,6 +36,11 @@ export function registerSocketHandlers(io, gameWorld) {
       } else {
         empire.socketId = socket.id;
         empire._io = io;
+        
+        // 兼容旧玩家：补充 time 组件
+        if (!empire.time) {
+          empire.time = new TimeComponent();
+        }
       }
 
       // 刷新日常任务（基于游戏内时间）
@@ -49,7 +54,12 @@ export function registerSocketHandlers(io, gameWorld) {
         army: empire.army.getSnapshot(),
         generals: empire.generals.getSnapshot(),
         tasks: empire.tasks.getSnapshot(empire),
-        time: empire.time.getSnapshot(), // 添加时间数据
+        time: empire.time?.getSnapshot() || { 
+          gameDate: '第1年 1月 1日', 
+          timeOfDayName: '☀️ 早晨',
+          speed: 1,
+          isPaused: false 
+        },
         maxArmySize: trainingSystem.calculateMaxArmySize(empire),
       });
     });
@@ -59,7 +69,7 @@ export function registerSocketHandlers(io, gameWorld) {
       const { playerId, resourceType, amount } = data;
       const empire = gameWorld.empires.get(playerId);
       if (!empire) {
-        socket.emit(SOCKET_EVENTS.S_ERROR, { message: 'Empire not found' });
+        socket.emit(SOCKET_EVENTS.S_ERROR, { message: '帝国不存在' });
         return;
       }
       const result = empire.resources.add(resourceType, amount);
@@ -87,11 +97,11 @@ export function registerSocketHandlers(io, gameWorld) {
       const { playerId, buildingTypeId, cost } = data;
       const empire = gameWorld.empires.get(playerId);
       if (!empire) {
-        socket.emit(SOCKET_EVENTS.S_ERROR, { message: 'Empire not found' });
+        socket.emit(SOCKET_EVENTS.S_ERROR, { message: '帝国不存在' });
         return;
       }
       if (!empire.resources.hasAll(cost)) {
-        socket.emit(SOCKET_EVENTS.S_ERROR, { message: 'Insufficient resources' });
+        socket.emit(SOCKET_EVENTS.S_ERROR, { message: '资源不足' });
         return;
       }
       for (const [resId, amount] of Object.entries(cost)) {
@@ -122,7 +132,7 @@ export function registerSocketHandlers(io, gameWorld) {
     socket.on('army:trainingPreview', (data) => {
       const { playerId, unitTypeId, count } = data;
       const empire = gameWorld.empires.get(playerId);
-      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: 'Empire not found' });
+      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '帝国不存在' });
       const barracksLevel = empire.buildings?.getLevel('barracks') || 1;
       const preview = trainingSystem.getTrainingPreview(unitTypeId, count, barracksLevel);
       const maxSize = trainingSystem.calculateMaxArmySize(empire);
@@ -138,7 +148,7 @@ export function registerSocketHandlers(io, gameWorld) {
     socket.on('army:train', (data) => {
       const { playerId, unitTypeId, count } = data;
       const empire = gameWorld.empires.get(playerId);
-      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: 'Empire not found' });
+      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '帝国不存在' });
       const result = trainingSystem.train(empire, unitTypeId, count);
       if (result.success) {
         socket.emit('army:trainStarted', {
@@ -155,7 +165,7 @@ export function registerSocketHandlers(io, gameWorld) {
     socket.on('army:getStatus', (data) => {
       const { playerId } = data;
       const empire = gameWorld.empires.get(playerId);
-      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: 'Empire not found' });
+      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '帝国不存在' });
       socket.emit('army:status', {
         army: empire.army.getSnapshot(),
         maxArmySize: trainingSystem.calculateMaxArmySize(empire),
@@ -174,7 +184,7 @@ export function registerSocketHandlers(io, gameWorld) {
     socket.on('task:getList', (data) => {
       const { playerId } = data;
       const empire = gameWorld.empires.get(playerId);
-      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: 'Empire not found' });
+      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '帝国不存在' });
       
       // 刷新日常任务（基于游戏内时间）
       const gameDay = Math.floor(empire.time?.getCurrentGameTime() / 86400) || 0;
@@ -187,7 +197,7 @@ export function registerSocketHandlers(io, gameWorld) {
     socket.on('task:claimReward', (data) => {
       const { playerId, taskId } = data;
       const empire = gameWorld.empires.get(playerId);
-      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: 'Empire not found' });
+      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '帝国不存在' });
       
       const result = empire.tasks.claimReward(taskId, empire);
       
@@ -210,7 +220,7 @@ export function registerSocketHandlers(io, gameWorld) {
     socket.on('time:get', (data) => {
       const { playerId } = data;
       const empire = gameWorld.empires.get(playerId);
-      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: 'Empire not found' });
+      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '帝国不存在' });
       
       socket.emit('time:update', empire.time.getSnapshot());
     });
@@ -219,7 +229,7 @@ export function registerSocketHandlers(io, gameWorld) {
     socket.on('time:setSpeed', (data) => {
       const { playerId, speed } = data;
       const empire = gameWorld.empires.get(playerId);
-      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: 'Empire not found' });
+      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '帝国不存在' });
       
       const success = empire.time.setSpeed(speed);
       if (success) {
@@ -233,7 +243,7 @@ export function registerSocketHandlers(io, gameWorld) {
     socket.on('time:togglePause', (data) => {
       const { playerId } = data;
       const empire = gameWorld.empires.get(playerId);
-      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: 'Empire not found' });
+      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '帝国不存在' });
       
       empire.time.togglePause();
       socket.emit('time:update', empire.time.getSnapshot());
@@ -243,7 +253,7 @@ export function registerSocketHandlers(io, gameWorld) {
     socket.on('time:fastForward', (data) => {
       const { playerId, seconds } = data;
       const empire = gameWorld.empires.get(playerId);
-      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: 'Empire not found' });
+      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '帝国不存在' });
       
       const snapshot = empire.time.fastForward(seconds);
       socket.emit('time:update', snapshot);
@@ -255,7 +265,7 @@ export function registerSocketHandlers(io, gameWorld) {
     socket.on('general:getList', (data) => {
       const { playerId } = data;
       const empire = gameWorld.empires.get(playerId);
-      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: 'Empire not found' });
+      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '帝国不存在' });
       
       socket.emit('general:list', {
         generals: empire.generals.getSnapshot(),
@@ -289,7 +299,7 @@ export function registerSocketHandlers(io, gameWorld) {
     socket.on('general:assign', (data) => {
       const { playerId, generalId, formationId } = data;
       const empire = gameWorld.empires.get(playerId);
-      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: 'Empire not found' });
+      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '帝国不存在' });
       
       const success = empire.generals.assignToFormation(generalId, formationId);
       if (success) {
@@ -320,7 +330,7 @@ export function registerSocketHandlers(io, gameWorld) {
       const { playerId, npcTypeId, formationId = 'default' } = data;
       const empire = gameWorld.empires.get(playerId);
       
-      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: 'Empire not found' });
+      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '帝国不存在' });
       
       // 获取编队将领
       const general = empire.generals.getFormationGeneral(formationId);
