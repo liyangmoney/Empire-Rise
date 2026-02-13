@@ -11,9 +11,12 @@ import { GameLoop } from './core/systems/GameLoop.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
 
+// 禁用 diagnostics tracing（避免 Node.js 20 兼容性问题）
+process.env.NODE_OPTIONS = '--no-warnings';
+
 // 创建 Fastify 实例
 const fastify = Fastify({
-  logger: { level: 'info' }
+  logger: false  // 禁用 logger 避免 diagnostics 问题
 });
 
 // 注册插件
