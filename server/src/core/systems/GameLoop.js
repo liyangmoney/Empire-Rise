@@ -141,7 +141,13 @@ export class GameLoop {
         if (e.socketId && e.time) {
           const io = e._io;
           if (io) {
-            io.to(e.socketId).emit('time:update', e.time.getSnapshot());
+            const timeSnapshot = e.time.getSnapshot();
+            // 调试：每秒打印一次时间数据
+            if (this.gameWorld.tick % 5 === 0) {
+              console.log(`[TimeSync] Sending: ${timeSnapshot.gameDate} ${timeSnapshot.realTime}`);
+            }
+            io.to(e.socketId).emit('time:update', timeSnapshot);
+            
             if (e.army) {
               io.to(e.socketId).emit('army:update', e.army.getSnapshot());
             }

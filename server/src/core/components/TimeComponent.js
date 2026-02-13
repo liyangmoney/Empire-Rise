@@ -13,19 +13,20 @@ import {
  */
 export class TimeComponent {
   constructor() {
-    this.startTime = Date.now();        // 现实开始时间戳
-    this.totalPausedTime = 0;           // 总暂停时间（毫秒）
-    this.lastPauseTime = null;          // 上次暂停时间
-    this.speed = TIME_SCALE.NORMAL;     // 当前时间加速倍率
-    this.isPaused = false;              // 是否暂停
+    // 设置起始时间为 2026-02-13 00:00:00 的时间戳
+    const startDate = new Date(2026, 1, 13, 0, 0, 0); // 月份从0开始，1=2月
+    this.startTime = startDate.getTime();
     
-    // 游戏内统计
-    this.gameDaysPassed = 0;            // 已过去的天数（用于每日刷新等）
-    this.lastDayChecked = 0;            // 上次检查的天数
+    this.totalPausedTime = 0;
+    this.lastPauseTime = null;
+    this.speed = TIME_SCALE.NORMAL;
+    this.isPaused = false;
     
-    // 时间事件监听
-    this.dayCallbacks = [];             // 新的一天回调
-    this.hourCallbacks = [];            // 新的小时回调
+    this.gameDaysPassed = 0;
+    this.lastDayChecked = 0;
+    
+    this.dayCallbacks = [];
+    this.hourCallbacks = [];
   }
 
   /**

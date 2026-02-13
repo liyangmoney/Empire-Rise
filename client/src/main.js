@@ -1210,6 +1210,7 @@ let currentTimeData = null;
 
 // 时间更新事件
 socket.on('time:update', (data) => {
+  console.log('[Client] Received time:', data);
   if (data && data.gameDate) {
     updateTimeDisplay(data);
   }
