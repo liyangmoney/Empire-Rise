@@ -108,12 +108,17 @@ export class GameLoop {
 
     // 触发资源和时间更新事件（每秒）
     if (this.gameWorld.tick % 1 === 0) { // 每秒更新
-      for (const empire of this.gameWorld.empires.values()) {
-        if (empire.socketId && empire.time) {
-          const io = empire._io;
+      for (const e of this.gameWorld.empires.values()) {
+        if (e.socketId && e.time) {
+          const io = e._io;
           if (io) {
-            const timeSnapshot = empire.time.getSnapshot();
-            io.to(empire.socketId).emit('time:update', timeSnapshot);
+            const timeSnapshot = e.time.getSnapshot();
+            io.to(e.socketId).emit('time:update', timeSnapshot);
+            
+            // 同时发送军队更新（训练队列需要）
+            if (e.army) {
+              io.to(e.socketId).emit('army:update', e.army.getSnapshot());
+            }
           }
         }
       }
