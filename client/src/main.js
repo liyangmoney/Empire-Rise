@@ -13,6 +13,7 @@ let lastBattleResult = null;
 let generalsData = null; // 将领数据
 let generalTemplates = null; // 将领模板
 let selectedGeneralId = null; // 当前选择的将领
+let currentTimeData = null; // 时间数据
 
 // 生成唯一玩家ID
 function generateId() {
@@ -1205,8 +1206,6 @@ switchTab = function(tabName) {
 };
 
 // ==================== 时间系统功能 ====================
-
-let currentTimeData = null;
 
 // 时间更新事件
 socket.on('time:update', (data) => {
