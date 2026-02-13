@@ -21,10 +21,10 @@ export const GAME_TIME = {
   YEAR: 31536000, // 365天
 };
 
-// 游戏起始日期（可设定为游戏世界观起始时间）
-export const GAME_START_YEAR = 1;
-export const GAME_START_MONTH = 1;
-export const GAME_START_DAY = 1;
+// 游戏起始日期（与现实时间同步）
+export const GAME_START_YEAR = 2026;
+export const GAME_START_MONTH = 2;
+export const GAME_START_DAY = 13;
 
 /**
  * 将现实毫秒转换为游戏秒
