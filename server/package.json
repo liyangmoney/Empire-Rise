@@ -1,7 +1,7 @@
 {
   "name": "empire-rise-server",
   "version": "0.2.0",
-  "description": "《帝国崛起》游戏服务端 - Fastify + Socket.io",
+  "description": "《帝国崛起》游戏服务端 - Express + Socket.io",
   "type": "module",
   "main": "src/index.js",
   "scripts": {
@@ -9,10 +9,9 @@
     "dev": "node --watch src/index.js"
   },
   "dependencies": {
-    "fastify": "4.28.1",
-    "socket.io": "4.7.4",
-    "@fastify/cors": "8.5.0",
-    "@fastify/static": "6.12.0"
+    "express": "^4.18.2",
+    "socket.io": "^4.7.4",
+    "cors": "^2.8.5"
   },
   "keywords": ["game-server", "strategy", "websocket"],
   "author": "liyangmoney"

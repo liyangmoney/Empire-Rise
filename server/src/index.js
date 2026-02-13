@@ -1,8 +1,8 @@
 // server/src/index.js
-import Fastify from 'fastify';
+import express from 'express';
+import { createServer } from 'http';
 import { Server as SocketServer } from 'socket.io';
-import fastifyCors from '@fastify/cors';
-import fastifyStatic from '@fastify/static';
+import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { registerSocketHandlers } from './network/socket/handlers.js';
@@ -11,36 +11,29 @@ import { GameLoop } from './core/systems/GameLoop.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
 
-// 禁用 diagnostics tracing（避免 Node.js 20 兼容性问题）
-process.env.NODE_OPTIONS = '--no-warnings';
+// 创建 Express 应用
+const app = express();
+const httpServer = createServer(app);
 
-// 创建 Fastify 实例
-const fastify = Fastify({
-  logger: false  // 禁用 logger 避免 diagnostics 问题
-});
-
-// 注册插件
-await fastify.register(fastifyCors, {
+// 启用 CORS
+app.use(cors({
   origin: '*',
   methods: ['GET', 'POST']
-});
+}));
 
 // 静态文件服务（托管 H5 客户端）
-await fastify.register(fastifyStatic, {
-  root: path.join(__dirname, '../../client'),
-  prefix: '/'
-});
+app.use(express.static(path.join(__dirname, '../../client')));
 
 // 创建 Socket.io 实例
-const io = new SocketServer(fastify.server, {
+const io = new SocketServer(httpServer, {
   cors: { origin: '*' }
 });
 
 // 游戏世界状态（内存存储，生产环境用 Redis）
 const gameWorld = {
-  players: new Map(),      // playerId -> playerData
-  empires: new Map(),      // empireId -> empireData
-  npcs: new Map(),         // npcId -> npcData
+  players: new Map(),
+  empires: new Map(),
+  npcs: new Map(),
   tick: 0
 };
 
@@ -53,18 +46,23 @@ gameLoop.start();
 console.log('✅ GameLoop started via index.js');
 
 // 启动服务器
-fastify.listen({ port: PORT, host: '0.0.0.0' }, (err) => {
-  if (err) {
-    fastify.log.error(err);
-    process.exit(1);
-  }
-  fastify.log.info(`🚀 Empire Rise Server running on http://localhost:${PORT}`);
+httpServer.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Empire Rise Server running on http://localhost:${PORT}`);
 });
 
 // 优雅关闭
-process.on('SIGTERM', async () => {
-  fastify.log.info('SIGTERM received, closing server...');
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, closing server...');
   gameLoop.stop();
-  await fastify.close();
-  process.exit(0);
+  httpServer.close(() => {
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('\n🛑 Server stopped by user');
+  gameLoop.stop();
+  httpServer.close(() => {
+    process.exit(0);
+  });
 });
