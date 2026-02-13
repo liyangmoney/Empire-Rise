@@ -114,8 +114,9 @@ export class GameLoop {
         if (e.socketId && e.time) {
           const io = e._io;
           if (io) {
+            const gameTime = e.time.getCurrentGameTime();
             const timeSnapshot = e.time.getSnapshot();
-            console.log(`[GameLoop] Sending time:update to ${e.socketId}`, timeSnapshot.gameDate);
+            console.log(`[GameLoop] Empire ${e.id.substring(0, 10)} gameTime=${gameTime.toFixed(0)}s, date=${timeSnapshot.gameDate}, speed=${e.time.speed}, paused=${e.time.isPaused}`);
             io.to(e.socketId).emit('time:update', timeSnapshot);
             
             // 同时发送军队更新（训练队列需要）
