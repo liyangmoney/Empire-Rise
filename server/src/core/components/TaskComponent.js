@@ -75,18 +75,16 @@ export class TaskComponent {
   }
 
   /**
-   * 刷新日常任务
+   * 刷新日常任务（基于游戏内时间）
+   * @param {number} gameDay 游戏内第几天
    */
-  refreshDailyTasks() {
-    const now = new Date();
-    const today = now.toDateString();
-    
-    // 如果今天已经刷新过，不重复刷新
-    if (this.lastDailyRefresh === today) {
+  refreshDailyTasks(gameDay) {
+    // 如果这一天已经刷新过，不重复刷新
+    if (this.lastDailyRefresh === gameDay) {
       return false;
     }
     
-    this.lastDailyRefresh = today;
+    this.lastDailyRefresh = gameDay;
     this.dailyTasks = [];
     
     // 随机选择3个日常任务

@@ -93,6 +93,19 @@ export class GameLoop {
       this.updateArmy(empire, adjustedDelta);
     }
 
+    // ===== 检查游戏内新的一天 =====
+    if (empire.time) {
+      const currentGameDay = Math.floor(empire.time.getCurrentGameTime() / 86400);
+      if (empire.tasks && empire.tasks.lastDailyRefresh !== currentGameDay) {
+        const refreshed = empire.tasks.refreshDailyTasks(currentGameDay);
+        if (refreshed && empire.socketId && empire._io) {
+          empire._io.to(empire.socketId).emit('task:dailyRefreshed', {
+            dailyTasks: empire.tasks.dailyTasks
+          });
+        }
+      }
+    }
+
     // 触发资源和时间更新事件（每秒）
     if (this.gameWorld.tick % 1 === 0) { // 每秒更新
       for (const empire of this.gameWorld.empires.values()) {

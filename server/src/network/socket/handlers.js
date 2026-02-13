@@ -38,8 +38,9 @@ export function registerSocketHandlers(io, gameWorld) {
         empire._io = io;
       }
 
-      // 刷新日常任务
-      empire.tasks.refreshDailyTasks();
+      // 刷新日常任务（基于游戏内时间）
+      const gameDay = Math.floor(empire.time?.getCurrentGameTime() / 86400) || 0;
+      empire.tasks.refreshDailyTasks(gameDay);
 
       socket.emit('empire:init', {
         playerId,
@@ -63,8 +64,17 @@ export function registerSocketHandlers(io, gameWorld) {
       }
       const result = empire.resources.add(resourceType, amount);
       
+      // 如果溢出，提示用户
+      if (result.overflow > 0) {
+        socket.emit(SOCKET_EVENTS.S_ERROR, { 
+          message: `仓库已满，${result.overflow}单位资源无法存储` 
+        });
+      }
+      
       // 更新任务进度
-      empire.tasks.updateProgress('collect', { [resourceType]: amount });
+      if (result.added > 0) {
+        empire.tasks.updateProgress('collect', { [resourceType]: result.added });
+      }
       
       socket.emit(SOCKET_EVENTS.S_RESOURCE_UPDATE, {
         resourceId: resourceType,
@@ -166,8 +176,9 @@ export function registerSocketHandlers(io, gameWorld) {
       const empire = gameWorld.empires.get(playerId);
       if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: 'Empire not found' });
       
-      // 刷新日常任务
-      empire.tasks.refreshDailyTasks();
+      // 刷新日常任务（基于游戏内时间）
+      const gameDay = Math.floor(empire.time?.getCurrentGameTime() / 86400) || 0;
+      empire.tasks.refreshDailyTasks(gameDay);
       
       socket.emit('task:list', empire.tasks.getSnapshot(empire));
     });
