@@ -228,7 +228,15 @@ export class ArmyComponent {
       morale: this.morale,
       moraleMultiplier: this.getMoraleMultiplier(),
       foodConsumption: this.calculateFoodConsumption(),
-      trainingQueue: this.trainingQueue.length,
+      trainingQueue: this.trainingQueue.map(t => ({
+        id: t.id,
+        unitTypeId: t.unitTypeId,
+        count: t.count,
+        duration: t.duration,
+        _progress: t._progress || 0,
+        startTime: t.startTime,
+        completed: t.completed
+      })),
       woundedUnits: this.woundedUnits,
       status: this.status,
     };

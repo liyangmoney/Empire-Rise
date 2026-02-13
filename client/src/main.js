@@ -302,8 +302,11 @@ function renderArmy(army, maxSize) {
   const effect = army.moraleMultiplier >= 1.2 ? '+20%' : army.moraleMultiplier >= 1.1 ? '+10%' : army.moraleMultiplier >= 1.0 ? '正常' : army.moraleMultiplier >= 0.8 ? '-20%' : '-40%';
   document.getElementById('moraleEffect').textContent = effect;
   
-  if (army.trainingQueue > 0) {
+  if (army.trainingQueue && army.trainingQueue.length > 0) {
     document.getElementById('trainingQueue').style.display = 'block';
+    updateTrainingQueue(army.trainingQueue);
+  } else {
+    document.getElementById('trainingQueue').style.display = 'none';
   }
 }
 
@@ -370,7 +373,17 @@ function updateTrainingQueue(queue) {
   
   for (const task of queue) {
     const unitName = unitTypesData?.[task.unitTypeId.toUpperCase()]?.name || task.unitTypeId;
-    const remaining = Math.max(0, Math.ceil((task.startTime + task.duration - Date.now()) / 1000));
+    
+    // 使用服务器提供的进度计算（考虑时间加速）
+    let remaining = 0;
+    if (task._progress !== undefined) {
+      // 服务器使用 _progress 追踪进度（毫秒）
+      const remainingMs = Math.max(0, task.duration - task._progress);
+      remaining = Math.ceil(remainingMs / 1000);
+    } else {
+      // 回退：使用真实时间计算
+      remaining = Math.max(0, Math.ceil((task.startTime + task.duration - Date.now()) / 1000));
+    }
     
     const item = document.createElement('div');
     item.innerHTML = `${unitName} × ${task.count} - 剩余${remaining}秒`;
