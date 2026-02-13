@@ -47,6 +47,7 @@ registerSocketHandlers(io, gameWorld);
 // 启动游戏循环
 const gameLoop = new GameLoop(gameWorld);
 gameLoop.start();
+console.log('✅ GameLoop started via index.js');
 
 // 启动服务器
 fastify.listen({ port: PORT, host: '0.0.0.0' }, (err) => {

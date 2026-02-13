@@ -38,6 +38,11 @@ export class GameLoop {
     const now = Date.now();
     const deltaTime = (now - this.lastTick) / 1000; // 秒
     this.lastTick = now;
+
+    // 调试：每30秒打印一次
+    if (this.gameWorld.tick % 30 === 0) {
+      console.log(`[GameLoop.tick] tick=${this.gameWorld.tick}, deltaTime=${deltaTime}, empires=${this.gameWorld.empires.size}`);
+    }
     this.gameWorld.tick++;
 
     // 更新时间系统和检查新的一天
