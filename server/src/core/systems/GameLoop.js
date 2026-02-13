@@ -38,11 +38,6 @@ export class GameLoop {
     const now = Date.now();
     const deltaTime = (now - this.lastTick) / 1000; // 秒
     this.lastTick = now;
-
-    // 调试：每30秒打印一次
-    if (this.gameWorld.tick % 30 === 0) {
-      console.log(`[GameLoop.tick] tick=${this.gameWorld.tick}, deltaTime=${deltaTime}, empires=${this.gameWorld.empires.size}`);
-    }
     this.gameWorld.tick++;
 
     // 更新时间系统和检查新的一天
@@ -141,19 +136,12 @@ export class GameLoop {
     }
 
     // 触发资源和时间更新事件（每秒）
-    if (this.gameWorld.tick % 1 === 0) { // 每秒更新
-      console.log(`[GameLoop] Tick ${this.gameWorld.tick}, empires: ${this.gameWorld.empires.size}`);
+    if (this.gameWorld.tick % 1 === 0) {
       for (const e of this.gameWorld.empires.values()) {
-        console.log(`[GameLoop] Empire ${e.id}: socketId=${e.socketId ? 'yes' : 'no'}, time=${e.time ? 'yes' : 'no'}`);
         if (e.socketId && e.time) {
           const io = e._io;
           if (io) {
-            const gameTime = e.time.getCurrentGameTime();
-            const timeSnapshot = e.time.getSnapshot();
-            console.log(`[GameLoop] Empire ${e.id.substring(0, 10)} gameTime=${gameTime.toFixed(0)}s, date=${timeSnapshot.gameDate}, speed=${e.time.speed}, paused=${e.time.isPaused}`);
-            io.to(e.socketId).emit('time:update', timeSnapshot);
-            
-            // 同时发送军队更新（训练队列需要）
+            io.to(e.socketId).emit('time:update', e.time.getSnapshot());
             if (e.army) {
               io.to(e.socketId).emit('army:update', e.army.getSnapshot());
             }

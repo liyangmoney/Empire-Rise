@@ -1200,7 +1200,6 @@ let currentTimeData = null;
 
 // 时间更新事件
 socket.on('time:update', (data) => {
-  console.log('[Client] Time update received:', data);
   if (data && data.gameDate) {
     updateTimeDisplay(data);
   }
