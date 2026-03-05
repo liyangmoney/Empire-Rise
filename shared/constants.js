@@ -75,6 +75,16 @@ export const BUILDING_TYPES = {
     category: 'production',
     populationCost: 20
   },
+  CRYSTAL_MINE:     { 
+    id: 'crystal_mine',     
+    name: '水晶矿',   
+    maxLevel: 999, 
+    outputBase: 20,   
+    outputGrowth: 1.2,
+    description: '开采稀有水晶，用于高级科技和兵种，升级提高产量',
+    category: 'production',
+    populationCost: 30
+  },
   // 资源生产类 - 更多资源建筑
   FISHERY:          { 
     id: 'fishery',          
