@@ -1,5 +1,5 @@
 // server/src/network/socket/handlers.js
-import { SOCKET_EVENTS } from '../../../../shared/constants.js';
+import { SOCKET_EVENTS, BUILDING_TYPES } from '../../../../shared/constants.js';
 import { ResourceComponent } from '../../core/components/ResourceComponent.js';
 import { BuildingComponent } from '../../core/components/BuildingComponent.js';
 import { ArmyComponent } from '../../core/components/ArmyComponent.js';
@@ -450,7 +450,6 @@ function createNewEmpire(playerId, playerName, socketId, io) {
   empire.resources.add('gold', 100);
   
   // 根据建筑等级设置产出速率（从建筑配置读取）
-  const { BUILDING_TYPES } = await import('../../../../shared/constants.js');
   const lumberMill = BUILDING_TYPES.LUMBER_MILL;
   const farm = BUILDING_TYPES.FARM;
   const quarry = BUILDING_TYPES.QUARRY;
