@@ -315,8 +315,8 @@ function renderResources(resources) {
   container.innerHTML = '';
 
   const resourceNames = {
-    wood: '木材 🌲', stone: '石材 🪨', food: '粮食 🌾',
-    iron: '铁矿 ⛏️', crystal: '水晶 💎', gold: '金币 🪙'
+    wood: '木材 🌲', stone: '石材 ⛰️', food: '粮食 🌾',
+    iron: '铁矿 ⚙️', crystal: '水晶 💎', gold: '金币 💰'
   };
 
   for (const [id, data] of Object.entries(resources)) {
