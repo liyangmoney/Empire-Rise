@@ -182,6 +182,12 @@ export class BuildingComponent {
         if (resourceId === 'food' && typeId === 'farm') {
           bonus += (building.level * 0.2);
         }
+        if (resourceId === 'stone' && typeId === 'quarry') {
+          bonus += (building.level * 0.2);
+        }
+        if (resourceId === 'iron' && typeId === 'iron_mine') {
+          bonus += (building.level * 0.2);
+        }
       }
     }
     

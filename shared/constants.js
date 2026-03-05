@@ -18,6 +18,8 @@ export const BUILDING_TYPES = {
   WAREHOUSE_SPECIAL:{ id: 'warehouse_special',name: '特殊仓库', maxLevel: 20, capacityBase: 500,  capacityGrowth: 1.5 },
   LUMBER_MILL:      { id: 'lumber_mill',      name: '伐木场',   maxLevel: 20, outputBase: 100,  outputGrowth: 1.3 },
   FARM:             { id: 'farm',             name: '农场',     maxLevel: 20, outputBase: 80,   outputGrowth: 1.3 },
+  QUARRY:           { id: 'quarry',           name: '采石场',   maxLevel: 20, outputBase: 60,   outputGrowth: 1.3 },
+  IRON_MINE:        { id: 'iron_mine',        name: '铁矿场',   maxLevel: 20, outputBase: 40,   outputGrowth: 1.3 },
   BARRACKS:         { id: 'barracks',         name: '兵营',     maxLevel: 20 },
 };
 
