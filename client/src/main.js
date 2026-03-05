@@ -296,6 +296,8 @@ function switchTab(tabName) {
 
 // 渲染资源
 function renderResources(resources) {
+  console.log('渲染资源:', resources); // 调试用
+  
   const container = document.getElementById('resources');
   container.innerHTML = '';
 
@@ -305,12 +307,16 @@ function renderResources(resources) {
   };
 
   for (const [id, data] of Object.entries(resources)) {
+    // 确保数据格式正确
+    const amount = typeof data === 'object' ? (data.amount || 0) : (data || 0);
+    const max = typeof data === 'object' ? (data.max || 1000) : 1000;
+    
     const card = document.createElement('div');
     card.className = 'resource-card';
     card.innerHTML = `
       <div class="resource-name">${resourceNames[id] || id}</div>
-      <div class="resource-value">${Math.floor(data.amount)}</div>
-      <div class="resource-max">上限: ${Math.floor(data.max)}</div>
+      <div class="resource-value">${Math.floor(amount)}</div>
+      <div class="resource-max">上限: ${Math.floor(max)}</div>
     `;
     container.appendChild(card);
   }
@@ -321,11 +327,27 @@ function renderResources(resources) {
 
 // 更新全局资源栏
 function updateGlobalResources(resources) {
-  const resourceIds = ['wood', 'stone', 'food', 'iron', 'crystal', 'gold'];
-  for (const id of resourceIds) {
-    const element = document.getElementById(`global${id.charAt(0).toUpperCase() + id.slice(1)}`);
-    if (element && resources[id]) {
-      element.textContent = Math.floor(resources[id].amount);
+  console.log('更新全局资源栏:', resources); // 调试用
+  
+  const resourceMap = {
+    'wood': 'globalWood',
+    'stone': 'globalStone', 
+    'food': 'globalFood',
+    'iron': 'globalIron',
+    'crystal': 'globalCrystal',
+    'gold': 'globalGold'
+  };
+  
+  for (const [resId, elementId] of Object.entries(resourceMap)) {
+    const element = document.getElementById(elementId);
+    if (element && resources[resId]) {
+      const amount = typeof resources[resId] === 'object' ? (resources[resId].amount || 0) : (resources[resId] || 0);
+      element.textContent = Math.floor(amount);
+      console.log(`  ${resId}: ${amount}`); // 调试用
+    } else if (element) {
+      console.log(`  ${resId}: 无数据`); // 调试用
+    } else {
+      console.log(`  ${resId}: 元素 ${elementId} 不存在`); // 调试用
     }
   }
 }
