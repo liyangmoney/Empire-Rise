@@ -14,11 +14,11 @@ export const RESOURCE_TYPES = {
 };
 
 export const BUILDING_TYPES = {
-  // 仓库类
+  // 仓库类 - 无限升级
   WAREHOUSE_BASIC:  { 
     id: 'warehouse_basic',  
     name: '基础仓库', 
-    maxLevel: 20, 
+    maxLevel: 999, 
     capacityBase: 1000, 
     capacityGrowth: 1.5,
     description: '储存木材、石材、粮食等基础资源，升级提升容量',
@@ -27,18 +27,18 @@ export const BUILDING_TYPES = {
   WAREHOUSE_SPECIAL:{ 
     id: 'warehouse_special',
     name: '特殊仓库', 
-    maxLevel: 20, 
+    maxLevel: 999, 
     capacityBase: 500,  
     capacityGrowth: 1.5,
     description: '储存铁矿、水晶等稀有资源，升级提升容量',
     category: 'storage'
   },
   
-  // 资源生产类
+  // 资源生产类 - 无限升级
   LUMBER_MILL:      { 
     id: 'lumber_mill',      
     name: '伐木场',   
-    maxLevel: 20, 
+    maxLevel: 999, 
     outputBase: 100,  
     outputGrowth: 1.3,
     description: '生产木材，升级提高产量（+20%/级）',
@@ -47,7 +47,7 @@ export const BUILDING_TYPES = {
   FARM:             { 
     id: 'farm',             
     name: '农场',     
-    maxLevel: 20, 
+    maxLevel: 999, 
     outputBase: 80,   
     outputGrowth: 1.3,
     description: '生产粮食，升级提高产量（+20%/级）',
@@ -56,7 +56,7 @@ export const BUILDING_TYPES = {
   QUARRY:           { 
     id: 'quarry',           
     name: '采石场',   
-    maxLevel: 20, 
+    maxLevel: 999, 
     outputBase: 60,   
     outputGrowth: 1.3,
     description: '开采石材，升级提高产量（+20%/级）',
@@ -65,7 +65,7 @@ export const BUILDING_TYPES = {
   IRON_MINE:        { 
     id: 'iron_mine',        
     name: '铁矿场',   
-    maxLevel: 20, 
+    maxLevel: 999, 
     outputBase: 40,   
     outputGrowth: 1.3,
     description: '开采铁矿，升级提高产量（+20%/级）',
@@ -74,7 +74,7 @@ export const BUILDING_TYPES = {
   CRYSTAL_MINE:     { 
     id: 'crystal_mine',     
     name: '水晶矿',   
-    maxLevel: 20, 
+    maxLevel: 999, 
     outputBase: 20,   
     outputGrowth: 1.2,
     description: '开采稀有水晶，用于高级科技和兵种，升级提高产量',
