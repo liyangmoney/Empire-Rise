@@ -42,7 +42,8 @@ export const BUILDING_TYPES = {
     outputBase: 100,  
     outputGrowth: 1.3,
     description: '生产木材，升级提高产量（+20%/级）',
-    category: 'production'
+    category: 'production',
+    populationCost: 10  // 升级需要10人口
   },
   FARM:             { 
     id: 'farm',             
@@ -51,7 +52,8 @@ export const BUILDING_TYPES = {
     outputBase: 80,   
     outputGrowth: 1.3,
     description: '生产粮食，升级提高产量（+20%/级）',
-    category: 'production'
+    category: 'production',
+    populationCost: 10
   },
   QUARRY:           { 
     id: 'quarry',           
@@ -60,7 +62,8 @@ export const BUILDING_TYPES = {
     outputBase: 60,   
     outputGrowth: 1.3,
     description: '开采石材，升级提高产量（+20%/级）',
-    category: 'production'
+    category: 'production',
+    populationCost: 15
   },
   IRON_MINE:        { 
     id: 'iron_mine',        
@@ -69,7 +72,8 @@ export const BUILDING_TYPES = {
     outputBase: 40,   
     outputGrowth: 1.3,
     description: '开采铁矿，升级提高产量（+20%/级）',
-    category: 'production'
+    category: 'production',
+    populationCost: 20
   },
   CRYSTAL_MINE:     { 
     id: 'crystal_mine',     
@@ -78,7 +82,8 @@ export const BUILDING_TYPES = {
     outputBase: 20,   
     outputGrowth: 1.2,
     description: '开采稀有水晶，用于高级科技和兵种，升级提高产量',
-    category: 'production'
+    category: 'production',
+    populationCost: 30
   },
   
   // 军事类
@@ -87,28 +92,32 @@ export const BUILDING_TYPES = {
     name: '兵营',     
     maxLevel: 20,
     description: '训练士兵，升级解锁高级兵种、提升训练速度',
-    category: 'military'
+    category: 'military',
+    populationCost: 50
   },
   HOSPITAL:         { 
     id: 'hospital',         
     name: '医院',     
     maxLevel: 20,
     description: '治疗伤兵，每级每小时恢复5点伤病单位',
-    category: 'military'
+    category: 'military',
+    populationCost: 30
   },
   WALL:             { 
     id: 'wall',             
     name: '城墙',     
     maxLevel: 30,
     description: '防御工事，每级提升5%城防耐久',
-    category: 'military'
+    category: 'military',
+    populationCost: 100
   },
   TOWER:            { 
     id: 'tower',            
     name: '箭塔',     
     maxLevel: 20,
     description: '防御建筑，每级增加守军10%攻击力',
-    category: 'military'
+    category: 'military',
+    populationCost: 40
   },
   
   // 经济类
@@ -117,14 +126,17 @@ export const BUILDING_TYPES = {
     name: '民居',     
     maxLevel: 20,
     description: '增加人口上限和金币税收，每级+50人口、+5金币/小时',
-    category: 'economy'
+    category: 'economy',
+    populationCost: 0,  // 民居不消耗人口，而是增加人口上限
+    populationBonus: 50 // 每级增加50人口上限
   },
   MARKET:           { 
     id: 'market',           
     name: '市场',     
     maxLevel: 15,
     description: '资源交易，每级降低2%交易损耗',
-    category: 'economy'
+    category: 'economy',
+    populationCost: 25
   },
   
   // 科技类

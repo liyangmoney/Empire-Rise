@@ -18,7 +18,7 @@ export class BuildingComponent {
   add(buildingTypeId, level = 1) {
     const type = Object.values(BUILDING_TYPES).find(b => b.id === buildingTypeId);
     if (!type) throw new Error(`Unknown building type: ${buildingTypeId}`);
-    
+
     const building = {
       typeId: buildingTypeId,
       level: Math.min(level, type.maxLevel),
@@ -26,7 +26,7 @@ export class BuildingComponent {
       createdAt: Date.now(),
       lastUpgradedAt: Date.now()
     };
-    
+
     this.buildings.set(buildingTypeId, building);
     return building;
   }
@@ -39,14 +39,14 @@ export class BuildingComponent {
     const building = this.buildings.get(buildingTypeId);
     if (!building) return null;
     if (building.level >= building.maxLevel) return null;
-    
+
     // 检查是否已在升级队列中
     const existingTask = this.upgradeQueue.find(t => t.buildingTypeId === buildingTypeId && !t.completed);
     if (existingTask) return null;
-    
+
     const nextLevel = building.level + 1;
     const duration = getBuildingUpgradeTime(buildingTypeId, nextLevel) * 1000; // 转毫秒
-    
+
     const task = {
       id: `upgrade_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
       buildingTypeId,
@@ -56,7 +56,7 @@ export class BuildingComponent {
       _progress: 0,
       completed: false
     };
-    
+
     this.upgradeQueue.push(task);
     return task;
   }
@@ -67,7 +67,7 @@ export class BuildingComponent {
   completeUpgrade(task) {
     const building = this.buildings.get(task.buildingTypeId);
     if (!building) return false;
-    
+
     building.level = task.toLevel;
     building.lastUpgradedAt = Date.now();
     return true;
@@ -81,13 +81,13 @@ export class BuildingComponent {
    */
   processUpgradeQueue(deltaTime, timeScale = 1) {
     const completed = [];
-    
+
     for (const task of this.upgradeQueue) {
       if (!task.completed) {
         // 根据时间加速推进进度
         const gameTimeElapsed = deltaTime * timeScale * 1000; // 转毫秒
         task._progress = (task._progress || 0) + gameTimeElapsed;
-        
+
         if (task._progress >= task.duration) {
           task.completed = true;
           if (this.completeUpgrade(task)) {
@@ -96,10 +96,10 @@ export class BuildingComponent {
         }
       }
     }
-    
+
     // 清理已完成的任务
     this.upgradeQueue = this.upgradeQueue.filter(t => !t.completed);
-    
+
     return completed;
   }
 
@@ -109,18 +109,18 @@ export class BuildingComponent {
   cancelUpgrade(taskId) {
     const taskIndex = this.upgradeQueue.findIndex(t => t.id === taskId);
     if (taskIndex === -1) return { success: false, error: '升级任务不存在' };
-    
+
     const task = this.upgradeQueue[taskIndex];
     if (task.completed) return { success: false, error: '升级已完成' };
-    
+
     // 计算进度
     const progress = task._progress / task.duration;
-    
+
     // 移除任务
     this.upgradeQueue.splice(taskIndex, 1);
-    
-    return { 
-      success: true, 
+
+    return {
+      success: true,
       progress,
       refundRatio: Math.max(0, 0.8 - progress * 0.8) // 最高返还80%
     };
@@ -133,16 +133,18 @@ export class BuildingComponent {
     const building = this.buildings.get(buildingTypeId);
     if (!building) return null;
     if (building.level >= building.maxLevel) return null;
-    
+
     const nextLevel = building.level + 1;
-    
+    const type = Object.values(BUILDING_TYPES).find(b => b.id === buildingTypeId);
+
     return {
       buildingTypeId,
       currentLevel: building.level,
       nextLevel,
       cost: getBuildingUpgradeCost(buildingTypeId, nextLevel),
       duration: getBuildingUpgradeTime(buildingTypeId, nextLevel),
-      maxLevel: building.maxLevel
+      maxLevel: building.maxLevel,
+      populationCost: type?.populationCost || 0
     };
   }
 
@@ -176,13 +178,13 @@ export class BuildingComponent {
    */
   calculateProductionBonus(resourceId) {
     let bonus = 1.0; // 基础倍数
-    
+
     for (const [typeId, building] of this.buildings) {
       const type = Object.values(BUILDING_TYPES).find(b => b.id === typeId);
       if (type?.outputBase) {
         // 每级建筑增加 20% 产出
         const levelBonus = building.level * 0.2;
-        
+
         if (resourceId === 'wood' && typeId === 'lumber_mill') {
           bonus += levelBonus;
         }
@@ -197,7 +199,7 @@ export class BuildingComponent {
         }
       }
     }
-    
+
     return bonus;
   }
 
@@ -208,12 +210,12 @@ export class BuildingComponent {
   getProductionRate(resourceId) {
     let baseRate = 0;
     let level = 0;
-    
+
     // 查找对应的建筑
     for (const [typeId, building] of this.buildings) {
       const type = Object.values(BUILDING_TYPES).find(b => b.id === typeId);
       if (!type?.outputBase) continue;
-      
+
       if (resourceId === 'wood' && typeId === 'lumber_mill') {
         baseRate = type.outputBase;
         level = building.level;
@@ -235,14 +237,14 @@ export class BuildingComponent {
         level = building.level;
       }
     }
-    
+
     // 产出 = 基础产出 × 等级加成
     // 1级 = 100%, 2级 = 120%, 3级 = 140% ...
     if (baseRate > 0 && level > 0) {
       const bonus = 1 + (level - 1) * 0.2; // 1级=1.0, 2级=1.2, 3级=1.4
       return Math.floor(baseRate * bonus);
     }
-    
+
     return 0;
   }
 }

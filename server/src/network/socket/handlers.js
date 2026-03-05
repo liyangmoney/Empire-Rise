@@ -7,6 +7,7 @@ import { GeneralComponent } from '../../core/components/GeneralComponent.js';
 import { TaskComponent } from '../../core/components/TaskComponent.js';
 import { TimeComponent } from '../../core/components/TimeComponent.js';
 import { StaminaComponent } from '../../core/components/StaminaComponent.js';
+import { PopulationComponent } from '../../core/components/PopulationComponent.js';
 import { TrainingSystem } from '../../core/systems/TrainingSystem.js';
 import { BattleSystem } from '../../core/systems/BattleSystem.js';
 import { RecruitSystem } from '../../core/systems/RecruitSystem.js';
@@ -64,6 +65,7 @@ export function registerSocketHandlers(io, gameWorld) {
           isPaused: false 
         },
         stamina: empire.stamina?.getSnapshot() || { current: 100, max: 100 },
+        population: empire.population?.getSnapshot() || { current: 0, max: 0 },
         maxArmySize: trainingSystem.calculateMaxArmySize(empire),
       });
     });
@@ -117,36 +119,56 @@ export function registerSocketHandlers(io, gameWorld) {
         socket.emit(SOCKET_EVENTS.S_ERROR, { message: '帝国不存在' });
         return;
       }
-      
+
       // 获取升级预览
       const preview = empire.buildings.getUpgradePreview(buildingTypeId);
       if (!preview) {
         socket.emit(SOCKET_EVENTS.S_ERROR, { message: '该建筑无法升级或已达到最高等级' });
         return;
       }
-      
+
       // 检查资源
       if (!empire.resources.hasAll(preview.cost)) {
         socket.emit(SOCKET_EVENTS.S_ERROR, { message: '资源不足' });
         return;
       }
-      
+
+      // 检查人口需求
+      const buildingType = Object.values(BUILDING_TYPES).find(b => b.id === buildingTypeId);
+      const popCost = buildingType?.populationCost || 0;
+      if (popCost > 0 && empire.population) {
+        const popResult = empire.population.consume(popCost);
+        if (!popResult.success) {
+          socket.emit(SOCKET_EVENTS.S_ERROR, {
+            message: `人口不足！需要${popCost}人口，当前可用${popResult.available}人口`
+          });
+          return;
+        }
+      }
+
       // 扣除资源
       for (const [resId, amount] of Object.entries(preview.cost)) {
         empire.resources.consume(resId, amount);
       }
-      
+
       // 开始升级（加入队列）
       const task = empire.buildings.startUpgrade(buildingTypeId);
       if (!task) {
-        // 返还资源
+        // 返还资源和人口
         for (const [resId, amount] of Object.entries(preview.cost)) {
           empire.resources.add(resId, amount);
         }
+        if (popCost > 0) empire.population.release(popCost);
         socket.emit(SOCKET_EVENTS.S_ERROR, { message: '该建筑正在升级中' });
         return;
       }
-      
+
+      // 民居升级特殊处理：增加人口上限
+      if (buildingTypeId === 'house' && buildingType?.populationBonus) {
+        const totalBonus = buildingType.populationBonus * (preview.nextLevel - preview.currentLevel);
+        empire.population.addMax(totalBonus);
+      }
+
       socket.emit('building:upgradeStarted', {
         buildingId: buildingTypeId,
         task: {
@@ -157,12 +179,13 @@ export function registerSocketHandlers(io, gameWorld) {
           durationFormatted: formatDuration(task.duration / 1000)
         },
         upgradeQueue: empire.buildings.upgradeQueue || [],
-        resources: empire.resources.getSnapshot(empire.buildings)
+        resources: empire.resources.getSnapshot(empire.buildings),
+        population: empire.population?.getSnapshot()
       });
-      
+
       // 发送成功提示给客户端
-      socket.emit('success', { 
-        message: `开始升级建筑！预计${formatDuration(task.duration / 1000)}完成` 
+      socket.emit('success', {
+        message: `开始升级建筑！预计${formatDuration(task.duration / 1000)}完成`
       });
     });
     
@@ -438,8 +461,10 @@ function createNewEmpire(playerId, playerName, socketId, io) {
     tasks: new TaskComponent(),
     time: new TimeComponent(),
     stamina: new StaminaComponent(), // 体力系统
+    population: new PopulationComponent(), // 人口系统
   };
 
+  // 添加初始建筑
   empire.buildings.add('warehouse_basic');
   empire.buildings.add('lumber_mill');
   empire.buildings.add('farm');
@@ -450,6 +475,14 @@ function createNewEmpire(playerId, playerName, socketId, io) {
   empire.buildings.add('hospital');
   empire.buildings.add('house');
   empire.buildings.add('blacksmith');
+  
+  // 设置初始人口上限（1级民居 = 50人口）
+  const houseType = BUILDING_TYPES.HOUSE;
+  if (houseType && houseType.populationBonus) {
+    empire.population.addMax(houseType.populationBonus);
+  }
+  // 初始人口填满
+  empire.population.add(empire.population.max);
   
   empire.resources.add('wood', 500);
   empire.resources.add('stone', 300);

@@ -95,6 +95,11 @@ function connect() {
     if (data.stamina) {
       updateStaminaDisplay(data.stamina);
     }
+    
+    // 人口数据
+    if (data.population) {
+      updatePopulationDisplay(data.population);
+    }
   });
 
   // 资源更新
@@ -1635,6 +1640,26 @@ function updateStaminaDisplay(staminaData) {
   
   if (maxEl) {
     maxEl.textContent = staminaData.max || 100;
+  }
+}
+
+// 更新人口显示
+function updatePopulationDisplay(popData) {
+  const currentEl = document.getElementById('globalPopulation');
+  const maxEl = document.getElementById('maxPopulation');
+  
+  if (currentEl) {
+    currentEl.textContent = popData.current || 0;
+    // 人口不足时变红色
+    if (popData.current < 10) {
+      currentEl.style.color = '#f44336';
+    } else {
+      currentEl.style.color = '';
+    }
+  }
+  
+  if (maxEl) {
+    maxEl.textContent = popData.max || 0;
   }
 }
 
