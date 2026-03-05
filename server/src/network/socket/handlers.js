@@ -465,6 +465,7 @@ function createNewEmpire(playerId, playerName, socketId, io) {
   };
 
   // 添加初始建筑
+  // 添加初始建筑
   empire.buildings.add('warehouse_basic');
   empire.buildings.add('lumber_mill');
   empire.buildings.add('farm');
@@ -475,6 +476,16 @@ function createNewEmpire(playerId, playerName, socketId, io) {
   empire.buildings.add('hospital');
   empire.buildings.add('house');
   empire.buildings.add('blacksmith');
+  empire.buildings.add('wall');         // 城墙
+  empire.buildings.add('tower');        // 箭塔
+  empire.buildings.add('market');       // 市场
+  empire.buildings.add('fishery');      // 鱼塘
+  empire.buildings.add('orchard');      // 果园
+  empire.buildings.add('stables');      // 马厩
+  empire.buildings.add('arsenal');      // 军械库
+  empire.buildings.add('tavern');       // 酒馆
+  empire.buildings.add('watchtower');   // 瞭望塔
+  empire.buildings.add('moat');         // 护城河
   
   // 设置初始人口上限（1级民居 = 50人口）
   const houseType = BUILDING_TYPES.HOUSE;

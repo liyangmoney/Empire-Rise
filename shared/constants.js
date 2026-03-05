@@ -75,15 +75,26 @@ export const BUILDING_TYPES = {
     category: 'production',
     populationCost: 20
   },
-  CRYSTAL_MINE:     { 
-    id: 'crystal_mine',     
-    name: '水晶矿',   
+  // 资源生产类 - 更多资源建筑
+  FISHERY:          { 
+    id: 'fishery',          
+    name: '鱼塘',     
     maxLevel: 999, 
-    outputBase: 20,   
-    outputGrowth: 1.2,
-    description: '开采稀有水晶，用于高级科技和兵种，升级提高产量',
+    outputBase: 60,   
+    outputGrowth: 1.3,
+    description: '养鱼生产食物，适合靠近水源的城镇',
     category: 'production',
-    populationCost: 30
+    populationCost: 12
+  },
+  ORCHARD:          { 
+    id: 'orchard',          
+    name: '果园',     
+    maxLevel: 999, 
+    outputBase: 50,   
+    outputGrowth: 1.3,
+    description: '种植果树，产出稳定的食物来源',
+    category: 'production',
+    populationCost: 12
   },
   
   // 军事类
@@ -119,6 +130,38 @@ export const BUILDING_TYPES = {
     category: 'military',
     populationCost: 40
   },
+  WATCHTOWER:       { 
+    id: 'watchtower',       
+    name: '瞭望塔',   
+    maxLevel: 20,
+    description: '增加视野范围，提前发现敌军入侵',
+    category: 'military',
+    populationCost: 35
+  },
+  MOAT:             { 
+    id: 'moat',             
+    name: '护城河',   
+    maxLevel: 15,
+    description: '环绕城市的防御工事，延缓敌军进攻',
+    category: 'military',
+    populationCost: 80
+  },
+  STABLES:          { 
+    id: 'stables',          
+    name: '马厩',     
+    maxLevel: 20,
+    description: '训练骑兵和战马，提升骑兵训练速度',
+    category: 'military',
+    populationCost: 45
+  },
+  ARSENAL:          { 
+    id: 'arsenal',          
+    name: '军械库',   
+    maxLevel: 20,
+    description: '储存武器装备，解锁高级兵种和攻城器械',
+    category: 'military',
+    populationCost: 60
+  },
   
   // 经济类
   HOUSE:            { 
@@ -136,6 +179,32 @@ export const BUILDING_TYPES = {
     maxLevel: 15,
     description: '资源交易，每级降低2%交易损耗',
     category: 'economy',
+    populationCost: 25
+  },
+  TAVERN:           { 
+    id: 'tavern',           
+    name: '酒馆',     
+    maxLevel: 15,
+    description: '提升士兵士气，增加金币收入，可招募雇佣兵',
+    category: 'economy',
+    populationCost: 20
+  },
+  PORT:             { 
+    id: 'port',             
+    name: '港口',     
+    maxLevel: 20,
+    description: '海上贸易，获取稀有资源和大量金币',
+    category: 'economy',
+    populationCost: 50
+  },
+  MINE_SHAFT:       { 
+    id: 'mine_shaft',       
+    name: '矿井',     
+    maxLevel: 999,
+    outputBase: 30,
+    outputGrowth: 1.2,
+    description: '深层开采，产出少量铁矿和水晶',
+    category: 'production',
     populationCost: 25
   },
   
