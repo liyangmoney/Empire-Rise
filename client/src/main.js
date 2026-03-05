@@ -323,6 +323,10 @@ function renderResources(resources) {
     // 确保数据格式正确
     const amount = typeof data === 'object' ? (data.amount || 0) : (data || 0);
     const max = typeof data === 'object' ? (data.max || 1000) : 1000;
+    const rate = typeof data === 'object' ? (data.rate || 0) : 0; // 每小时产出
+    
+    // 计算每秒产出（保留1位小数）
+    const ratePerSecond = (rate / 3600).toFixed(1);
     
     const card = document.createElement('div');
     card.className = 'resource-card';
@@ -330,6 +334,7 @@ function renderResources(resources) {
       <div class="resource-name">${resourceNames[id] || id}</div>
       <div class="resource-value">${Math.floor(amount)}</div>
       <div class="resource-max">上限: ${Math.floor(max)}</div>
+      <div class="resource-rate" style="color: #4CAF50; font-size: 12px; margin-top: 5px;">+${ratePerSecond}/秒</div>
     `;
     container.appendChild(card);
   }

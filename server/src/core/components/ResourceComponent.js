@@ -103,7 +103,8 @@ export class ResourceComponent {
     for (const [id, data] of Object.entries(this.storage)) {
       snapshot[id] = {
         amount: data.amount,
-        max: data.maxCapacity
+        max: data.maxCapacity,
+        rate: this.productionRates[id] || 0  // 每小时产出速率
       };
     }
     return snapshot;
