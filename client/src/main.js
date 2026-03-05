@@ -324,12 +324,6 @@ function switchTab(tabName) {
 function renderResources(resources) {
   console.log('渲染资源:', resources); // 调试用
   
-  // 保存资源数据用于本地刷新
-  currentResources = JSON.parse(JSON.stringify(resources));
-  
-  // 启动本地资源刷新（如果还没启动）
-  startResourceLocalUpdate();
-  
   const container = document.getElementById('resources');
   container.innerHTML = '';
 
@@ -351,7 +345,7 @@ function renderResources(resources) {
     card.className = 'resource-card';
     card.innerHTML = `
       <div class="resource-name">${resourceNames[id] || id}</div>
-      <div class="resource-value" id="res-${id}">${Math.floor(amount)}</div>
+      <div class="resource-value">${Math.floor(amount)}</div>
       <div class="resource-max">上限: ${Math.floor(max)}</div>
       <div class="resource-rate" style="color: #4CAF50; font-size: 12px; margin-top: 5px;">+${ratePerSecond}/秒</div>
     `;
@@ -360,37 +354,6 @@ function renderResources(resources) {
   
   // 同时更新全局资源栏
   updateGlobalResources(resources);
-}
-
-// 启动资源本地刷新（每秒更新显示）
-function startResourceLocalUpdate() {
-  if (resourceUpdateInterval) return; // 已经启动了
-  
-  resourceUpdateInterval = setInterval(() => {
-    if (!currentResources) return;
-    
-    // 每秒根据产出速率增加资源（本地显示）
-    for (const [id, data] of Object.entries(currentResources)) {
-      const rate = data.rate || 0; // 每小时产出
-      const perSecond = rate / 3600; // 每秒产出
-      const max = data.max || 1000;
-      
-      // 增加资源（不超过上限）
-      data.amount = Math.min(max, (data.amount || 0) + perSecond);
-      
-      // 更新显示
-      const el = document.getElementById(`res-${id}`);
-      if (el) {
-        el.textContent = Math.floor(data.amount);
-      }
-      
-      // 更新全局资源栏
-      const globalEl = document.getElementById(`global${id.charAt(0).toUpperCase() + id.slice(1)}`);
-      if (globalEl) {
-        globalEl.textContent = Math.floor(data.amount);
-      }
-    }
-  }, 1000);
 }
 
 // 更新全局资源栏

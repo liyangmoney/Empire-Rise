@@ -73,13 +73,17 @@ export class GameLoop {
     const timeScale = empire.time?.speed || 1;
     const adjustedDelta = deltaTime * timeScale;
 
-    // 执行产出（使用基础速率 × 建筑加成，但不修改基础速率）
-    for (const [resId, baseRate] of Object.entries(empire.resources.productionRates)) {
-      const bonus = empire.buildings.calculateProductionBonus(resId);
-      const actualRate = baseRate * bonus * timeScale; // 实际产出速率
-      
-      // 直接产出资源，不修改 productionRates
-      if (actualRate > 0) {
+    // 执行产出（直接根据建筑等级计算）
+    const productionRates = {
+      wood: empire.buildings.getProductionRate('wood'),
+      food: empire.buildings.getProductionRate('food'),
+      stone: empire.buildings.getProductionRate('stone'),
+      iron: empire.buildings.getProductionRate('iron')
+    };
+    
+    for (const [resId, rate] of Object.entries(productionRates)) {
+      if (rate > 0) {
+        const actualRate = rate * timeScale;
         empire.resources.add(resId, actualRate * (adjustedDelta / 3600));
       }
     }

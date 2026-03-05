@@ -97,21 +97,21 @@ export class ResourceComponent {
 
   /**
    * 获取资源状态（用于发送给客户端）
+   * 产出速率完全根据建筑等级计算
    */
   getSnapshot(buildings) {
     const snapshot = {};
     for (const [id, data] of Object.entries(this.storage)) {
-      // 计算实际产出速率（基础速率 × 建筑加成）
-      let actualRate = this.productionRates[id] || 0;
-      if (buildings && actualRate > 0) {
-        const bonus = buildings.calculateProductionBonus(id);
-        actualRate = actualRate * bonus;
+      // 根据建筑等级计算产出速率
+      let actualRate = 0;
+      if (buildings) {
+        actualRate = buildings.getProductionRate(id);
       }
       
       snapshot[id] = {
         amount: data.amount,
         max: data.maxCapacity,
-        rate: actualRate  // 实际每小时产出（带加成）
+        rate: actualRate  // 实际每小时产出
       };
     }
     return snapshot;

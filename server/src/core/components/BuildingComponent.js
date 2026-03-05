@@ -197,4 +197,45 @@ export class BuildingComponent {
     
     return bonus;
   }
+
+  /**
+   * 获取指定资源的产出速率（每小时）
+   * 直接根据建筑等级计算
+   */
+  getProductionRate(resourceId) {
+    let baseRate = 0;
+    let level = 0;
+    
+    // 查找对应的建筑
+    for (const [typeId, building] of this.buildings) {
+      const type = Object.values(BUILDING_TYPES).find(b => b.id === typeId);
+      if (!type?.outputBase) continue;
+      
+      if (resourceId === 'wood' && typeId === 'lumber_mill') {
+        baseRate = type.outputBase;
+        level = building.level;
+      }
+      if (resourceId === 'food' && typeId === 'farm') {
+        baseRate = type.outputBase;
+        level = building.level;
+      }
+      if (resourceId === 'stone' && typeId === 'quarry') {
+        baseRate = type.outputBase;
+        level = building.level;
+      }
+      if (resourceId === 'iron' && typeId === 'iron_mine') {
+        baseRate = type.outputBase;
+        level = building.level;
+      }
+    }
+    
+    // 产出 = 基础产出 × 等级加成
+    // 1级 = 100%, 2级 = 120%, 3级 = 140% ...
+    if (baseRate > 0 && level > 0) {
+      const bonus = 1 + (level - 1) * 0.2; // 1级=1.0, 2级=1.2, 3级=1.4
+      return Math.floor(baseRate * bonus);
+    }
+    
+    return 0;
+  }
 }
