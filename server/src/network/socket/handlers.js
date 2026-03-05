@@ -6,6 +6,7 @@ import { ArmyComponent } from '../../core/components/ArmyComponent.js';
 import { GeneralComponent } from '../../core/components/GeneralComponent.js';
 import { TaskComponent } from '../../core/components/TaskComponent.js';
 import { TimeComponent } from '../../core/components/TimeComponent.js';
+import { StaminaComponent } from '../../core/components/StaminaComponent.js';
 import { TrainingSystem } from '../../core/systems/TrainingSystem.js';
 import { BattleSystem } from '../../core/systems/BattleSystem.js';
 import { RecruitSystem } from '../../core/systems/RecruitSystem.js';
@@ -49,17 +50,19 @@ export function registerSocketHandlers(io, gameWorld) {
 
       socket.emit('empire:init', {
         playerId,
+        playerName: empire.playerName,
         resources: empire.resources.getSnapshot(),
         buildings: empire.buildings.getSnapshot(),
         army: empire.army.getSnapshot(),
         generals: empire.generals.getSnapshot(),
         tasks: empire.tasks.getSnapshot(empire),
         time: empire.time?.getSnapshot() || { 
-          gameDate: '第1年 1月 1日', 
+          gameDate: '2026年 2月 13日', 
           timeOfDayName: '☀️ 早晨',
           speed: 1,
           isPaused: false 
         },
+        stamina: empire.stamina?.getSnapshot() || { current: 100, max: 100 },
         maxArmySize: trainingSystem.calculateMaxArmySize(empire),
       });
     });
@@ -72,12 +75,24 @@ export function registerSocketHandlers(io, gameWorld) {
         socket.emit(SOCKET_EVENTS.S_ERROR, { message: '帝国不存在' });
         return;
       }
+      
+      // 计算体力消耗
+      const staminaCost = Math.ceil(amount / 10); // 每10资源消耗1体力
+      const staminaResult = empire.stamina.consume(staminaCost);
+      
+      if (!staminaResult.success) {
+        socket.emit(SOCKET_EVENTS.S_ERROR, { 
+          message: `体力不足！需要${staminaCost}点体力，当前${staminaResult.remaining}点`
+        });
+        return;
+      }
+      
       const result = empire.resources.add(resourceType, amount);
       
       // 如果溢出，提示用户
       if (result.overflow > 0) {
         socket.emit(SOCKET_EVENTS.S_ERROR, { 
-          message: `仓库已满，${result.overflow}单位资源无法存储` 
+          message: `仓库已满，${result.overflow}单位资源无法存储`
         });
       }
       
@@ -89,7 +104,8 @@ export function registerSocketHandlers(io, gameWorld) {
       socket.emit(SOCKET_EVENTS.S_RESOURCE_UPDATE, {
         resourceId: resourceType,
         result,
-        allResources: empire.resources.getSnapshot()
+        allResources: empire.resources.getSnapshot(),
+        stamina: empire.stamina.getSnapshot()
       });
     });
 
@@ -418,7 +434,8 @@ function createNewEmpire(playerId, playerName, socketId, io) {
     army: new ArmyComponent(),
     generals: new GeneralComponent(),
     tasks: new TaskComponent(),
-    time: new TimeComponent(), // 新增时间组件
+    time: new TimeComponent(),
+    stamina: new StaminaComponent(), // 体力系统
   };
 
   empire.buildings.add('warehouse_basic');

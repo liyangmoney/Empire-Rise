@@ -86,12 +86,21 @@ function connect() {
       // 启动时间自动更新定时器
       startTimeUpdateInterval();
     }
+    
+    // 体力数据
+    if (data.stamina) {
+      updateStaminaDisplay(data.stamina);
+    }
   });
 
   // 资源更新
   socket.on('resource:update', (data) => {
     if (data.allResources) {
       renderResources(data.allResources);
+    }
+    // 更新体力
+    if (data.stamina) {
+      updateStaminaDisplay(data.stamina);
     }
   });
 
@@ -1279,6 +1288,26 @@ function updateTimeDisplay(timeData) {
     const timeOfDay = timeData.timeOfDayName || '☀️ 早晨';
     const realTime = timeData.realTime || '';
     timeOfDayEl.textContent = realTime ? `${timeOfDay} ${realTime}` : timeOfDay;
+  }
+}
+
+// 更新体力显示
+function updateStaminaDisplay(staminaData) {
+  const currentEl = document.getElementById('globalStamina');
+  const maxEl = document.getElementById('maxStamina');
+  
+  if (currentEl) {
+    currentEl.textContent = staminaData.current || 0;
+    // 体力低时变红色
+    if (staminaData.current < 20) {
+      currentEl.style.color = '#f44336';
+    } else {
+      currentEl.style.color = '';
+    }
+  }
+  
+  if (maxEl) {
+    maxEl.textContent = staminaData.max || 100;
   }
 }
 
