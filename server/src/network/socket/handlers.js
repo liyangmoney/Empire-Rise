@@ -526,6 +526,23 @@ export function registerSocketHandlers(io, gameWorld) {
 
     // ==================== 世界地图事件 ====================
 
+    // 获取完整世界地图
+    socket.on('map:getFullMap', (data) => {
+      const { playerId } = data;
+      if (!gameWorld.worldMap) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '地图未初始化' });
+      
+      const fullMap = gameWorld.worldMap.getPlayerFullMap(playerId);
+      socket.emit('map:fullMap', fullMap);
+    });
+
+    // 获取地图缩略图
+    socket.on('map:getMiniMap', () => {
+      if (!gameWorld.worldMap) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '地图未初始化' });
+      
+      const miniMap = gameWorld.worldMap.getMiniMapData(0.1);
+      socket.emit('map:miniMap', miniMap);
+    });
+
     // 获取地图视图
     socket.on('map:getView', (data) => {
       const { playerId } = data;

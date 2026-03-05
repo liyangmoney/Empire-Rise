@@ -249,6 +249,118 @@ export class WorldMapComponent {
   }
 
   /**
+   * 获取完整地图（用于客户端生成）
+   */
+  getFullMap() {
+    // 只返回地形ID，减少数据传输
+    const terrain = [];
+    for (let y = 0; y < MAP_SIZE; y++) {
+      const row = [];
+      for (let x = 0; x < MAP_SIZE; x++) {
+        row.push(this.map[y][x].terrain);
+      }
+      terrain.push(row);
+    }
+    
+    // 收集所有NPC位置
+    const npcs = [];
+    for (const [key, npcList] of this.npcs) {
+      const [x, y] = key.split(',').map(Number);
+      npcs.push({
+        x, y,
+        count: npcList.length,
+        hasEnemy: npcList.some(n => !n.isNeutral),
+        hasMerchant: npcList.some(n => n.isNeutral)
+      });
+    }
+    
+    // 收集所有城堡位置
+    const castles = [];
+    for (const [playerId, castle] of this.castles) {
+      castles.push({
+        x: castle.x,
+        y: castle.y,
+        name: castle.name,
+        isOwn: false // 客户端需要判断
+      });
+    }
+    
+    return {
+      size: MAP_SIZE,
+      seed: this.seed,
+      terrain,
+      npcs,
+      castles
+    };
+  }
+
+  /**
+   * 获取玩家视角的完整地图
+   */
+  getPlayerFullMap(playerId) {
+    const fullMap = this.getFullMap();
+    const myCastle = this.castles.get(playerId);
+    
+    // 标记自己的城堡
+    fullMap.castles = fullMap.castles.map(c => ({
+      ...c,
+      isOwn: myCastle && c.x === myCastle.x && c.y === myCastle.y
+    }));
+    
+    // 添加我的城堡（如果还没有）
+    if (myCastle && !fullMap.castles.find(c => c.x === myCastle.x && c.y === myCastle.y)) {
+      fullMap.castles.push({
+        x: myCastle.x,
+        y: myCastle.y,
+        name: myCastle.name,
+        isOwn: true
+      });
+    }
+    
+    return fullMap;
+  }
+
+  /**
+   * 生成地图缩略图数据（用于小地图显示）
+   */
+  getMiniMapData(scale = 0.1) {
+    const miniSize = Math.max(1, Math.floor(MAP_SIZE * scale));
+    const pixels = [];
+    
+    const terrainColors = {
+      plains: '#90EE90',
+      forest: '#228B22',
+      hills: '#DAA520',
+      mountains: '#808080',
+      river: '#4169E1',
+      lake: '#1E90FF',
+      desert: '#FFD700',
+      swamp: '#556B2F'
+    };
+    
+    const blockSize = Math.floor(MAP_SIZE / miniSize);
+    
+    for (let my = 0; my < miniSize; my++) {
+      for (let mx = 0; mx < miniSize; mx++) {
+        // 取区块中最常见的地形
+        const y = my * blockSize;
+        const x = mx * blockSize;
+        const terrain = this.map[y]?.[x]?.terrain || 'plains';
+        pixels.push(terrainColors[terrain] || '#ccc');
+      }
+    }
+    
+    return {
+      size: miniSize,
+      pixels,
+      castles: Array.from(this.castles.values()).map(c => ({
+        x: Math.floor(c.x / blockSize),
+        y: Math.floor(c.y / blockSize)
+      }))
+    };
+  }
+
+  /**
    * 获取地图快照（用于客户端显示）
    */
   getMapSnapshot() {
