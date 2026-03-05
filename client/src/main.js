@@ -504,6 +504,14 @@ function renderBuildings(buildings, upgradeQueue = []) {
         <p style="color:#aaa;font-size:13px;margin-top:8px;line-height:1.4;">${building.description || '暂无介绍'}</p>
         ${upgradeHtml}
       `;
+      
+      // 点击显示详细信息
+      item.style.cursor = 'pointer';
+      item.onclick = (e) => {
+        if (e.target.tagName === 'BUTTON') return; // 点击按钮时不弹出
+        showBuildingDetail(building);
+      };
+      
       listDiv.appendChild(item);
     }
     
@@ -533,6 +541,142 @@ function getBuildingName(buildingId) {
     general_camp: '🎖️ 将领营'
   };
   return names[buildingId] || buildingId;
+}
+
+// 显示建筑详细信息
+function showBuildingDetail(building) {
+  const BUILDING_DETAILS = {
+    lumber_mill: {
+      title: '🌲 伐木场',
+      detail: '伐木场是帝国木材的主要来源。升级伐木场可以提高木材产量，每升一级产量增加20%。',
+      effect: '每小时产出木材',
+      levelBonus: '每级 +20% 产量'
+    },
+    farm: {
+      title: '🌾 农场',
+      detail: '农场生产粮食，用于训练军队和维持士兵士气。粮食不足会导致军队士气下降。',
+      effect: '每小时产出粮食',
+      levelBonus: '每级 +20% 产量'
+    },
+    quarry: {
+      title: '⛰️ 采石场',
+      detail: '采石场开采石材，用于建造防御建筑和加固城墙。',
+      effect: '每小时产出石材',
+      levelBonus: '每级 +20% 产量'
+    },
+    iron_mine: {
+      title: '⚙️ 铁矿场',
+      detail: '铁矿场开采铁矿，用于打造高级装备和训练进阶兵种。',
+      effect: '每小时产出铁矿',
+      levelBonus: '每级 +20% 产量'
+    },
+    crystal_mine: {
+      title: '💎 水晶矿',
+      detail: '水晶矿开采稀有水晶，用于研究高级科技和召唤稀有兵种。',
+      effect: '每小时产出水晶',
+      levelBonus: '每级 +20% 产量'
+    },
+    warehouse_basic: {
+      title: '📦 基础仓库',
+      detail: '基础仓库用于储存木材、石材、粮食等基础资源。升级可以提升仓库容量。',
+      effect: '增加基础资源存储上限',
+      levelBonus: '每级 +50% 容量'
+    },
+    warehouse_special: {
+      title: '📦 特殊仓库',
+      detail: '特殊仓库用于储存铁矿、水晶等稀有资源。升级可以提升仓库容量。',
+      effect: '增加稀有资源存储上限',
+      levelBonus: '每级 +50% 容量'
+    },
+    barracks: {
+      title: '⚔️ 兵营',
+      detail: '兵营是训练士兵的地方。升级兵营可以解锁更高级的兵种，并加快训练速度。',
+      effect: '训练士兵、解锁新兵种',
+      levelBonus: '每级提升训练速度10%'
+    },
+    hospital: {
+      title: '🏥 医院',
+      detail: '医院治疗战斗中的伤兵。每级医院每小时可以恢复一定数量的伤病单位。',
+      effect: '恢复伤兵',
+      levelBonus: '每级每小时恢复+5单位'
+    },
+    wall: {
+      title: '🛡️ 城墙',
+      detail: '城墙是城市的防御工事，可以抵御敌人的进攻。升级城墙提升城防耐久。',
+      effect: '增加城防耐久',
+      levelBonus: '每级 +5% 耐久'
+    },
+    tower: {
+      title: '🏹 箭塔',
+      detail: '箭塔是防御建筑，可以在守城战中攻击敌人。',
+      effect: '守城战增加攻击力',
+      levelBonus: '每级 +10% 攻击力'
+    },
+    house: {
+      title: '🏠 民居',
+      detail: '民居增加帝国的人口上限和金币税收。人口是训练军队的基础。',
+      effect: '增加人口上限和金币产出',
+      levelBonus: '每级 +50人口、+5金币/小时'
+    },
+    market: {
+      title: '🏪 市场',
+      detail: '市场用于资源交易。升级市场可以降低交易损耗。',
+      effect: '资源交易',
+      levelBonus: '每级 -2% 交易损耗'
+    },
+    blacksmith: {
+      title: '🔨 铁匠铺',
+      detail: '铁匠铺打造士兵装备。升级可以解锁更高级的装备配方。',
+      effect: '锻造装备',
+      levelBonus: '解锁高级装备、提升属性'
+    },
+    tech_institute: {
+      title: '🔬 研究院',
+      detail: '研究院研究各种科技，提升帝国的整体实力。',
+      effect: '研究科技',
+      levelBonus: '解锁新科技、提升加成效果'
+    },
+    imperial_palace: {
+      title: '👑 皇宫',
+      detail: '皇宫是帝国的核心建筑，象征着帝国的荣耀。升级皇宫可以提升所有资源产量和军队上限。',
+      effect: '提升全局产量和军队上限',
+      levelBonus: '每级 +5% 全局加成'
+    },
+    general_camp: {
+      title: '🎖️ 将领营',
+      detail: '将领营是招募和培养将领的地方。升级可以增加将领上限和培养速度。',
+      effect: '招募将领、提升将领能力',
+      levelBonus: '增加将领上限、加快培养'
+    }
+  };
+
+  const info = BUILDING_DETAILS[building.id] || {
+    title: getBuildingName(building.id),
+    detail: building.description || '暂无详细介绍',
+    effect: '未知',
+    levelBonus: '未知'
+  };
+
+  const nextLevel = building.level + 1;
+  
+  showModal({
+    title: info.title,
+    content: `
+      <div style="text-align:left;line-height:1.6;">
+        <p style="color:#aaa;margin-bottom:15px;">${info.detail}</p>
+        <hr style="border-color:rgba(255,215,0,0.3);margin:15px 0;">
+        <p><strong style="color:#ffd700;">当前等级:</strong> Lv.${building.level} / ${building.maxLevel}</p>
+        <p><strong style="color:#ffd700;">建筑功能:</strong> ${info.effect}</p>
+        <p><strong style="color:#ffd700;">升级效果:</strong> ${info.levelBonus}</p>
+        ${building.level < building.maxLevel ? `
+          <hr style="border-color:rgba(255,215,0,0.3);margin:15px 0;">
+          <p style="color:#4CAF50;">下一级 (Lv.${nextLevel}) 将提升效果</p>
+        ` : '<p style="color:#888;margin-top:15px;">🏆 已满级</p>'}
+      </div>
+    `,
+    showCancel: false,
+    confirmText: '关闭'
+  });
 }
 
 // 启动建筑升级进度刷新
