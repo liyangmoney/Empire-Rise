@@ -337,6 +337,7 @@
         <button class="tab" onclick="switchTab('buildings')">🏗️ 建筑</button>
         <button class="tab" onclick="switchTab('army')">⚔️ 军队</button>
         <button class="tab" onclick="switchTab('generals')">🎖️ 将领</button>
+        <button class="tab" onclick="switchTab('map')">🗺️ 地图</button>
         <button class="tab" onclick="switchTab('battle')">🎯 战斗</button>
         <button class="tab" onclick="switchTab('tech')">🔬 科技</button>
         <button class="tab" onclick="switchTab('tasks')">📋 任务</button>
@@ -410,6 +411,60 @@
           <h3>编队信息</h3>
           <div id="formations">
             <p style="text-align:center;color:#888;">暂无编队信息</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 地图面板 -->
+      <div id="mapTab" class="tab-content">
+        <div class="panel">
+          <h3>🗺️ 世界地图</h3>
+          <div style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 5px;">
+              <span style="width: 16px; height: 16px; background: #8B4513; border-radius: 3px;"></span>
+              <small>城堡</small>
+            </div>
+            <div style="display: flex; align-items: center; gap: 5px;">
+              <span style="width: 16px; height: 16px; background: #90EE90; border-radius: 3px;"></span>
+              <small>平原</small>
+            </div>
+            <div style="display: flex; align-items: center; gap: 5px;">
+              <span style="width: 16px; height: 16px; background: #228B22; border-radius: 3px;"></span>
+              <small>森林</small>
+            </div>
+            <div style="display: flex; align-items: center; gap: 5px;">
+              <span style="width: 16px; height: 16px; background: #808080; border-radius: 3px;"></span>
+              <small>山地</small>
+            </div>
+            <div style="display: flex; align-items: center; gap: 5px;">
+              <span style="width: 16px; height: 16px; background: #4169E1; border-radius: 3px;"></span>
+              <small>河流</small>
+            </div>
+            <div style="display: flex; align-items: center; gap: 5px;">
+              <span style="width: 16px; height: 16px; background: #FFD700; border-radius: 3px;"></span>
+              <small>沙漠</small>
+            </div>
+            <div style="display: flex; align-items: center; gap: 5px;">
+              <span style="width: 16px; height: 16px; background: #FF4500; border-radius: 50%;"></span>
+              <small>敌人</small>
+            </div>
+            <div style="display: flex; align-items: center; gap: 5px;">
+              <span style="width: 16px; height: 16px; background: #9370DB; border-radius: 50%;"></span>
+              <small>商人</small>
+            </div>
+          </div>
+          <div id="worldMap" style="display: grid; grid-template-columns: repeat(21, 24px); gap: 1px; justify-content: center; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; overflow: auto;">
+            <p style="grid-column: 1 / -1; text-align: center; color: #888;">加载地图中...</p>
+          </div>
+          <div id="castleInfo" style="margin-top: 15px; padding: 10px; background: rgba(255,215,0,0.1); border-radius: 8px; display: none;">
+            <p><strong>🏰 城堡位置:</strong> <span id="castlePos">-</span></p>
+            <p style="color: #888; font-size: 12px;">点击空地块可迁移城堡（消耗资源）</p>
+          </div>
+        </div>
+        <div class="panel">
+          <h3>👁️ 区域信息</h3>
+          <div id="tileInfo">
+            <p style="text-align:center;color:#888;">点击地图查看详情</p>
           </div>
         </div>
       </div>
