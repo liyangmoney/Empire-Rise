@@ -196,6 +196,62 @@ function connect() {
   socket.on('battle:status', (data) => {
     console.log('Battle status:', data);
   });
+
+  // 监听升级预览
+  socket.on('building:upgradePreview', (preview) => {
+    if (!preview) {
+      showError('该建筑无法升级');
+      return;
+    }
+
+    const buildingNames = {
+      warehouse_basic: '基础仓库',
+      farm: '农场',
+      lumber_mill: '伐木场',
+      quarry: '采石场',
+      iron_mine: '铁矿场',
+      crystal_mine: '水晶矿',
+      barracks: '兵营',
+      hospital: '医院',
+      wall: '城墙',
+      tower: '箭塔',
+      house: '民居',
+      imperial_palace: '皇宫',
+      general_camp: '将领营',
+      tech_institute: '科技院'
+    };
+
+    const durationText = preview.duration < 60
+      ? `${preview.duration}秒`
+      : preview.duration < 3600
+        ? `${Math.ceil(preview.duration / 60)}分钟`
+        : `${Math.floor(preview.duration / 3600)}小时${Math.ceil((preview.duration % 3600) / 60)}分钟`;
+
+    showCostConfirm(
+      `升级${buildingNames[preview.buildingTypeId] || preview.buildingTypeId} (Lv.${preview.currentLevel} → Lv.${preview.nextLevel})`,
+      preview.cost,
+      () => {
+        socket.emit('building:upgrade', { playerId, buildingTypeId: preview.buildingTypeId });
+      },
+      `预计升级时间: ${durationText}`
+    );
+  });
+
+  // 监听升级开始
+  socket.on('building:upgradeStarted', (data) => {
+    console.log('Building upgrade started:', data);
+    renderResources(data.resources);
+    updateBuildingQueue([data.task]);
+    showSuccess(`开始升级建筑！预计${data.task.durationFormatted}完成`);
+  });
+
+  // 监听升级完成
+  socket.on('building:upgradeCompleted', (data) => {
+    console.log('Building upgrade completed:', data);
+    renderBuildings(data.buildings);
+    renderResources(data.resources);
+    showSuccess(`建筑升级完成！升级至Lv.${data.task.toLevel}`);
+  });
 }
 
 // 更新连接状态
@@ -585,62 +641,6 @@ function upgradeBuilding(buildingTypeId) {
   // 从服务器获取升级预览
   socket.emit('building:upgradePreview', { playerId, buildingTypeId });
 }
-
-// 监听升级预览
-socket.on('building:upgradePreview', (preview) => {
-  if (!preview) {
-    showError('该建筑无法升级');
-    return;
-  }
-  
-  const buildingNames = {
-    warehouse_basic: '基础仓库',
-    farm: '农场',
-    lumber_mill: '伐木场',
-    quarry: '采石场',
-    iron_mine: '铁矿场',
-    crystal_mine: '水晶矿',
-    barracks: '兵营',
-    hospital: '医院',
-    wall: '城墙',
-    tower: '箭塔',
-    house: '民居',
-    imperial_palace: '皇宫',
-    general_camp: '将领营',
-    tech_institute: '科技院'
-  };
-  
-  const durationText = preview.duration < 60 
-    ? `${preview.duration}秒` 
-    : preview.duration < 3600 
-      ? `${Math.ceil(preview.duration / 60)}分钟`
-      : `${Math.floor(preview.duration / 3600)}小时${Math.ceil((preview.duration % 3600) / 60)}分钟`;
-  
-  showCostConfirm(
-    `升级${buildingNames[preview.buildingTypeId] || preview.buildingTypeId} (Lv.${preview.currentLevel} → Lv.${preview.nextLevel})`,
-    preview.cost,
-    () => {
-      socket.emit('building:upgrade', { playerId, buildingTypeId: preview.buildingTypeId });
-    },
-    `预计升级时间: ${durationText}`
-  );
-});
-
-// 监听升级开始
-socket.on('building:upgradeStarted', (data) => {
-  console.log('Building upgrade started:', data);
-  renderResources(data.resources);
-  updateBuildingQueue([data.task]);
-  showSuccess(`开始升级建筑！预计${data.task.durationFormatted}完成`);
-});
-
-// 监听升级完成
-socket.on('building:upgradeCompleted', (data) => {
-  console.log('Building upgrade completed:', data);
-  renderBuildings(data.buildings);
-  renderResources(data.resources);
-  showSuccess(`建筑升级完成！升级至Lv.${data.task.toLevel}`);
-});
 
 // 更新建筑升级队列显示
 function updateBuildingQueue(queue) {
