@@ -7,19 +7,31 @@
 export function getBuildingUpgradeTime(buildingTypeId, level) {
   const baseTimes = {
     warehouse_basic: 30,   // 仓库：30秒基础
+    warehouse_special: 40, // 特殊仓库：40秒基础
     farm: 60,              // 农场：1分钟基础
+    fishery: 50,           // 鱼塘：50秒基础
+    orchard: 70,           // 果园：70秒基础
     lumber_mill: 60,       // 伐木场：1分钟基础
     quarry: 90,            // 采石场：1.5分钟基础
     iron_mine: 120,        // 铁矿场：2分钟基础
     crystal_mine: 180,     // 水晶矿：3分钟基础
+    mine_shaft: 150,       // 矿井：2.5分钟基础
     barracks: 120,         // 兵营：2分钟基础
+    stables: 150,          // 马厩：2.5分钟基础
     hospital: 90,          // 医院：1.5分钟基础
     wall: 150,             // 城墙：2.5分钟基础
     tower: 180,            // 箭塔：3分钟基础
+    watchtower: 120,       // 瞭望塔：2分钟基础
+    moat: 200,             // 护城河：3.5分钟基础
+    arsenal: 180,          // 军械库：3分钟基础
     house: 45,             // 民居：45秒基础
+    market: 60,            // 市场：1分钟基础
+    tavern: 90,            // 酒馆：1.5分钟基础
+    port: 240,             // 港口：4分钟基础
+    blacksmith: 150,       // 铁匠铺：2.5分钟基础
+    tech_institute: 240,   // 科技院：4分钟基础
     imperial_palace: 300,  // 皇宫：5分钟基础
     general_camp: 120,     // 将领营：2分钟基础
-    tech_institute: 240,   // 科技院：4分钟基础
   };
   
   const baseTime = baseTimes[buildingTypeId] || 60;
