@@ -1222,7 +1222,7 @@ socket.on('time:update', (data) => {
 // 自动修复：如果10秒后时间仍显示默认值，请求重新同步
 setTimeout(() => {
   const gameDateEl = document.getElementById('gameDate');
-  if (gameDateEl && gameDateEl.textContent === '第1年 1月 1日' && socket && playerId) {
+  if (gameDateEl && gameDateEl.textContent === '2026年 2月 13日' && socket && playerId) {
     console.log('时间显示异常，请求重新同步...');
     socket.emit('time:get', { playerId });
   }
@@ -1235,7 +1235,7 @@ function updateTimeDisplay(timeData) {
   const timeOfDayEl = document.getElementById('timeOfDay');
   
   if (gameDateEl) {
-    gameDateEl.textContent = timeData.gameDate || '第1年 1月 1日';
+    gameDateEl.textContent = timeData.gameDate || '2026年 2月 13日';
   }
   
   if (timeOfDayEl) {

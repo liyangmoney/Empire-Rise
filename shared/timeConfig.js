@@ -49,18 +49,20 @@ export function gameToRealTime(gameSeconds, speed = TIME_SCALE.NORMAL) {
 /**
  * 格式化游戏时间为日期字符串
  * @param {number} totalGameSeconds 总游戏秒数
- * @returns {string} 格式化日期 "第X年 Y月 Z日"
+ * @returns {string} 格式化日期 "2026年 Y月 Z日"
  */
 export function formatGameDate(totalGameSeconds) {
   const totalDays = Math.floor(totalGameSeconds / GAME_TIME.DAY);
   
-  // 游戏内年份从第1年开始，每月30天
-  const gameYear = Math.floor(totalDays / 360) + 1;
-  const remainingDays = totalDays % 360;
-  const gameMonth = Math.floor(remainingDays / 30) + 1;
-  const gameDay = (remainingDays % 30) + 1;
+  // 从2026年2月13日开始计算
+  const startDate = new Date(2026, 1, 13); // 月份从0开始，1=2月
+  const currentDate = new Date(startDate.getTime() + totalDays * 24 * 60 * 60 * 1000);
   
-  return `第${gameYear}年 ${gameMonth}月 ${gameDay}日`;
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth() + 1; // 月份从0开始，需要+1
+  const day = currentDate.getDate();
+  
+  return `${year}年 ${month}月 ${day}日`;
 }
 
 /**
