@@ -197,6 +197,19 @@ function connect() {
     console.log('Battle status:', data);
   });
 
+  // 任务系统事件监听
+  socket.on('task:list', (data) => {
+    console.log('Tasks:', data);
+    tasksData = data;
+    renderTasks(data);
+  });
+
+  socket.on('task:rewardClaimed', (data) => {
+    showSuccess('任务奖励领取成功！');
+    renderResources(data.resources);
+    renderTasks(data.tasks);
+  });
+
   // 监听升级预览
   socket.on('building:upgradePreview', (preview) => {
     if (!preview) {
@@ -1195,19 +1208,6 @@ function claimTaskReward(taskId) {
   
   socket.emit('task:claimReward', { playerId, taskId });
 }
-
-// 添加 Socket 事件监听
-socket.on('task:list', (data) => {
-  console.log('Tasks:', data);
-  tasksData = data;
-  renderTasks(data);
-});
-
-socket.on('task:rewardClaimed', (data) => {
-  showSuccess('任务奖励领取成功！');
-  renderResources(data.resources);
-  renderTasks(data.tasks);
-});
 
 // 在 switchTab 中添加任务标签
 const originalSwitchTab = switchTab;
