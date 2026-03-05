@@ -341,15 +341,23 @@ function renderBuildings(buildings) {
   container.innerHTML = '';
   const names = {
     warehouse_basic: '基础仓库', warehouse_special: '特殊仓库',
-    lumber_mill: '伐木场', farm: '农场', barracks: '兵营'
+    lumber_mill: '伐木场', farm: '农场', barracks: '兵营',
+    quarry: '采石场', iron_mine: '铁矿场', crystal_mine: '水晶矿',
+    hospital: '医院', wall: '城墙', tower: '箭塔',
+    house: '民居', imperial_palace: '皇宫', general_camp: '将领营',
+    tech_institute: '科技院'
   };
 
   for (const [id, data] of Object.entries(buildings)) {
     const item = document.createElement('div');
     item.className = 'unit-card';
+    
+    const canUpgrade = data.level < data.maxLevel;
+    
     item.innerHTML = `
       <h4>${names[id] || id} - Lv.${data.level}</h4>
       <p style="color:#888;">最高等级: ${data.maxLevel}</p>
+      ${canUpgrade ? `<button class="btn-primary" onclick="upgradeBuilding('${id}')">升级</button>` : '<p style="color:#666;">已满级</p>'}
     `;
     container.appendChild(item);
   }
