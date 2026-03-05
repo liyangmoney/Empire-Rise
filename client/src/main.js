@@ -354,7 +354,8 @@ function renderResources(resources) {
 
   const resourceNames = {
     wood: '木材 🌲', stone: '石材 ⛰️', food: '粮食 🌾',
-    iron: '铁矿 ⚙️', crystal: '水晶 💎', gold: '金币 💰'
+    iron: '铁矿 ⚙️', crystal: '水晶 💎', gold: '金币 💰',
+    fish_product: '鱼产品 🐟', fruit: '水果 🍎', premium_food: '精品食材 🍖'
   };
 
   for (const [id, data] of Object.entries(resources)) {
@@ -804,7 +805,7 @@ function renderTrainingPreview(data) {
   
   const div = document.getElementById('trainingPreview');
   
-  const resourceNames = { wood: '木材', stone: '石材', food: '粮食', iron: '铁矿', crystal: '水晶', gold: '金币' };
+  const resourceNames = { wood: '木材', stone: '石材', food: '粮食', iron: '铁矿', crystal: '水晶', gold: '金币', fish_product: '鱼产品', fruit: '水果', premium_food: '精品食材' };
   let costText = '';
   for (const [res, amount] of Object.entries(preview.cost)) {
     costText += `${resourceNames[res] || res}: ${amount} `;
@@ -944,7 +945,7 @@ function showBattleResult(data) {
   const isVictory = result.winner === 'attacker';
   
   // 战斗结果摘要
-  const resourceNames = { wood: '木材', stone: '石材', food: '粮食', iron: '铁矿', crystal: '水晶', gold: '金币' };
+  const resourceNames = { wood: '木材', stone: '石材', food: '粮食', iron: '铁矿', crystal: '水晶', gold: '金币', fish_product: '鱼产品', fruit: '水果', premium_food: '精品食材' };
   const unitNames = { infantry: '步兵', archer: '弓兵', cavalry: '骑兵', mage: '魔法兵' };
   
   let lootText = '';
