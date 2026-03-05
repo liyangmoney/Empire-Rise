@@ -55,9 +55,13 @@ export class TimeComponent {
     const realMinutes = now.getMinutes();
     const realSeconds = now.getSeconds();
     
-    // 计算游戏内总秒数（从起始日期开始 + 今天的时间）
+    // 计算从起始日期到现在的天数（只取整天）
+    const currentGameTime = this.getCurrentGameTime();
+    const daysPassed = Math.floor(currentGameTime / GAME_TIME.DAY);
+    
+    // 游戏内总秒数 = 天数 + 今天的时间（使用现实时间）
     const todaySeconds = realHours * 3600 + realMinutes * 60 + realSeconds;
-    const gameTime = this.getCurrentGameTime() + todaySeconds;
+    const gameTime = daysPassed * GAME_TIME.DAY + todaySeconds;
     
     const timeOfDay = getTimeOfDay(todaySeconds); // 基于现实时间判断时间段
     
@@ -70,7 +74,7 @@ export class TimeComponent {
       speed: this.speed,
       speedName: this.getSpeedName(this.speed),
       isPaused: this.isPaused,
-      dayCount: Math.floor(gameTime / GAME_TIME.DAY),
+      dayCount: daysPassed,
       // 添加现实时间信息
       realTime: `${realHours.toString().padStart(2, '0')}:${realMinutes.toString().padStart(2, '0')}:${realSeconds.toString().padStart(2, '0')}`
     };
