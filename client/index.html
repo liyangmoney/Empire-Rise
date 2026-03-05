@@ -338,6 +338,7 @@
         <button class="tab" onclick="switchTab('army')">⚔️ 军队</button>
         <button class="tab" onclick="switchTab('generals')">🎖️ 将领</button>
         <button class="tab" onclick="switchTab('battle')">🎯 战斗</button>
+        <button class="tab" onclick="switchTab('tech')">🔬 科技</button>
         <button class="tab" onclick="switchTab('tasks')">📋 任务</button>
       </div>
 
@@ -353,6 +354,8 @@
             <button onclick="collect('iron', 20)">⛏️ 开采铁矿 +20</button>
             <button onclick="collect('crystal', 5)">💎 挖掘水晶 +5</button>
             <button onclick="collect('gold', 10)">💰 搜寻金币 +10</button>
+            <button onclick="collect('fish_product', 5)">🐟 捕鱼 +5</button>
+            <button onclick="collect('fruit', 5)">🍎 采摘水果 +5</button>
           </div>
         </div>
       </div>
@@ -407,6 +410,22 @@
           <h3>编队信息</h3>
           <div id="formations">
             <p style="text-align:center;color:#888;">暂无编队信息</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 科技面板 -->
+      <div id="techTab" class="tab-content">
+        <div class="panel">
+          <h3>🔬 农业科技</h3>
+          <div id="techList">
+            <p style="text-align:center;color:#888;">加载中...</p>
+          </div>
+        </div>
+        <div class="panel">
+          <h3>📚 已研究科技</h3>
+          <div id="researchedTechs">
+            <p style="text-align:center;color:#888;">暂无</p>
           </div>
         </div>
       </div>

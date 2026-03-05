@@ -1,5 +1,5 @@
 // server/src/core/systems/GameLoop.js
-import { TICK_RATE } from '../../../../shared/constants.js';
+import { TICK_RATE, AGRICULTURE_TECHS } from '../../../../shared/constants.js';
 import { GAME_TIME } from '../../../../shared/timeConfig.js';
 
 /**
@@ -52,9 +52,20 @@ export class GameLoop {
       }
     }
 
-    // 更新所有帝国（资源产出 + 军队系统）
+    // 更新所有帝国（资源产出 + 军队系统 + 科技研究）
     for (const empire of this.gameWorld.empires.values()) {
       this.updateEmpire(empire, deltaTime);
+      // 更新科技研究进度
+      if (empire.tech) {
+        const result = empire.tech.update(deltaTime * 1000); // 转换为毫秒
+        if (result?.completed && empire.socketId && empire._io) {
+          const tech = AGRICULTURE_TECHS[result.completed];
+          empire._io.to(empire.socketId).emit('tech:researchCompleted', {
+            techId: result.completed,
+            tech: tech ? { name: tech.name, effect: tech.effect } : null
+          });
+        }
+      }
     }
 
     // 更新所有NPC（简单AI）
@@ -88,6 +99,9 @@ export class GameLoop {
         empire.resources.add(resId, actualRate * (adjustedDelta / 3600));
       }
     }
+
+    // ===== 特殊资源产出（鱼塘、果园）=====
+    this.updateSpecialResources(empire, adjustedDelta, timeScale);
 
     // ===== 建筑系统更新 =====
     if (empire.buildings) {
@@ -247,6 +261,65 @@ export class GameLoop {
           if (toHeal > 0) {
             army.healWounded(unitTypeId, toHeal);
           }
+        }
+      }
+    }
+  }
+
+  /**
+   * 更新特殊资源产出（鱼塘、果园）
+   */
+  updateSpecialResources(empire, deltaTime, timeScale) {
+    if (!empire.buildings || !empire.resources) return;
+
+    // 获取科技加成
+    const techEffects = empire.tech?.getEffects?.() || {};
+
+    // ===== 鱼塘产出 =====
+    const fisheryLevel = empire.buildings.getLevel('fishery');
+    if (fisheryLevel > 0) {
+      // 基础鱼产品产出概率：每级0.5%/小时
+      const baseFishChance = 0.005 * fisheryLevel;
+      const techBonus = techEffects.fishProductChance || 0;
+      const fishChance = (baseFishChance + techBonus) * timeScale;
+
+      // 每小时尝试产出
+      const hoursElapsed = deltaTime / 3600;
+      if (Math.random() < fishChance * hoursElapsed) {
+        const baseAmount = 1;
+        const techBonusAmount = techEffects.fishProductBonus || 0;
+        const amount = Math.max(1, Math.floor(baseAmount * (1 + techBonusAmount)));
+        empire.resources.add('fish_product', amount);
+      }
+    }
+
+    // ===== 果园产出 =====
+    const orchardLevel = empire.buildings.getLevel('orchard');
+    if (orchardLevel > 0) {
+      // 基础水果产出概率：每级0.5%/小时
+      const baseFruitChance = 0.005 * orchardLevel;
+      const techBonus = techEffects.fruitChance || 0;
+      const fruitChance = (baseFruitChance + techBonus) * timeScale;
+
+      // 每小时尝试产出
+      const hoursElapsed = deltaTime / 3600;
+      if (Math.random() < fruitChance * hoursElapsed) {
+        empire.resources.add('fruit', 1);
+      }
+    }
+
+    // ===== 精品食材合成 =====
+    if (techEffects.enablePremiumFood) {
+      const fishProd = empire.resources.get('fish_product');
+      const fruit = empire.resources.get('fruit');
+
+      // 每10个鱼产品 + 10个水果 = 1个精品食材
+      if (fishProd >= 10 && fruit >= 10) {
+        const canCraft = Math.min(Math.floor(fishProd / 10), Math.floor(fruit / 10));
+        if (canCraft > 0) {
+          empire.resources.consume('fish_product', canCraft * 10);
+          empire.resources.consume('fruit', canCraft * 10);
+          empire.resources.add('premium_food', canCraft);
         }
       }
     }

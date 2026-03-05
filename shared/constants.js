@@ -11,6 +11,10 @@ export const RESOURCE_TYPES = {
   IRON:   { id: 'iron',   name: '铁矿', category: 'special',  description: '高阶科技、进阶兵种' },
   CRYSTAL:{ id: 'crystal',name: '水晶', category: 'special',  description: '稀有兵种、终极科技' },
   GOLD:   { id: 'gold',   name: '金币', category: 'currency', description: '通用货币' },
+  // 新增：渔业和农业特殊资源
+  FISH_PRODUCT:   { id: 'fish_product',   name: '鱼产品',   category: 'special', description: '高质量蛋白质，提升士兵体力恢复' },
+  FRUIT:          { id: 'fruit',          name: '水果',     category: 'special', description: '提升士气，可用于酿造果酒' },
+  PREMIUM_FOOD:   { id: 'premium_food',   name: '精品食材', category: 'rare',    description: '高级食材，用于宴会和招募高级兵种' },
 };
 
 export const BUILDING_TYPES = {
@@ -265,3 +269,98 @@ export const SOCKET_EVENTS = {
 };
 
 export const TICK_RATE = 1000; // 游戏心跳 1秒
+
+// 渔业和农业科技研究
+export const AGRICULTURE_TECHS = {
+  // 渔业科技
+  FISH_BREEDING: {
+    id: 'fish_breeding',
+    name: '良种繁育',
+    description: '培育优良鱼种，提升鱼塘产量15%',
+    category: 'fishery',
+    cost: { wood: 200, food: 100, gold: 50 },
+    effect: { fisheryOutputBonus: 0.15 },
+    requireLevel: 3,
+  },
+  FISH_NET_TECH: {
+    id: 'fish_net_tech',
+    name: '渔网技术',
+    description: '改进渔网，提升鱼塘产量20%，并有10%几率产出鱼产品',
+    category: 'fishery',
+    cost: { wood: 300, iron: 50, gold: 80 },
+    effect: { fisheryOutputBonus: 0.20, fishProductChance: 0.10 },
+    requireLevel: 5,
+  },
+  AQUACULTURE: {
+    id: 'aquaculture',
+    name: '水产养殖',
+    description: '现代化水产养殖技术，鱼塘产量+25%，鱼产品产出+15%',
+    category: 'fishery',
+    cost: { wood: 500, stone: 200, iron: 100, crystal: 5 },
+    effect: { fisheryOutputBonus: 0.25, fishProductBonus: 0.15 },
+    requireLevel: 8,
+  },
+  
+  // 农业科技  
+  CROP_ROTATION: {
+    id: 'crop_rotation',
+    name: '轮作制度',
+    description: '科学轮作，农场产量+15%，果园产量+10%',
+    category: 'agriculture',
+    cost: { wood: 150, food: 100, gold: 40 },
+    effect: { farmOutputBonus: 0.15, orchardOutputBonus: 0.10 },
+    requireLevel: 3,
+  },
+  IRRIGATION: {
+    id: 'irrigation',
+    name: '水利灌溉',
+    description: '建设灌溉系统，农场和果园产量+20%',
+    category: 'agriculture',
+    cost: { wood: 300, stone: 150, gold: 60 },
+    effect: { farmOutputBonus: 0.20, orchardOutputBonus: 0.20 },
+    requireLevel: 5,
+  },
+  GRAFTING_TECH: {
+    id: 'grafting_tech',
+    name: '嫁接技术',
+    description: '果树嫁接改良，果园产量+25%，10%几率产出水果',
+    category: 'agriculture',
+    cost: { wood: 400, food: 200, gold: 100 },
+    effect: { orchardOutputBonus: 0.25, fruitChance: 0.10 },
+    requireLevel: 6,
+  },
+  PREMIUM_CUISINE: {
+    id: 'premium_cuisine',
+    name: '精品美食',
+    description: '研发高级食谱，鱼产品和水果可合成为精品食材',
+    category: 'agriculture',
+    cost: { wood: 600, stone: 300, iron: 100, crystal: 10 },
+    effect: { enablePremiumFood: true },
+    requireLevel: 10,
+  },
+};
+
+// 渔业/农业贸易加成
+export const TRADE_BONUSES = {
+  FISH_EXPORT: {
+    id: 'fish_export',
+    name: '鱼类出口',
+    description: '将鱼产品出口，换取双倍金币收益',
+    multiplier: 2.0,
+    requireResource: 'fish_product',
+  },
+  FRUIT_WINE: {
+    id: 'fruit_wine',
+    name: '果酒酿造',
+    description: '用水果酿造果酒，市场价值+50%',
+    multiplier: 1.5,
+    requireResource: 'fruit',
+  },
+  GOURMET_TRADE: {
+    id: 'gourmet_trade',
+    name: '美食贸易',
+    description: '精品食材高价出售，金币收益+200%',
+    multiplier: 3.0,
+    requireResource: 'premium_food',
+  },
+};

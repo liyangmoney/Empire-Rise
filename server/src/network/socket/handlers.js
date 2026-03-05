@@ -1,5 +1,5 @@
 // server/src/network/socket/handlers.js
-import { SOCKET_EVENTS, BUILDING_TYPES } from '../../../../shared/constants.js';
+import { SOCKET_EVENTS, BUILDING_TYPES, AGRICULTURE_TECHS } from '../../../../shared/constants.js';
 import { ResourceComponent } from '../../core/components/ResourceComponent.js';
 import { BuildingComponent } from '../../core/components/BuildingComponent.js';
 import { ArmyComponent } from '../../core/components/ArmyComponent.js';
@@ -8,6 +8,7 @@ import { TaskComponent } from '../../core/components/TaskComponent.js';
 import { TimeComponent } from '../../core/components/TimeComponent.js';
 import { StaminaComponent } from '../../core/components/StaminaComponent.js';
 import { PopulationComponent } from '../../core/components/PopulationComponent.js';
+import { TechComponent } from '../../core/components/TechComponent.js';
 import { TrainingSystem } from '../../core/systems/TrainingSystem.js';
 import { BattleSystem } from '../../core/systems/BattleSystem.js';
 import { RecruitSystem } from '../../core/systems/RecruitSystem.js';
@@ -251,6 +252,76 @@ export function registerSocketHandlers(io, gameWorld) {
       });
     });
 
+    // ==================== 科技系统事件 ====================
+
+    // 获取科技列表
+    socket.on('tech:getList', (data) => {
+      const { playerId } = data;
+      const empire = gameWorld.empires.get(playerId);
+      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '帝国不存在' });
+      
+      socket.emit('tech:list', {
+        available: Object.entries(AGRICULTURE_TECHS).filter(([id, tech]) => {
+          // 检查是否已研究
+          if (empire.tech.has(id)) return false;
+          // 检查建筑等级要求
+          if (tech.requireLevel) {
+            const buildingLevel = empire.buildings.getLevel(tech.category === 'fishery' ? 'fishery' : 'farm');
+            return buildingLevel >= tech.requireLevel;
+          }
+          return true;
+        }).map(([id, tech]) => ({ id, ...tech })),
+        researched: Array.from(empire.tech.researched),
+        researching: empire.tech.researching,
+        progress: empire.tech.getSnapshot()
+      });
+    });
+
+    // 开始研究科技
+    socket.on('tech:research', (data) => {
+      const { playerId, techId } = data;
+      const empire = gameWorld.empires.get(playerId);
+      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '帝国不存在' });
+      
+      const tech = AGRICULTURE_TECHS[techId];
+      if (!tech) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '未知科技' });
+      
+      if (empire.tech.has(techId)) {
+        return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '已研究该科技' });
+      }
+      
+      // 检查资源
+      if (!empire.resources.hasAll(tech.cost)) {
+        return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '资源不足' });
+      }
+      
+      // 扣除资源
+      for (const [resId, amount] of Object.entries(tech.cost)) {
+        empire.resources.consume(resId, amount);
+      }
+      
+      // 开始研究（研究时间 = 总成本/10，单位：秒）
+      const researchCost = Object.values(tech.cost).reduce((a, b) => a + b, 0);
+      const duration = Math.max(30, Math.floor(researchCost / 10)) * 1000; // 毫秒
+      
+      const result = empire.tech.startResearch(techId, duration);
+      if (result.success) {
+        socket.emit('tech:researchStarted', {
+          techId,
+          tech: { name: tech.name, description: tech.description },
+          duration,
+          resources: empire.resources.getSnapshot(empire.buildings)
+        });
+        socket.emit('success', { message: `开始研究：${tech.name}` });
+      } else {
+        // 返还资源
+        for (const [resId, amount] of Object.entries(tech.cost)) {
+          empire.resources.add(resId, amount);
+        }
+        socket.emit(SOCKET_EVENTS.S_ERROR, { message: result.error });
+      }
+    });
+
     // ==================== 任务系统事件 ====================
 
     // 获取任务列表
@@ -462,6 +533,7 @@ function createNewEmpire(playerId, playerName, socketId, io) {
     time: new TimeComponent(),
     stamina: new StaminaComponent(), // 体力系统
     population: new PopulationComponent(), // 人口系统
+    tech: new TechComponent(), // 科技系统
   };
 
   // 添加初始建筑
