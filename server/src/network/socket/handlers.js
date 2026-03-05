@@ -448,10 +448,18 @@ function createNewEmpire(playerId, playerName, socketId, io) {
   empire.resources.add('stone', 200);
   empire.resources.add('food', 300);
   empire.resources.add('gold', 100);
-  empire.resources.setProductionRate('wood', 50);
-  empire.resources.setProductionRate('food', 30);
-  empire.resources.setProductionRate('stone', 20);
-  empire.resources.setProductionRate('iron', 10);
+  
+  // 根据建筑等级设置产出速率（从建筑配置读取）
+  const { BUILDING_TYPES } = await import('../../../../shared/constants.js');
+  const lumberMill = BUILDING_TYPES.LUMBER_MILL;
+  const farm = BUILDING_TYPES.FARM;
+  const quarry = BUILDING_TYPES.QUARRY;
+  const ironMine = BUILDING_TYPES.IRON_MINE;
+  
+  if (lumberMill) empire.resources.setProductionRate('wood', lumberMill.outputBase);
+  if (farm) empire.resources.setProductionRate('food', farm.outputBase);
+  if (quarry) empire.resources.setProductionRate('stone', quarry.outputBase);
+  if (ironMine) empire.resources.setProductionRate('iron', ironMine.outputBase);
 
   return empire;
 }
