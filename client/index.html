@@ -221,23 +221,26 @@
       z-index: 100;
       background: rgba(26, 26, 46, 0.95);
       backdrop-filter: blur(10px);
-      padding: 10px 20px;
+      padding: 8px 10px;
       border-radius: 12px;
       margin-bottom: 20px;
       display: flex;
       justify-content: center;
-      gap: 15px;
+      gap: 8px;
       flex-wrap: nowrap;
       border: 1px solid rgba(255,215,0,0.3);
+      overflow-x: auto;
     }
     .global-resource-item {
       display: flex;
       align-items: center;
-      gap: 3px;
-      padding: 3px 8px;
+      gap: 2px;
+      padding: 2px 5px;
       background: rgba(0,0,0,0.3);
       border-radius: 6px;
-      font-size: 14px;
+      font-size: 13px;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
     .global-resource-icon {
       font-size: 18px;
@@ -252,12 +255,15 @@
     .global-time-display {
       display: flex;
       align-items: center;
-      padding: 5px 15px;
+      padding: 2px 8px;
       background: rgba(255,215,0,0.1);
       border: 1px solid rgba(255,215,0,0.3);
       border-radius: 6px;
       font-weight: bold;
       color: #ffd700;
+      font-size: 13px;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
   </style>
 </head>
@@ -313,7 +319,7 @@
           <span class="global-resource-icon">💰</span>
           <span class="global-resource-value" id="globalGold">0</span>
         </div>
-        <div class="global-resource-item" title="体力" style="margin-left: 10px; border-left: 1px solid #444; padding-left: 10px;">
+        <div class="global-resource-item" title="体力" style="margin-left: 5px; border-left: 1px solid #444; padding-left: 5px;">
           <span class="global-resource-icon">⚡</span>
           <span class="global-resource-value" id="globalStamina">100</span>
           <span style="font-size: 12px; color: #888;">/<span id="maxStamina">100</span></span>
