@@ -53,6 +53,8 @@ function connect() {
     console.log('❌ Disconnected from server');
     updateStatus('disconnected', '连接断开');
     updateConnectionStatus(false);
+    // 停止时间更新
+    stopTimeUpdateInterval();
   });
 
   socket.on('error', (err) => {
@@ -80,6 +82,8 @@ function connect() {
     // 时间数据
     if (data.time) {
       updateTimeDisplay(data.time);
+      // 启动时间自动更新定时器
+      startTimeUpdateInterval();
     }
   });
 
@@ -1231,7 +1235,7 @@ function updateTimeDisplay(timeData) {
   const timeOfDayEl = document.getElementById('timeOfDay');
   
   if (gameDateEl) {
-    gameDateEl.textContent = timeData.gameDate || '第2026年 2月 13日';
+    gameDateEl.textContent = timeData.gameDate || '第1年 1月 1日';
   }
   
   if (timeOfDayEl) {
@@ -1239,6 +1243,44 @@ function updateTimeDisplay(timeData) {
     const timeOfDay = timeData.timeOfDayName || '☀️ 早晨';
     const realTime = timeData.realTime || '';
     timeOfDayEl.textContent = realTime ? `${timeOfDay} ${realTime}` : timeOfDay;
+  }
+}
+
+// 时间自动更新定时器
+let timeUpdateInterval = null;
+
+function startTimeUpdateInterval() {
+  // 清除已有的定时器
+  if (timeUpdateInterval) {
+    clearInterval(timeUpdateInterval);
+  }
+  
+  // 每秒更新一次时间显示
+  timeUpdateInterval = setInterval(() => {
+    if (!currentTimeData) return;
+    
+    // 使用现实时间的时分秒，但保持游戏日期
+    const now = new Date();
+    const realTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+    
+    // 更新显示
+    const timeOfDayEl = document.getElementById('timeOfDay');
+    if (timeOfDayEl && currentTimeData.timeOfDayName) {
+      timeOfDayEl.textContent = `${currentTimeData.timeOfDayName} ${realTime}`;
+    }
+    
+    // 每10秒向服务器请求同步一次游戏日期
+    if (now.getSeconds() % 10 === 0 && socket && playerId) {
+      socket.emit('time:get', { playerId });
+    }
+  }, 1000);
+}
+
+// 停止时间更新
+function stopTimeUpdateInterval() {
+  if (timeUpdateInterval) {
+    clearInterval(timeUpdateInterval);
+    timeUpdateInterval = null;
   }
 }
 

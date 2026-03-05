@@ -54,21 +54,13 @@ export function gameToRealTime(gameSeconds, speed = TIME_SCALE.NORMAL) {
 export function formatGameDate(totalGameSeconds) {
   const totalDays = Math.floor(totalGameSeconds / GAME_TIME.DAY);
   
-  let year = GAME_START_YEAR;
-  let month = GAME_START_MONTH;
-  let day = GAME_START_DAY + totalDays;
+  // 游戏内年份从第1年开始，每月30天
+  const gameYear = Math.floor(totalDays / 360) + 1;
+  const remainingDays = totalDays % 360;
+  const gameMonth = Math.floor(remainingDays / 30) + 1;
+  const gameDay = (remainingDays % 30) + 1;
   
-  // 处理月份和年份进位
-  while (day > 30) {
-    day -= 30;
-    month++;
-    if (month > 12) {
-      month = 1;
-      year++;
-    }
-  }
-  
-  return `第${year}年 ${month}月 ${day}日`;
+  return `第${gameYear}年 ${gameMonth}月 ${gameDay}日`;
 }
 
 /**
