@@ -441,15 +441,21 @@ function createNewEmpire(playerId, playerName, socketId, io) {
   };
 
   empire.buildings.add('warehouse_basic');
-  empire.buildings.add('lumber_mill');  // 伐木场
-  empire.buildings.add('farm');         // 农场
-  empire.buildings.add('quarry');       // 采石场
-  empire.buildings.add('iron_mine');    // 铁矿
+  empire.buildings.add('lumber_mill');
+  empire.buildings.add('farm');
+  empire.buildings.add('quarry');
+  empire.buildings.add('iron_mine');
+  empire.buildings.add('crystal_mine');
+  empire.buildings.add('barracks');
+  empire.buildings.add('hospital');
+  empire.buildings.add('house');
+  empire.buildings.add('blacksmith');
   
   empire.resources.add('wood', 500);
-  empire.resources.add('stone', 200);
-  empire.resources.add('food', 300);
-  empire.resources.add('gold', 100);
+  empire.resources.add('stone', 300);
+  empire.resources.add('food', 400);
+  empire.resources.add('gold', 200);
+  empire.resources.add('crystal', 10);
   
   // 根据建筑等级设置产出速率（从建筑配置读取）
   const lumberMill = BUILDING_TYPES.LUMBER_MILL;

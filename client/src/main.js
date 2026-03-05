@@ -431,54 +431,108 @@ function renderBuildings(buildings, upgradeQueue = []) {
   }
 
   container.innerHTML = '';
-  const names = {
-    warehouse_basic: '基础仓库', warehouse_special: '特殊仓库',
-    lumber_mill: '伐木场', farm: '农场', barracks: '兵营',
-    quarry: '采石场', iron_mine: '铁矿场', crystal_mine: '水晶矿',
-    hospital: '医院', wall: '城墙', tower: '箭塔',
-    house: '民居', imperial_palace: '皇宫', general_camp: '将领营',
-    tech_institute: '科技院'
+  
+  // 建筑分类
+  const categories = {
+    production: '🌾 资源生产',
+    storage: '📦 仓库',
+    military: '⚔️ 军事',
+    economy: '💰 经济',
+    technology: '🔬 科技',
+    special: '👑 特殊',
+    other: '🏛️ 其他'
   };
+
+  // 按分类组织建筑
+  const buildingsByCategory = {};
+  for (const [id, data] of Object.entries(buildings)) {
+    const cat = data.category || 'other';
+    if (!buildingsByCategory[cat]) buildingsByCategory[cat] = [];
+    buildingsByCategory[cat].push({ id, ...data });
+  }
 
   // 保存升级队列
   currentBuildingQueue = upgradeQueue;
   startBuildingUpdateInterval();
 
-  for (const [id, data] of Object.entries(buildings)) {
-    const item = document.createElement('div');
-    item.className = 'unit-card';
-    item.id = `building-${id}`;
+  // 按分类渲染
+  for (const [catKey, catName] of Object.entries(categories)) {
+    const catBuildings = buildingsByCategory[catKey];
+    if (!catBuildings || catBuildings.length === 0) continue;
+
+    // 分类标题
+    const catTitle = document.createElement('h3');
+    catTitle.style.cssText = 'color: #ffd700; margin: 15px 0 10px 0; border-bottom: 1px solid rgba(255,215,0,0.3); padding-bottom: 5px;';
+    catTitle.textContent = catName;
+    container.appendChild(catTitle);
+
+    // 建筑列表
+    const listDiv = document.createElement('div');
+    listDiv.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px;';
     
-    const canUpgrade = data.level < data.maxLevel;
-    
-    // 检查是否正在升级
-    const upgradingTask = upgradeQueue.find(t => t.buildingTypeId === id && !t.completed);
-    
-    let upgradeHtml = '';
-    if (upgradingTask) {
-      const progress = Math.min(100, (upgradingTask._progress / upgradingTask.duration) * 100);
-      const remaining = Math.ceil((upgradingTask.duration - upgradingTask._progress) / 1000);
-      upgradeHtml = `
-        <div style="margin-top:10px;">
-          <div style="background:rgba(0,0,0,0.3);height:20px;border-radius:10px;overflow:hidden;">
-            <div id="building-progress-${id}" style="background:linear-gradient(90deg,#4CAF50,#8BC34A);height:100%;width:${progress}%;transition:width 0.3s;"></div>
+    for (const building of catBuildings) {
+      const item = document.createElement('div');
+      item.className = 'unit-card';
+      item.id = `building-${building.id}`;
+      
+      const canUpgrade = building.level < building.maxLevel;
+      
+      // 检查是否正在升级
+      const upgradingTask = upgradeQueue.find(t => t.buildingTypeId === building.id && !t.completed);
+      
+      let upgradeHtml = '';
+      if (upgradingTask) {
+        const progress = Math.min(100, (upgradingTask._progress / upgradingTask.duration) * 100);
+        const remaining = Math.ceil((upgradingTask.duration - upgradingTask._progress) / 1000);
+        upgradeHtml = `
+          <div style="margin-top:10px;">
+            <div style="background:rgba(0,0,0,0.3);height:20px;border-radius:10px;overflow:hidden;">
+              <div id="building-progress-${building.id}" style="background:linear-gradient(90deg,#4CAF50,#8BC34A);height:100%;width:${progress}%;transition:width 0.3s;"></div>
+            </div>
+            <p style="color:#4CAF50;font-size:12px;margin-top:5px;" id="building-time-${building.id}">升级中... ${remaining}秒</p>
           </div>
-          <p style="color:#4CAF50;font-size:12px;margin-top:5px;" id="building-time-${id}">升级中... ${remaining}秒</p>
-        </div>
+        `;
+      } else if (canUpgrade) {
+        upgradeHtml = `<button class="btn-primary" onclick="upgradeBuilding('${building.id}')" style="margin-top:10px;">升级</button>`;
+      } else {
+        upgradeHtml = '<p style="color:#666;margin-top:10px;">已满级</p>';
+      }
+      
+      item.innerHTML = `
+        <h4>${getBuildingName(building.id)} - Lv.${building.level}</h4>
+        <p style="color:#888;font-size:12px;">最高等级: ${building.maxLevel}</p>
+        <p style="color:#aaa;font-size:13px;margin-top:8px;line-height:1.4;">${building.description || '暂无介绍'}</p>
+        ${upgradeHtml}
       `;
-    } else if (canUpgrade) {
-      upgradeHtml = `<button class="btn-primary" onclick="upgradeBuilding('${id}')" style="margin-top:10px;">升级</button>`;
-    } else {
-      upgradeHtml = '<p style="color:#666;margin-top:10px;">已满级</p>';
+      listDiv.appendChild(item);
     }
     
-    item.innerHTML = `
-      <h4>${names[id] || id} - Lv.${data.level}</h4>
-      <p style="color:#888;">最高等级: ${data.maxLevel}</p>
-      ${upgradeHtml}
-    `;
-    container.appendChild(item);
+    container.appendChild(listDiv);
   }
+}
+
+// 获取建筑显示名称
+function getBuildingName(buildingId) {
+  const names = {
+    warehouse_basic: '📦 基础仓库',
+    warehouse_special: '📦 特殊仓库',
+    lumber_mill: '🌲 伐木场',
+    farm: '🌾 农场',
+    quarry: '⛰️ 采石场',
+    iron_mine: '⚙️ 铁矿场',
+    crystal_mine: '💎 水晶矿',
+    barracks: '⚔️ 兵营',
+    hospital: '🏥 医院',
+    wall: '🛡️ 城墙',
+    tower: '🏹 箭塔',
+    house: '🏠 民居',
+    market: '🏪 市场',
+    blacksmith: '🔨 铁匠铺',
+    tech_institute: '🔬 研究院',
+    imperial_palace: '👑 皇宫',
+    general_camp: '🎖️ 将领营'
+  };
+  return names[buildingId] || buildingId;
 }
 
 // 启动建筑升级进度刷新

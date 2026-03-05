@@ -159,9 +159,12 @@ export class BuildingComponent {
   getSnapshot() {
     const snapshot = {};
     for (const [id, data] of this.buildings) {
+      const type = Object.values(BUILDING_TYPES).find(b => b.id === id);
       snapshot[id] = {
         level: data.level,
-        maxLevel: data.maxLevel
+        maxLevel: data.maxLevel,
+        description: type?.description || '',
+        category: type?.category || 'other'
       };
     }
     return snapshot;
@@ -224,6 +227,10 @@ export class BuildingComponent {
         level = building.level;
       }
       if (resourceId === 'iron' && typeId === 'iron_mine') {
+        baseRate = type.outputBase;
+        level = building.level;
+      }
+      if (resourceId === 'crystal' && typeId === 'crystal_mine') {
         baseRate = type.outputBase;
         level = building.level;
       }

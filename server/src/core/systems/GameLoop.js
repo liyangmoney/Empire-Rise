@@ -78,7 +78,8 @@ export class GameLoop {
       wood: empire.buildings.getProductionRate('wood'),
       food: empire.buildings.getProductionRate('food'),
       stone: empire.buildings.getProductionRate('stone'),
-      iron: empire.buildings.getProductionRate('iron')
+      iron: empire.buildings.getProductionRate('iron'),
+      crystal: empire.buildings.getProductionRate('crystal')
     };
     
     for (const [resId, rate] of Object.entries(productionRates)) {
