@@ -267,7 +267,7 @@ function connect() {
     const durationText = preview.duration < 60
       ? `${preview.duration}秒`
       : preview.duration < 3600
-        ? `${Math.ceil(preview.duration / 60)}分钟`
+        ? `${Math.floor(preview.duration / 60)}分${Math.ceil(preview.duration % 60)}秒`
         : `${Math.floor(preview.duration / 3600)}小时${Math.ceil((preview.duration % 3600) / 60)}分钟`;
 
     showCostConfirm(
