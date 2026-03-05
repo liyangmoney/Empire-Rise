@@ -98,13 +98,20 @@ export class ResourceComponent {
   /**
    * 获取资源状态（用于发送给客户端）
    */
-  getSnapshot() {
+  getSnapshot(buildings) {
     const snapshot = {};
     for (const [id, data] of Object.entries(this.storage)) {
+      // 计算实际产出速率（基础速率 × 建筑加成）
+      let actualRate = this.productionRates[id] || 0;
+      if (buildings && actualRate > 0) {
+        const bonus = buildings.calculateProductionBonus(id);
+        actualRate = actualRate * bonus;
+      }
+      
       snapshot[id] = {
         amount: data.amount,
         max: data.maxCapacity,
-        rate: this.productionRates[id] || 0  // 每小时产出速率
+        rate: actualRate  // 实际每小时产出（带加成）
       };
     }
     return snapshot;

@@ -168,25 +168,29 @@ export class BuildingComponent {
   }
 
   /**
-   * 计算总产出加成
+   * 计算总产出加成倍数
+   * 返回 1.0 + 所有建筑加成（例如 1级建筑 = 1.2倍）
    */
   calculateProductionBonus(resourceId) {
-    let bonus = 1.0;
+    let bonus = 1.0; // 基础倍数
     
     for (const [typeId, building] of this.buildings) {
       const type = Object.values(BUILDING_TYPES).find(b => b.id === typeId);
       if (type?.outputBase) {
+        // 每级建筑增加 20% 产出
+        const levelBonus = building.level * 0.2;
+        
         if (resourceId === 'wood' && typeId === 'lumber_mill') {
-          bonus += (building.level * 0.2);
+          bonus += levelBonus;
         }
         if (resourceId === 'food' && typeId === 'farm') {
-          bonus += (building.level * 0.2);
+          bonus += levelBonus;
         }
         if (resourceId === 'stone' && typeId === 'quarry') {
-          bonus += (building.level * 0.2);
+          bonus += levelBonus;
         }
         if (resourceId === 'iron' && typeId === 'iron_mine') {
-          bonus += (building.level * 0.2);
+          bonus += levelBonus;
         }
       }
     }

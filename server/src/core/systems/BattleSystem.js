@@ -270,7 +270,7 @@ export class BattleSystem {
         battleId,
         result: battle.getResult(),
         army: empire.army.getSnapshot(),
-        resources: empire.resources.getSnapshot(),
+        resources: empire.resources.getSnapshot(empire.buildings),
         generals: empire.generals.getSnapshot(),
       });
     }

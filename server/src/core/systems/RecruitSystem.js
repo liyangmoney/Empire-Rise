@@ -104,7 +104,7 @@ export class RecruitSystem {
       },
       rarity: GENERAL_RARITIES[rarity.toUpperCase()],
       cost: config.cost,
-      remainingResources: empire.resources.getSnapshot(),
+      remainingResources: empire.resources.getSnapshot(empire.buildings),
     };
   }
 

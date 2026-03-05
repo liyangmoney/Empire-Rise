@@ -73,20 +73,16 @@ export class GameLoop {
     const timeScale = empire.time?.speed || 1;
     const adjustedDelta = deltaTime * timeScale;
 
-    // 计算产出加成
-    const production = {};
-    for (const [resId, rate] of Object.entries(empire.resources.productionRates)) {
+    // 执行产出（使用基础速率 × 建筑加成，但不修改基础速率）
+    for (const [resId, baseRate] of Object.entries(empire.resources.productionRates)) {
       const bonus = empire.buildings.calculateProductionBonus(resId);
-      production[resId] = rate * bonus * timeScale;
+      const actualRate = baseRate * bonus * timeScale; // 实际产出速率
+      
+      // 直接产出资源，不修改 productionRates
+      if (actualRate > 0) {
+        empire.resources.add(resId, actualRate * (adjustedDelta / 3600));
+      }
     }
-
-    // 更新产出速率并执行产出
-    for (const [resId, finalRate] of Object.entries(production)) {
-      empire.resources.setProductionRate(resId, finalRate);
-    }
-    
-    // 执行产出（考虑时间加速）
-    empire.resources.produce(adjustedDelta / 3600);
 
     // ===== 建筑系统更新 =====
     if (empire.buildings) {
@@ -111,7 +107,7 @@ export class GameLoop {
           empire._io.to(empire.socketId).emit('building:upgradeCompleted', {
             task,
             buildings: empire.buildings.getSnapshot(),
-            resources: empire.resources.getSnapshot()
+            resources: empire.resources.getSnapshot(empire.buildings)
           });
         }
       }
@@ -162,7 +158,7 @@ export class GameLoop {
         if (empire.socketId) {
           const io = empire._io;
           if (io) {
-            io.to(empire.socketId).emit('resource:update', empire.resources.getSnapshot());
+            io.to(empire.socketId).emit('resource:update', empire.resources.getSnapshot(empire.buildings));
             
             if (empire.army) {
               io.to(empire.socketId).emit('army:update', empire.army.getSnapshot());

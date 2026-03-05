@@ -51,7 +51,7 @@ export function registerSocketHandlers(io, gameWorld) {
       socket.emit('empire:init', {
         playerId,
         playerName: empire.playerName,
-        resources: empire.resources.getSnapshot(),
+        resources: empire.resources.getSnapshot(empire.buildings),
         buildings: empire.buildings.getSnapshot(),
         army: empire.army.getSnapshot(),
         generals: empire.generals.getSnapshot(),
@@ -104,7 +104,7 @@ export function registerSocketHandlers(io, gameWorld) {
       socket.emit(SOCKET_EVENTS.S_RESOURCE_UPDATE, {
         resourceId: resourceType,
         result,
-        allResources: empire.resources.getSnapshot(),
+        allResources: empire.resources.getSnapshot(empire.buildings),
         stamina: empire.stamina.getSnapshot()
       });
     });
@@ -155,7 +155,7 @@ export function registerSocketHandlers(io, gameWorld) {
           duration: task.duration,
           durationFormatted: formatDuration(task.duration / 1000)
         },
-        resources: empire.resources.getSnapshot()
+        resources: empire.resources.getSnapshot(empire.buildings)
       });
       
       // 发送成功提示给客户端
@@ -202,7 +202,7 @@ export function registerSocketHandlers(io, gameWorld) {
         socket.emit('army:trainStarted', {
           task: result.task,
           cost: result.cost,
-          resources: empire.resources.getSnapshot(),
+          resources: empire.resources.getSnapshot(empire.buildings),
           queue: empire.army.trainingQueue,
         });
       } else {
@@ -253,7 +253,7 @@ export function registerSocketHandlers(io, gameWorld) {
         socket.emit('task:rewardClaimed', {
           taskId,
           rewards: result.rewards,
-          resources: empire.resources.getSnapshot(),
+          resources: empire.resources.getSnapshot(empire.buildings),
           tasks: empire.tasks.getSnapshot(empire)
         });
         socket.emit('success', { message: '领取奖励成功！' });
