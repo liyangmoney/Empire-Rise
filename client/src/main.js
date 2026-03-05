@@ -17,6 +17,8 @@ let currentTimeData = null; // 时间数据
 let timeUpdateInterval = null; // 时间更新定时器
 let currentResources = null; // 当前资源数据（用于本地刷新）
 let resourceUpdateInterval = null; // 资源本地刷新定时器
+let currentBuildingQueue = []; // 当前建筑升级队列
+let buildingUpdateInterval = null; // 建筑升级刷新定时器
 
 // 生成唯一玩家ID
 function generateId() {
@@ -419,7 +421,7 @@ function updateGlobalResources(resources) {
 }
 
 // 渲染建筑
-function renderBuildings(buildings) {
+function renderBuildings(buildings, upgradeQueue = []) {
   const container = document.getElementById('buildings');
   if (Object.keys(buildings).length === 0) {
     container.innerHTML = '<p style="text-align:center;color:#888;">暂无建筑</p>';
@@ -436,19 +438,85 @@ function renderBuildings(buildings) {
     tech_institute: '科技院'
   };
 
+  // 保存升级队列
+  currentBuildingQueue = upgradeQueue;
+  startBuildingUpdateInterval();
+
   for (const [id, data] of Object.entries(buildings)) {
     const item = document.createElement('div');
     item.className = 'unit-card';
+    item.id = `building-${id}`;
     
     const canUpgrade = data.level < data.maxLevel;
+    
+    // 检查是否正在升级
+    const upgradingTask = upgradeQueue.find(t => t.buildingTypeId === id && !t.completed);
+    
+    let upgradeHtml = '';
+    if (upgradingTask) {
+      const progress = Math.min(100, (upgradingTask._progress / upgradingTask.duration) * 100);
+      const remaining = Math.ceil((upgradingTask.duration - upgradingTask._progress) / 1000);
+      upgradeHtml = `
+        <div style="margin-top:10px;">
+          <div style="background:rgba(0,0,0,0.3);height:20px;border-radius:10px;overflow:hidden;">
+            <div id="building-progress-${id}" style="background:linear-gradient(90deg,#4CAF50,#8BC34A);height:100%;width:${progress}%;transition:width 0.3s;"></div>
+          </div>
+          <p style="color:#4CAF50;font-size:12px;margin-top:5px;" id="building-time-${id}">升级中... ${remaining}秒</p>
+        </div>
+      `;
+    } else if (canUpgrade) {
+      upgradeHtml = `<button class="btn-primary" onclick="upgradeBuilding('${id}')" style="margin-top:10px;">升级</button>`;
+    } else {
+      upgradeHtml = '<p style="color:#666;margin-top:10px;">已满级</p>';
+    }
     
     item.innerHTML = `
       <h4>${names[id] || id} - Lv.${data.level}</h4>
       <p style="color:#888;">最高等级: ${data.maxLevel}</p>
-      ${canUpgrade ? `<button class="btn-primary" onclick="upgradeBuilding('${id}')">升级</button>` : '<p style="color:#666;">已满级</p>'}
+      ${upgradeHtml}
     `;
     container.appendChild(item);
   }
+}
+
+// 启动建筑升级进度刷新
+function startBuildingUpdateInterval() {
+  if (buildingUpdateInterval) {
+    clearInterval(buildingUpdateInterval);
+  }
+  
+  buildingUpdateInterval = setInterval(() => {
+    if (!currentBuildingQueue || currentBuildingQueue.length === 0) return;
+    
+    const now = Date.now();
+    
+    for (const task of currentBuildingQueue) {
+      if (task.completed) continue;
+      
+      // 计算进度
+      const progress = Math.min(100, (task._progress / task.duration) * 100);
+      const remaining = Math.max(0, Math.ceil((task.duration - task._progress) / 1000));
+      
+      // 更新进度条
+      const progressEl = document.getElementById(`building-progress-${task.buildingTypeId}`);
+      const timeEl = document.getElementById(`building-time-${task.buildingTypeId}`);
+      
+      if (progressEl) {
+        progressEl.style.width = `${progress}%`;
+      }
+      
+      if (timeEl) {
+        if (remaining > 0) {
+          timeEl.textContent = `升级中... ${remaining}秒`;
+        } else {
+          timeEl.textContent = '即将完成...';
+        }
+      }
+      
+      // 本地模拟进度增长（实际由服务器同步）
+      task._progress += 1000; // 每秒增加1000ms
+    }
+  }, 1000);
 }
 
 // ==================== 军队系统渲染 ====================
@@ -740,9 +808,29 @@ function upgradeBuilding(buildingTypeId) {
 
 // 更新建筑升级队列显示
 function updateBuildingQueue(queue) {
-  // 可以在建筑面板显示升级进度
-  // 类似训练队列的显示方式
+  currentBuildingQueue = queue || [];
   console.log('Building upgrade queue:', queue);
+  
+  // 触发重新渲染建筑（显示进度）
+  if (empireData && empireData.buildings) {
+    renderBuildings(empireData.buildings, currentBuildingQueue);
+  }
+}
+
+// 停止所有定时器
+function stopAllIntervals() {
+  if (timeUpdateInterval) {
+    clearInterval(timeUpdateInterval);
+    timeUpdateInterval = null;
+  }
+  if (resourceUpdateInterval) {
+    clearInterval(resourceUpdateInterval);
+    resourceUpdateInterval = null;
+  }
+  if (buildingUpdateInterval) {
+    clearInterval(buildingUpdateInterval);
+    buildingUpdateInterval = null;
+  }
 }
 
 function previewTraining() {
@@ -1379,14 +1467,7 @@ function startTimeUpdateInterval() {
 
 // 停止时间更新
 function stopTimeUpdateInterval() {
-  if (timeUpdateInterval) {
-    clearInterval(timeUpdateInterval);
-    timeUpdateInterval = null;
-  }
-  if (resourceUpdateInterval) {
-    clearInterval(resourceUpdateInterval);
-    resourceUpdateInterval = null;
-  }
+  stopAllIntervals();
 }
 
 // 控制时间速度
