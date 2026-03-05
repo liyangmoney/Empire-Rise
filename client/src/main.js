@@ -73,7 +73,7 @@ function connect() {
     empireData = data;
     showGameUI();
     renderResources(data.resources);
-    renderBuildings(data.buildings);
+    renderBuildings(data.buildings, data.upgradeQueue || []);
     renderArmy(data.army, data.maxArmySize);
     updateMyBattleInfo(data.army);
     
@@ -111,7 +111,7 @@ function connect() {
   // 建筑更新
   socket.on('building:update', (data) => {
     if (data.buildings) {
-      renderBuildings(data.buildings);
+      renderBuildings(data.buildings, data.upgradeQueue || []);
     }
     if (data.resources) {
       renderResources(data.resources);
@@ -267,14 +267,14 @@ function connect() {
   socket.on('building:upgradeStarted', (data) => {
     console.log('Building upgrade started:', data);
     renderResources(data.resources);
-    updateBuildingQueue([data.task]);
+    updateBuildingQueue(data.upgradeQueue || []);
     showSuccess(`开始升级建筑！预计${data.task.durationFormatted}完成`);
   });
 
   // 监听升级完成
   socket.on('building:upgradeCompleted', (data) => {
     console.log('Building upgrade completed:', data);
-    renderBuildings(data.buildings);
+    renderBuildings(data.buildings, data.upgradeQueue || []);
     renderResources(data.resources);
     showSuccess(`建筑升级完成！升级至Lv.${data.task.toLevel}`);
   });

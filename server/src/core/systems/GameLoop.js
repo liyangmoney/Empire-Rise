@@ -111,6 +111,7 @@ export class GameLoop {
           empire._io.to(empire.socketId).emit('building:upgradeCompleted', {
             task,
             buildings: empire.buildings.getSnapshot(),
+            upgradeQueue: empire.buildings.upgradeQueue || [],
             resources: empire.resources.getSnapshot(empire.buildings)
           });
         }

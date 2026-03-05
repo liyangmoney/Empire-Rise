@@ -53,6 +53,7 @@ export function registerSocketHandlers(io, gameWorld) {
         playerName: empire.playerName,
         resources: empire.resources.getSnapshot(empire.buildings),
         buildings: empire.buildings.getSnapshot(),
+        upgradeQueue: empire.buildings.upgradeQueue || [],
         army: empire.army.getSnapshot(),
         generals: empire.generals.getSnapshot(),
         tasks: empire.tasks.getSnapshot(empire),
@@ -155,6 +156,7 @@ export function registerSocketHandlers(io, gameWorld) {
           duration: task.duration,
           durationFormatted: formatDuration(task.duration / 1000)
         },
+        upgradeQueue: empire.buildings.upgradeQueue || [],
         resources: empire.resources.getSnapshot(empire.buildings)
       });
       
