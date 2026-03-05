@@ -45,6 +45,13 @@ const gameLoop = new GameLoop(gameWorld);
 gameLoop.start();
 console.log('✅ GameLoop started via index.js');
 
+// 定期广播时间更新（每秒）
+setInterval(() => {
+  const timeData = gameLoop.world.time.getSnapshot();
+  io.emit('time:update', timeData);
+}, 1000);
+console.log('⏰ Time broadcast started (every 1s)');
+
 // 启动服务器
 httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Empire Rise Server running on http://localhost:${PORT}`);
