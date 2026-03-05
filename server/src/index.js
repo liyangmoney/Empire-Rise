@@ -47,8 +47,15 @@ console.log('✅ GameLoop started via index.js');
 
 // 定期广播时间更新（每秒）
 setInterval(() => {
-  const timeData = gameLoop.world.time.getSnapshot();
-  io.emit('time:update', timeData);
+  // 向所有连接的客户端广播第一个帝国的时间（如果没有帝国，使用默认时间）
+  const empires = gameWorld.empires;
+  if (empires.size > 0) {
+    const firstEmpire = empires.values().next().value;
+    if (firstEmpire && firstEmpire.time) {
+      const timeData = firstEmpire.time.getSnapshot();
+      io.emit('time:update', timeData);
+    }
+  }
 }, 1000);
 console.log('⏰ Time broadcast started (every 1s)');
 
