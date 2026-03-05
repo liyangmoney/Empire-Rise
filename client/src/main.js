@@ -14,6 +14,7 @@ let generalsData = null; // 将领数据
 let generalTemplates = null; // 将领模板
 let selectedGeneralId = null; // 当前选择的将领
 let currentTimeData = null; // 时间数据
+let timeUpdateInterval = null; // 时间更新定时器
 
 // 生成唯一玩家ID
 function generateId() {
@@ -1245,9 +1246,6 @@ function updateTimeDisplay(timeData) {
     timeOfDayEl.textContent = realTime ? `${timeOfDay} ${realTime}` : timeOfDay;
   }
 }
-
-// 时间自动更新定时器
-let timeUpdateInterval = null;
 
 function startTimeUpdateInterval() {
   // 清除已有的定时器
