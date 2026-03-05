@@ -366,4 +366,99 @@ export class BattleSystem {
 
     return availableNpcs;
   }
+
+  /**
+   * 攻击地图上的NPC
+   */
+  startMapBattle(playerId, mapNpc, formationId = 'default', general = null) {
+    const empire = this.gameWorld.empires.get(playerId);
+    if (!empire) {
+      return { success: false, error: '帝国不存在' };
+    }
+
+    // 检查玩家是否已在战斗中
+    if (this.playerBattleMap.has(playerId)) {
+      return { success: false, error: '您正在进行另一场战斗' };
+    }
+
+    // 检查编队
+    const formation = empire.army.formations.get(formationId);
+    if (!formation) {
+      return { success: false, error: '编队不存在' };
+    }
+    
+    const totalUnits = Object.values(formation.units).reduce((sum, count) => sum + count, 0);
+    if (totalUnits === 0) {
+      return { success: false, error: '编队中没有士兵，请先训练军队' };
+    }
+
+    if (empire.army.status !== 'idle') {
+      return { success: false, error: `军队当前状态: ${empire.army.status}，无法出征` };
+    }
+
+    // 创建战斗
+    const battleId = `battle_${Date.now()}_${playerId}`;
+    const battle = new BattleComponent(battleId, playerId, mapNpc.type, 'pve');
+
+    // 根据NPC战力生成敌军
+    const attackerPower = empire.army.calculateFormationPower(formationId);
+    const npcArmy = this.generateNpcArmy(mapNpc.power);
+
+    // 初始化战斗数据
+    battle.init(
+      {
+        empireId: empire.id,
+        playerName: empire.playerName,
+        army: formation.units,
+        formation: formationId,
+        morale: empire.army.morale,
+        power: attackerPower,
+        general: general ? { name: general.name, rarity: general.rarity, bonus: general.battleBonus } : null,
+      },
+      {
+        id: mapNpc.type,
+        name: mapNpc.name,
+        type: 'npc',
+        army: npcArmy,
+        morale: 100,
+        power: mapNpc.power,
+      }
+    );
+
+    // 记录战斗
+    this.activeBattles.set(battleId, battle);
+    this.playerBattleMap.set(playerId, battleId);
+
+    // 设置军队状态
+    empire.army.status = 'fighting';
+
+    // 执行战斗
+    this.executeBattleInstantly(battleId);
+
+    return {
+      success: true,
+      battleId,
+      npc: {
+        name: mapNpc.name,
+        power: mapNpc.power,
+      },
+    };
+  }
+
+  /**
+   * 根据战力生成NPC军队
+   */
+  generateNpcArmy(power) {
+    // 简化的军队生成逻辑
+    const units = {};
+    const infantryCount = Math.floor(power / 50);
+    const archerCount = Math.floor(power / 80);
+    const cavalryCount = Math.floor(power / 100);
+    
+    if (infantryCount > 0) units.infantry = Math.min(infantryCount, 1000);
+    if (archerCount > 0) units.archer = Math.min(archerCount, 500);
+    if (cavalryCount > 0) units.cavalry = Math.min(cavalryCount, 200);
+    
+    return units;
+  }
 }

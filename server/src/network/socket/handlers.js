@@ -50,6 +50,15 @@ export function registerSocketHandlers(io, gameWorld) {
       const gameDay = Math.floor(empire.time?.getCurrentGameTime() / 86400) || 0;
       empire.tasks.refreshDailyTasks(gameDay);
 
+      // 检查并放置城堡到地图上
+      let castlePosition = null;
+      if (gameWorld.worldMap) {
+        castlePosition = gameWorld.worldMap.getCastle(playerId);
+        if (!castlePosition) {
+          castlePosition = gameWorld.worldMap.placeCastle(playerId, empire.name);
+        }
+      }
+
       socket.emit('empire:init', {
         playerId,
         playerName: empire.playerName,
@@ -68,6 +77,10 @@ export function registerSocketHandlers(io, gameWorld) {
         stamina: empire.stamina?.getSnapshot() || { current: 100, max: 100 },
         population: empire.population?.getSnapshot() || { current: 0, max: 0 },
         maxArmySize: trainingSystem.calculateMaxArmySize(empire),
+        map: gameWorld.worldMap ? {
+          castle: castlePosition,
+          size: gameWorld.worldMap.getMapSnapshot(),
+        } : null,
       });
     });
 
@@ -509,6 +522,122 @@ export function registerSocketHandlers(io, gameWorld) {
       const battle = battleSystem.getPlayerBattle(playerId);
       if (!battle || !battle.result) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '没有已结束的战斗' });
       socket.emit('battle:result', battle.getResult());
+    });
+
+    // ==================== 世界地图事件 ====================
+
+    // 获取地图视图
+    socket.on('map:getView', (data) => {
+      const { playerId } = data;
+      if (!gameWorld.worldMap) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '地图未初始化' });
+      
+      const view = gameWorld.worldMap.getPlayerView(playerId);
+      if (!view) {
+        // 玩家还没有城堡，需要放置
+        const empire = gameWorld.empires.get(playerId);
+        if (empire) {
+          const pos = gameWorld.worldMap.placeCastle(playerId, empire.name);
+          socket.emit('map:castlePlaced', { position: pos });
+        }
+      }
+      
+      socket.emit('map:view', view || gameWorld.worldMap.getPlayerView(playerId));
+    });
+
+    // 获取指定位置详情
+    socket.on('map:getTile', (data) => {
+      const { x, y } = data;
+      if (!gameWorld.worldMap) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '地图未初始化' });
+      
+      const terrain = gameWorld.worldMap.getTerrain(x, y);
+      const npcs = gameWorld.worldMap.getNPCs(x, y);
+      
+      socket.emit('map:tile', {
+        x, y,
+        terrain: terrain ? { id: terrain.id, name: terrain.name, moveCost: terrain.moveCost, defenseBonus: terrain.defenseBonus } : null,
+        npcs: npcs.map(n => ({ type: n.type, name: n.name, power: n.power, isNeutral: n.isNeutral })),
+      });
+    });
+
+    // 迁移城堡
+    socket.on('map:migrateCastle', (data) => {
+      const { playerId, targetX, targetY } = data;
+      const empire = gameWorld.empires.get(playerId);
+      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '帝国不存在' });
+      if (!gameWorld.worldMap) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '地图未初始化' });
+      
+      const result = gameWorld.worldMap.migrateCastle(playerId, targetX, targetY, empire);
+      
+      if (result.success) {
+        socket.emit('map:migrated', {
+          newPosition: result.newPosition,
+          cost: result.cost,
+          resources: empire.resources.getSnapshot(empire.buildings),
+        });
+        socket.emit('success', { message: `城堡迁移成功！新位置: (${result.newPosition.x}, ${result.newPosition.y})` });
+      } else {
+        socket.emit(SOCKET_EVENTS.S_ERROR, { message: result.error });
+      }
+    });
+
+    // 攻击地图上的NPC
+    socket.on('map:attackNPC', (data) => {
+      const { playerId, x, y, npcIndex, formationId = 'default' } = data;
+      const empire = gameWorld.empires.get(playerId);
+      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '帝国不存在' });
+      if (!gameWorld.worldMap) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '地图未初始化' });
+      
+      const npcs = gameWorld.worldMap.getNPCs(x, y);
+      if (!npcs || !npcs[npcIndex]) {
+        return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '目标不存在' });
+      }
+      
+      const npc = npcs[npcIndex];
+      if (npc.isNeutral) {
+        return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '不能攻击中立单位' });
+      }
+      
+      // 使用战斗系统开始战斗
+      const general = empire.generals.getFormationGeneral(formationId);
+      const result = battleSystem.startMapBattle(playerId, npc, formationId, general);
+      
+      if (result.success) {
+        socket.emit('map:battleStarted', {
+          battleId: result.battleId,
+          npc: { name: npc.name, power: npc.power },
+          position: { x, y },
+        });
+      } else {
+        socket.emit(SOCKET_EVENTS.S_ERROR, { message: result.error });
+      }
+    });
+
+    // 与商人交易
+    socket.on('map:trade', (data) => {
+      const { playerId, x, y, npcIndex } = data;
+      if (!gameWorld.worldMap) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '地图未初始化' });
+      
+      const npcs = gameWorld.worldMap.getNPCs(x, y);
+      if (!npcs || !npcs[npcIndex]) {
+        return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '商人不存在' });
+      }
+      
+      const npc = npcs[npcIndex];
+      if (!npc.isNeutral || npc.type !== 'merchant_caravan') {
+        return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '该目标不可交易' });
+      }
+      
+      // 提供交易选项
+      socket.emit('map:tradeOptions', {
+        merchant: npc.name,
+        offers: [
+          { give: { gold: 100 }, get: { food: 200 } },
+          { give: { gold: 200 }, get: { wood: 150 } },
+          { give: { gold: 300 }, get: { iron: 50 } },
+          { give: { fish_product: 50 }, get: { gold: 150 } },
+          { give: { fruit: 50 }, get: { gold: 120 } },
+        ],
+      });
     });
 
     socket.on('disconnect', () => {
