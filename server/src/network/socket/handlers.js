@@ -422,11 +422,19 @@ function createNewEmpire(playerId, playerName, socketId, io) {
   };
 
   empire.buildings.add('warehouse_basic');
+  empire.buildings.add('lumber_mill');  // 伐木场
+  empire.buildings.add('farm');         // 农场
+  empire.buildings.add('quarry');       // 采石场
+  empire.buildings.add('iron_mine');    // 铁矿
+  
   empire.resources.add('wood', 500);
+  empire.resources.add('stone', 200);
   empire.resources.add('food', 300);
   empire.resources.add('gold', 100);
   empire.resources.setProductionRate('wood', 50);
   empire.resources.setProductionRate('food', 30);
+  empire.resources.setProductionRate('stone', 20);
+  empire.resources.setProductionRate('iron', 10);
 
   return empire;
 }
