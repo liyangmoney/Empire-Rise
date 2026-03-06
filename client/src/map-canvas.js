@@ -33,10 +33,16 @@ let viewMapCtx = null;
 let worldMapCanvas = null;
 let worldMapCtx = null;
 
+// 当前视野地图数据
+let currentViewMapData = null;
+
 // 初始化 Canvas
 function initMapCanvases() {
   const container = document.getElementById('worldMap');
   if (!container) return;
+  
+  // 检查是否已创建
+  if (viewMapCanvas && worldMapCanvas) return;
   
   // 清空容器
   container.innerHTML = '';
@@ -45,68 +51,54 @@ function initMapCanvases() {
   container.style.alignItems = 'center';
   container.style.overflow = 'auto';
   container.style.position = 'relative';
-  container.style.width = '100%';
-  container.style.height = '100%';
   
-  // 创建视野地图 Canvas - 居中
+  // 创建视野地图 Canvas
   viewMapCanvas = document.createElement('canvas');
   viewMapCanvas.id = 'viewMapCanvas';
-  viewMapCanvas.width = 21 * 28; // 21格 x 28像素
+  viewMapCanvas.width = 21 * 28;
   viewMapCanvas.height = 21 * 28;
   viewMapCanvas.style.display = 'none';
   viewMapCanvas.style.cursor = 'pointer';
   viewMapCanvas.style.margin = 'auto';
-  viewMapCanvas.style.position = 'absolute';
-  viewMapCanvas.style.left = '50%';
-  viewMapCanvas.style.top = '50%';
-  viewMapCanvas.style.transform = 'translate(-50%, -50%)';
-  viewMapCanvas.style.transformOrigin = 'center center';
   container.appendChild(viewMapCanvas);
   viewMapCtx = viewMapCanvas.getContext('2d');
   
   // 点击事件
-  viewMapCanvas.onclick = (e) => {
+  viewMapCanvas.onclick = function(e) {
     const rect = viewMapCanvas.getBoundingClientRect();
     const scaleX = viewMapCanvas.width / rect.width;
     const scaleY = viewMapCanvas.height / rect.height;
     const x = Math.floor(((e.clientX - rect.left) * scaleX) / 28);
     const y = Math.floor(((e.clientY - rect.top) * scaleY) / 28);
     
-    // 找到对应的 tile
     if (currentViewMapData && currentViewMapData.area) {
-      const tile = currentViewMapData.area.find(t => {
-        const centerX = 10;
-        const centerY = 10;
+      const centerX = 10;
+      const centerY = 10;
+      const tile = currentViewMapData.area.find(function(t) {
         const relX = t.x - currentViewMapData.castle.x + centerX;
         const relY = t.y - currentViewMapData.castle.y + centerY;
         return relX === x && relY === y;
       });
       if (tile) {
         showTileModal(tile);
-        // 重绘选中效果
         renderViewMap(currentViewMapData, x, y);
       }
     }
   };
   
-  // 创建世界地图 Canvas - 居中
+  // 创建世界地图 Canvas
   worldMapCanvas = document.createElement('canvas');
   worldMapCanvas.id = 'worldMapCanvas';
-  worldMapCanvas.width = 100 * 8; // 100格 x 8像素
+  worldMapCanvas.width = 100 * 8;
   worldMapCanvas.height = 100 * 8;
   worldMapCanvas.style.display = 'none';
   worldMapCanvas.style.cursor = 'pointer';
   worldMapCanvas.style.margin = 'auto';
-  worldMapCanvas.style.position = 'absolute';
-  worldMapCanvas.style.left = '50%';
-  worldMapCanvas.style.top = '50%';
-  worldMapCanvas.style.transform = 'translate(-50%, -50%)';
-  worldMapCanvas.style.transformOrigin = 'center center';
   container.appendChild(worldMapCanvas);
   worldMapCtx = worldMapCanvas.getContext('2d');
   
   // 点击事件
-  worldMapCanvas.onclick = (e) => {
+  worldMapCanvas.onclick = function(e) {
     const rect = worldMapCanvas.getBoundingClientRect();
     const scaleX = worldMapCanvas.width / rect.width;
     const scaleY = worldMapCanvas.height / rect.height;
@@ -115,11 +107,12 @@ function initMapCanvases() {
     
     if (fullMapData && x >= 0 && x < 100 && y >= 0 && y < 100) {
       const terrainId = fullMapData.terrain[y][x];
-      const npc = fullMapData.npcs.find(n => n.x === x && n.y === y);
-      const castle = fullMapData.castles.find(c => c.x === x && c.y === y);
+      const npc = fullMapData.npcs.find(function(n) { return n.x === x && n.y === y; });
+      const castle = fullMapData.castles.find(function(c) { return c.x === x && c.y === y; });
       
       const tileData = {
-        x, y,
+        x: x,
+        y: y,
         terrain: {
           id: terrainId,
           name: TERRAIN_NAMES[terrainId] || terrainId,
@@ -138,18 +131,9 @@ function initMapCanvases() {
   };
 }
 
-// 当前视野地图数据
-let currentViewMapData = null;
-
 function renderMap(map) {
-  // 确保 Canvas 已初始化
   if (!viewMapCanvas) {
     initMapCanvases();
-  }
-  
-  if (!viewMapCanvas) {
-    console.error('Map canvas initialization failed');
-    return;
   }
   
   if (currentMapMode === 'world' && fullMapData) {
@@ -159,25 +143,20 @@ function renderMap(map) {
   }
 }
 
-function renderViewMap(map, selectedX = -1, selectedY = -1) {
-  // 确保 Canvas 已创建
-  if (!viewMapCanvas) {
-    initMapCanvases();
-  }
-  
+function renderViewMap(map, selectedX, selectedY) {
+  if (!viewMapCanvas) initMapCanvases();
   if (!viewMapCanvas || !map) return;
   
+  selectedX = selectedX || -1;
+  selectedY = selectedY || -1;
   currentViewMapData = map;
   
-  // 显示视野地图，隐藏世界地图
   viewMapCanvas.style.display = 'block';
   if (worldMapCanvas) worldMapCanvas.style.display = 'none';
   
   const ctx = viewMapCtx;
   const cellSize = 28;
-  const size = 21;
   
-  // 清空
   ctx.fillStyle = '#1a1a2e';
   ctx.fillRect(0, 0, viewMapCanvas.width, viewMapCanvas.height);
   
@@ -189,7 +168,6 @@ function renderViewMap(map, selectedX = -1, selectedY = -1) {
     return;
   }
   
-  // 绘制每个格子
   const castleInfo = document.getElementById('castleInfo');
   const castlePos = document.getElementById('castlePos');
   if (castleInfo && castlePos && map.castle) {
@@ -200,18 +178,17 @@ function renderViewMap(map, selectedX = -1, selectedY = -1) {
   const centerX = 10;
   const centerY = 10;
   
-  map.area.forEach(tile => {
+  const icons = { forest: '🌲', hills: '⛰️', mountains: '🏔️', river: '💧', lake: '🌊', desert: '🏜️', swamp: '🌿' };
+  
+  map.area.forEach(function(tile) {
     const relX = tile.x - map.castle.x + centerX;
     const relY = tile.y - map.castle.y + centerY;
-    
     const px = relX * cellSize;
     const py = relY * cellSize;
     
-    // 地形背景
     ctx.fillStyle = TERRAIN_COLORS[tile.terrain.id] || '#ccc';
     ctx.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
     
-    // 城堡
     if (tile.hasCastle) {
       ctx.fillStyle = '#8B4513';
       ctx.fillRect(px + 2, py + 2, cellSize - 4, cellSize - 4);
@@ -219,27 +196,19 @@ function renderViewMap(map, selectedX = -1, selectedY = -1) {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText('🏰', px + cellSize / 2, py + cellSize / 2);
-    }
-    // NPC
-    else if (tile.npcs && tile.npcs.length > 0) {
+    } else if (tile.npcs && tile.npcs.length > 0) {
       const npc = tile.npcs[0];
       ctx.font = '16px Arial';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(npc.isNeutral ? '🏪' : '⚔️', px + cellSize / 2, py + cellSize / 2);
-    }
-    // 地形图标
-    else {
-      const icons = { forest: '🌲', hills: '⛰️', mountains: '🏔️', river: '💧', lake: '🌊', desert: '🏜️', swamp: '🌿' };
-      if (icons[tile.terrain.id]) {
-        ctx.font = '14px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(icons[tile.terrain.id], px + cellSize / 2, py + cellSize / 2);
-      }
+    } else if (icons[tile.terrain.id]) {
+      ctx.font = '14px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(icons[tile.terrain.id], px + cellSize / 2, py + cellSize / 2);
     }
     
-    // 选中效果
     if (relX === selectedX && relY === selectedY) {
       ctx.strokeStyle = '#FFD700';
       ctx.lineWidth = 3;
@@ -247,21 +216,17 @@ function renderViewMap(map, selectedX = -1, selectedY = -1) {
     }
   });
   
-  // 应用缩放
   applyMapZoom();
 }
 
-function renderFullMap(fullMap, selectedX = -1, selectedY = -1) {
-  // 确保 Canvas 已创建
-  if (!worldMapCanvas) {
-    initMapCanvases();
-  }
-  
+function renderFullMap(fullMap, selectedX, selectedY) {
+  if (!worldMapCanvas) initMapCanvases();
   if (!worldMapCanvas || !fullMap) return;
   
+  selectedX = selectedX || -1;
+  selectedY = selectedY || -1;
   fullMapData = fullMap;
   
-  // 显示世界地图，隐藏视野地图
   worldMapCanvas.style.display = 'block';
   if (viewMapCanvas) viewMapCanvas.style.display = 'none';
   
@@ -269,20 +234,17 @@ function renderFullMap(fullMap, selectedX = -1, selectedY = -1) {
   const cellSize = 8;
   const mapSize = fullMap.size;
   
-  // 清空
   ctx.fillStyle = '#1a1a2e';
   ctx.fillRect(0, 0, worldMapCanvas.width, worldMapCanvas.height);
   
-  // 更新城堡信息
   const castleInfo = document.getElementById('castleInfo');
   const castlePos = document.getElementById('castlePos');
-  const myCastle = fullMap.castles.find(c => c.isOwn);
+  const myCastle = fullMap.castles.find(function(c) { return c.isOwn; });
   if (castleInfo && castlePos && myCastle) {
     castleInfo.style.display = 'block';
     castlePos.textContent = '(' + myCastle.x + ', ' + myCastle.y + ')';
   }
   
-  // 绘制地形
   for (let y = 0; y < mapSize; y++) {
     for (let x = 0; x < mapSize; x++) {
       const terrainId = fullMap.terrain[y][x];
@@ -291,18 +253,14 @@ function renderFullMap(fullMap, selectedX = -1, selectedY = -1) {
     }
   }
   
-  // 绘制 NPC
-  fullMap.npcs.forEach(npc => {
+  fullMap.npcs.forEach(function(npc) {
     ctx.fillStyle = npc.hasMerchant ? '#9370DB' : '#FF4500';
     ctx.fillRect(npc.x * cellSize, npc.y * cellSize, cellSize * 2, cellSize * 2);
   });
   
-  // 绘制城堡
-  fullMap.castles.forEach(castle => {
+  fullMap.castles.forEach(function(castle) {
     ctx.fillStyle = castle.isOwn ? '#8B4513' : '#4a4a4a';
     ctx.fillRect(castle.x * cellSize - 1, castle.y * cellSize - 1, cellSize * 3, cellSize * 3);
-    
-    // 玩家自己的城堡加金色边框
     if (castle.isOwn) {
       ctx.strokeStyle = '#FFD700';
       ctx.lineWidth = 2;
@@ -310,38 +268,27 @@ function renderFullMap(fullMap, selectedX = -1, selectedY = -1) {
     }
   });
   
-  // 选中效果
   if (selectedX >= 0 && selectedY >= 0) {
     ctx.strokeStyle = '#FFD700';
     ctx.lineWidth = 3;
     ctx.strokeRect(selectedX * cellSize, selectedY * cellSize, cellSize * 2, cellSize * 2);
   }
   
-  // 应用缩放
   applyMapZoom();
-  
-  // 绘制小地图
   renderMiniMap(fullMap);
 }
 
-// 应用缩放
 function applyMapZoom() {
   const activeCanvas = currentMapMode === 'world' ? worldMapCanvas : viewMapCanvas;
   if (!activeCanvas) return;
-  
-  // 保留居中的transform，只添加缩放
-  activeCanvas.style.transform = 'translate(-50%, -50%) scale(' + mapZoom + ')';
-  activeCanvas.style.transformOrigin = 'center center';
+  activeCanvas.style.transform = 'scale(' + mapZoom + ')';
 }
 
-// 修改缩放函数
 function zoomMap(factor) {
   mapZoom *= factor;
   mapZoom = Math.max(0.25, Math.min(2, mapZoom));
-  
   const zoomLevel = document.getElementById('zoomLevel');
   if (zoomLevel) zoomLevel.textContent = Math.round(mapZoom * 100) + '%';
-  
   applyMapZoom();
 }
 
@@ -349,11 +296,9 @@ function resetMapZoom() {
   mapZoom = 1;
   const zoomLevel = document.getElementById('zoomLevel');
   if (zoomLevel) zoomLevel.textContent = '100%';
-  
   applyMapZoom();
 }
 
-// 小地图渲染函数
 function renderMiniMap(fullMap) {
   const canvas = document.getElementById('miniMap');
   if (!canvas) return;
@@ -362,11 +307,9 @@ function renderMiniMap(fullMap) {
   const size = 100;
   const scale = size / fullMap.size;
   
-  // 清空
   ctx.fillStyle = '#1a1a2e';
   ctx.fillRect(0, 0, canvas.width || size, canvas.height || size);
   
-  // 绘制地形
   for (let y = 0; y < fullMap.size; y++) {
     for (let x = 0; x < fullMap.size; x++) {
       const terrainId = fullMap.terrain[y][x];
@@ -375,58 +318,45 @@ function renderMiniMap(fullMap) {
     }
   }
   
-  // 绘制NPC
   ctx.fillStyle = '#FF4500';
-  fullMap.npcs.forEach(npc => {
+  fullMap.npcs.forEach(function(npc) {
     ctx.fillRect(npc.x * scale, npc.y * scale, scale * 2, scale * 2);
   });
   
-  // 绘制城堡
-  fullMap.castles.forEach(castle => {
+  fullMap.castles.forEach(function(castle) {
     ctx.fillStyle = castle.isOwn ? '#8B4513' : '#4a4a4a';
     ctx.fillRect(castle.x * scale - 1, castle.y * scale - 1, scale * 3, scale * 3);
   });
   
-  // 视野范围框
-  const myCastle = fullMap.castles.find(c => c.isOwn);
+  const myCastle = fullMap.castles.find(function(c) { return c.isOwn; });
   if (myCastle) {
     ctx.strokeStyle = '#FF0000';
     ctx.lineWidth = 1;
     const viewRadius = 10;
-    ctx.strokeRect(
-      (myCastle.x - viewRadius) * scale,
-      (myCastle.y - viewRadius) * scale,
-      viewRadius * 2 * scale,
-      viewRadius * 2 * scale
-    );
+    ctx.strokeRect((myCastle.x - viewRadius) * scale, (myCastle.y - viewRadius) * scale, viewRadius * 2 * scale, viewRadius * 2 * scale);
   }
 }
 
-// 小地图点击跳转
 function initMiniMapClick() {
   const miniMap = document.getElementById('miniMap');
   if (!miniMap) return;
   
-  miniMap.onclick = (e) => {
+  miniMap.onclick = function(e) {
     if (!fullMapData) return;
     
     const rect = miniMap.getBoundingClientRect();
     const x = Math.floor(((e.clientX - rect.left) / rect.width) * fullMapData.size);
     const y = Math.floor(((e.clientY - rect.top) / rect.height) * fullMapData.size);
     
-    // 切换到世界地图模式
     if (currentMapMode !== 'world') {
       currentMapMode = 'world';
       renderMap();
-      
-      // 更新按钮状态
-      document.querySelectorAll('.map-mode-btn').forEach(btn => {
+      document.querySelectorAll('.map-mode-btn').forEach(function(btn) {
         btn.classList.remove('active');
         if (btn.dataset.mode === 'world') btn.classList.add('active');
       });
     }
     
-    // 滚动到点击位置（模拟居中）
     const mapContainer = document.getElementById('mapContainer');
     if (mapContainer && worldMapCanvas) {
       const cellSize = 8 * mapZoom;
@@ -435,13 +365,13 @@ function initMiniMapClick() {
       mapContainer.scrollTo({ left: Math.max(0, scrollX), top: Math.max(0, scrollY), behavior: 'smooth' });
     }
     
-    // 显示点击的地块信息
     const terrainId = fullMapData.terrain[y][x];
-    const npc = fullMapData.npcs.find(n => n.x === x && n.y === y);
-    const castle = fullMapData.castles.find(c => c.x === x && c.y === y);
+    const npc = fullMapData.npcs.find(function(n) { return n.x === x && n.y === y; });
+    const castle = fullMapData.castles.find(function(c) { return c.x === x && c.y === y; });
     
     const tileData = {
-      x, y,
+      x: x,
+      y: y,
       terrain: {
         id: terrainId,
         name: TERRAIN_NAMES[terrainId] || terrainId,
@@ -461,8 +391,7 @@ function initMiniMapClick() {
   miniMap.style.cursor = 'pointer';
 }
 
-// 在页面加载完成后初始化
-setTimeout(() => {
+setTimeout(function() {
   initMapCanvases();
   initMiniMapClick();
 }, 500);
