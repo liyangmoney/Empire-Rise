@@ -50,52 +50,49 @@ export class GameScene extends Phaser.Scene {
   }
 
   createHeader() {
-    // 顶部背景 - 深色带边框
+    // 顶部背景
     const headerBg = this.add.graphics();
     headerBg.fillStyle(0x0a0a14, 0.95);
-    headerBg.fillRect(0, 0, 1280, 70);
-    headerBg.lineStyle(2, 0xffd700, 0.3);
-    headerBg.lineBetween(0, 70, 1280, 70);
+    headerBg.fillRect(0, 0, 1280, 60);
+    headerBg.lineStyle(1, 0xffd700, 0.3);
+    headerBg.lineBetween(0, 60, 1280, 60);
     
-    // 时间显示（左侧）
-    this.timeDisplay = new TimeDisplay(this, 120, 35);
+    // 左侧：时间显示
+    this.timeDisplay = new TimeDisplay(this, 80, 30);
     
-    // 资源面板（中间）
-    this.resourcePanel = new ResourcePanel(this, 680, 35);
+    // 中间：资源面板（紧凑排列）
+    this.resourcePanel = new ResourcePanel(this, 500, 30);
     
-    // 玩家信息（右侧）
+    // 右侧：玩家信息卡片
+    const playerX = 1080;
     const playerBg = this.add.graphics();
     playerBg.fillStyle(0x1a1a2e, 0.8);
-    playerBg.fillRoundedRect(1050, 10, 140, 50, 8);
+    playerBg.fillRoundedRect(playerX - 70, 8, 140, 44, 6);
     playerBg.lineStyle(1, 0xffd700, 0.3);
-    playerBg.strokeRoundedRect(1050, 10, 140, 50, 8);
+    playerBg.strokeRoundedRect(playerX - 70, 8, 140, 44, 6);
     
-    this.add.text(1120, 25, this.empireData.playerName || '领主', {
-      fontSize: '16px',
+    this.playerNameText = this.add.text(playerX, 22, this.empireData.playerName || '领主', {
+      fontSize: '14px',
       fontFamily: 'Arial',
       color: '#ffd700'
     }).setOrigin(0.5);
     
-    this.add.text(1120, 45, '在线', {
-      fontSize: '12px',
+    this.add.text(playerX, 40, '在线', {
+      fontSize: '11px',
       color: '#4CAF50'
     }).setOrigin(0.5);
     
-    // 断开按钮
-    const disconnectBtn = this.add.text(1220, 35, '退出', {
-      fontSize: '14px',
+    // 退出按钮
+    const exitBtn = this.add.text(1210, 30, '退出', {
+      fontSize: '13px',
       color: '#ff6666',
       backgroundColor: 'rgba(255,100,100,0.15)',
-      padding: { x: 15, y: 8 }
+      padding: { x: 12, y: 6 }
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     
-    disconnectBtn.on('pointerover', () => {
-      disconnectBtn.setBackgroundColor('rgba(255,100,100,0.3)');
-    });
-    disconnectBtn.on('pointerout', () => {
-      disconnectBtn.setBackgroundColor('rgba(255,100,100,0.15)');
-    });
-    disconnectBtn.on('pointerup', () => {
+    exitBtn.on('pointerover', () => exitBtn.setBackgroundColor('rgba(255,100,100,0.3)'));
+    exitBtn.on('pointerout', () => exitBtn.setBackgroundColor('rgba(255,100,100,0.15)'));
+    exitBtn.on('pointerup', () => {
       window.socketManager.disconnect();
       this.scene.start('MenuScene');
     });

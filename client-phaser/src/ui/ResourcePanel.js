@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 
 /**
- * 资源面板 - 显示所有资源详情
+ * 资源面板 - 顶部栏紧凑版
  */
 export class ResourcePanel extends Phaser.GameObjects.Container {
   constructor(scene, x, y) {
@@ -10,43 +10,39 @@ export class ResourcePanel extends Phaser.GameObjects.Container {
     this.resourceItems = {};
     this.currentResources = null;
     
-    // 资源类型配置
+    // 只显示6种主要资源，更紧凑
     this.resourceTypes = [
-      { key: 'wood', name: '木材', icon: '🌲', color: '#8B4513' },
-      { key: 'stone', name: '石材', icon: '⛰️', color: '#808080' },
-      { key: 'food', name: '粮食', icon: '🌾', color: '#FFD700' },
-      { key: 'iron', name: '铁矿', icon: '⚙️', color: '#4a5568' },
-      { key: 'crystal', name: '水晶', icon: '💎', color: '#00CED1' },
-      { key: 'gold', name: '金币', icon: '💰', color: '#FFD700' }
+      { key: 'wood', icon: '🌲', color: 0x4CAF50 },
+      { key: 'stone', icon: '⛰️', color: 0x9E9E9E },
+      { key: 'food', icon: '🌾', color: 0xFFC107 },
+      { key: 'iron', icon: '⚙️', color: 0x607D8B },
+      { key: 'crystal', icon: '💎', color: 0x00BCD4 },
+      { key: 'gold', icon: '💰', color: 0xFFD700 }
     ];
     
     this.createUI();
     scene.add.existing(this);
     
-    // 启动本地刷新
     this.startLocalUpdate();
   }
 
   createUI() {
-    let offsetX = -300;
+    const itemW = 65;
+    const startX = -((this.resourceTypes.length * itemW) / 2) + itemW / 2;
     
-    this.resourceTypes.forEach(type => {
-      const container = this.scene.add.container(offsetX, 0);
+    this.resourceTypes.forEach((type, index) => {
+      const x = startX + index * itemW;
       
-      // 背景
-      const bg = this.scene.add.graphics();
-      bg.fillStyle(0x000000, 0.3);
-      bg.fillRoundedRect(-45, -25, 90, 50, 8);
-      container.add(bg);
+      const container = this.scene.add.container(x, 0);
       
       // 图标
-      const icon = this.scene.add.text(0, -12, type.icon, {
-        fontSize: '20px'
+      const icon = this.scene.add.text(0, -10, type.icon, {
+        fontSize: '18px'
       }).setOrigin(0.5);
       container.add(icon);
       
       // 数值
-      const value = this.scene.add.text(0, 10, '0', {
+      const value = this.scene.add.text(0, 12, '0', {
         fontSize: '14px',
         fontFamily: 'Arial',
         color: '#ffd700',
@@ -54,39 +50,25 @@ export class ResourcePanel extends Phaser.GameObjects.Container {
       }).setOrigin(0.5);
       container.add(value);
       
-      // 产出速率（默认隐藏）
+      // 产出速率（小字体在下方）
       const rate = this.scene.add.text(0, 28, '', {
-        fontSize: '10px',
+        fontSize: '9px',
         color: '#4CAF50'
       }).setOrigin(0.5);
       container.add(rate);
       
       this.add(container);
       
-      this.resourceItems[type.key] = {
-        value,
-        rate,
-        bg
-      };
-      
-      offsetX += 100;
+      this.resourceItems[type.key] = { value, rate };
     });
     
-    // 体力显示
-    this.staminaText = this.scene.add.text(320, 0, '⚡ 100/100', {
-      fontSize: '14px',
+    // 体力显示 - 更紧凑
+    this.staminaText = this.scene.add.text(260, 0, '⚡100/100', {
+      fontSize: '13px',
       fontFamily: 'Arial',
       color: '#4CAF50'
     }).setOrigin(0.5);
     this.add(this.staminaText);
-    
-    // 人口显示
-    this.populationText = this.scene.add.text(450, 0, '👥 50/50', {
-      fontSize: '14px',
-      fontFamily: 'Arial',
-      color: '#4CAF50'
-    }).setOrigin(0.5);
-    this.add(this.populationText);
   }
 
   updateData(resources) {
@@ -102,7 +84,6 @@ export class ResourcePanel extends Phaser.GameObjects.Container {
         
         item.value.setText(Math.floor(amount).toString());
         
-        // 显示产出速率
         if (rate > 0) {
           const ratePerSecond = (rate / 3600).toFixed(1);
           item.rate.setText(`+${ratePerSecond}/s`);
@@ -113,21 +94,10 @@ export class ResourcePanel extends Phaser.GameObjects.Container {
 
   updateStamina(stamina) {
     if (!stamina) return;
-    this.staminaText.setText(`⚡ ${stamina.current}/${stamina.max}`);
+    this.staminaText.setText(`⚡${stamina.current}/${stamina.max}`);
     
-    // 根据体力值改变颜色
     const color = stamina.current < 20 ? '#f44336' : stamina.current < 50 ? '#ff9800' : '#4CAF50';
     this.staminaText.setColor(color);
-  }
-
-  updatePopulation(population) {
-    if (!population) return;
-    this.populationText.setText(`👥 ${population.current}/${population.max}`);
-    
-    // 根据人口使用率改变颜色
-    const ratio = population.current / population.max;
-    const color = ratio > 0.9 ? '#f44336' : ratio > 0.7 ? '#ff9800' : '#4CAF50';
-    this.populationText.setColor(color);
   }
 
   startLocalUpdate() {
