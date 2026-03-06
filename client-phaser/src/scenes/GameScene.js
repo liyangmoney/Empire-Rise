@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { ResourcePanel } from '../ui/ResourcePanel.js';
+import { ResourceWarehousePanel } from '../ui/ResourceWarehousePanel.js';
 import { BuildingPanel } from '../ui/BuildingPanel.js';
 import { ArmyPanel } from '../ui/ArmyPanel.js';
 import { BattlePanel } from '../ui/BattlePanel.js';
@@ -102,6 +103,7 @@ export class GameScene extends Phaser.Scene {
 
   createTabBar() {
     const tabs = [
+      { key: 'resources', label: '📦 资源', icon: '📦' },
       { key: 'buildings', label: '🏗️ 建筑', icon: '🏗️' },
       { key: 'army', label: '⚔️ 军队', icon: '⚔️' },
       { key: 'generals', label: '🎖️ 将领', icon: '🎖️' },
@@ -171,12 +173,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   initPanels() {
-    this.panels.buildings = new BuildingPanel(this, 640, 410);
-    this.panels.army = new ArmyPanel(this, 640, 410);
-    this.panels.generals = new GeneralPanel(this, 640, 410);
-    this.panels.map = new MapPanel(this, 640, 410);
-    this.panels.battle = new BattlePanel(this, 640, 410);
-    this.panels.tasks = new TaskPanel(this, 640, 410);
+    this.panels.resources = new ResourceWarehousePanel(this, 640, 400);
+    this.panels.buildings = new BuildingPanel(this, 640, 400);
+    this.panels.army = new ArmyPanel(this, 640, 400);
+    this.panels.generals = new GeneralPanel(this, 640, 400);
+    this.panels.map = new MapPanel(this, 640, 400);
+    this.panels.battle = new BattlePanel(this, 640, 400);
+    this.panels.tasks = new TaskPanel(this, 640, 400);
     
     Object.values(this.panels).forEach(panel => {
       panel.setVisible(false);
@@ -216,6 +219,7 @@ export class GameScene extends Phaser.Scene {
   updateAllData() {
     if (this.empireData.resources) {
       this.resourcePanel.updateData(this.empireData.resources);
+      this.panels.resources.updateData(this.empireData.resources);
     }
     if (this.empireData.stamina) {
       this.resourcePanel.updateStamina(this.empireData.stamina);
@@ -243,15 +247,13 @@ export class GameScene extends Phaser.Scene {
     if (this.empireData.time) {
       this.timeDisplay.updateTime(this.empireData.time);
     }
-    if (this.empireData.map) {
-      this.panels.map.updateData({ map: this.empireData.map });
-    }
   }
 
   registerEvents() {
     window.socketManager.on('resource:update', (data) => {
       if (data.allResources) {
         this.resourcePanel.updateData(data.allResources);
+        this.panels.resources.updateData(data.allResources);
       }
     });
     
