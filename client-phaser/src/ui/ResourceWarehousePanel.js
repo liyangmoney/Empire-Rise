@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 
 /**
- * 资源仓库面板 - 显示所有资源详情
+ * 资源仓库面板 - 优化版
  */
 export class ResourceWarehousePanel extends Phaser.GameObjects.Container {
   constructor(scene, x, y) {
@@ -10,59 +10,56 @@ export class ResourceWarehousePanel extends Phaser.GameObjects.Container {
     this.resourceItems = {};
     this.currentResources = null;
     
-    // 资源类型配置
     this.resourceTypes = [
-      { key: 'wood', name: '木材', icon: '🌲', color: '#8B4513' },
-      { key: 'stone', name: '石材', icon: '⛰️', color: '#808080' },
-      { key: 'food', name: '粮食', icon: '🌾', color: '#FFD700' },
-      { key: 'iron', name: '铁矿', icon: '⚙️', color: '#4a5568' },
-      { key: 'crystal', name: '水晶', icon: '💎', color: '#00CED1' },
-      { key: 'gold', name: '金币', icon: '💰', color: '#FFD700' },
-      { key: 'fish_product', name: '鱼产品', icon: '🐟', color: '#4682B4' },
-      { key: 'fruit', name: '水果', icon: '🍎', color: '#FF6347' },
-      { key: 'premium_food', name: '精品食材', icon: '🍖', color: '#DAA520' }
+      { key: 'wood', name: '木材', icon: '🌲', color: 0x4CAF50 },
+      { key: 'stone', name: '石材', icon: '⛰️', color: 0x9E9E9E },
+      { key: 'food', name: '粮食', icon: '🌾', color: 0xFFC107 },
+      { key: 'iron', name: '铁矿', icon: '⚙️', color: 0x607D8B },
+      { key: 'crystal', name: '水晶', icon: '💎', color: 0x00BCD4 },
+      { key: 'gold', name: '金币', icon: '💰', color: 0xFFD700 },
+      { key: 'fish_product', name: '鱼产品', icon: '🐟', color: 0x2196F3 },
+      { key: 'fruit', name: '水果', icon: '🍎', color: 0xF44336 },
+      { key: 'premium_food', name: '精品食材', icon: '🍖', color: 0xFF9800 }
     ];
     
     this.createUI();
     scene.add.existing(this);
-    
-    // 启动本地刷新
     this.startLocalUpdate();
   }
 
   createUI() {
     // 标题
-    this.scene.add.text(0, -260, '📦 资源仓库', {
+    this.scene.add.text(0, -250, '📦 资源仓库', {
       fontSize: '28px',
       fontFamily: 'Microsoft YaHei, Arial',
       color: '#ffd700',
       fontStyle: 'bold'
     }).setOrigin(0.5);
     
-    // 资源卡片容器
+    // 卡片容器
     this.cardsContainer = this.scene.add.container(0, 0);
     this.add(this.cardsContainer);
     
-    // 创建资源卡片 - 每行4个，共3行
-    const cardWidth = 210;
-    const cardHeight = 95;
-    const spacingX = 20;
-    const spacingY = 20;
-    const cardsPerRow = 4;
+    // 布局参数
+    const cardW = 240;
+    const cardH = 110;
+    const gapX = 25;
+    const gapY = 20;
+    const cols = 4;
     
     // 计算总宽度和起始位置
-    const totalWidth = cardsPerRow * cardWidth + (cardsPerRow - 1) * spacingX;
-    const startX = -totalWidth / 2 + cardWidth / 2;
-    const startY = -180;
+    const totalWidth = cols * cardW + (cols - 1) * gapX;
+    const startX = -totalWidth / 2 + cardW / 2;
+    const startY = -160;
     
     this.resourceTypes.forEach((type, index) => {
-      const col = index % cardsPerRow;
-      const row = Math.floor(index / cardsPerRow);
+      const col = index % cols;
+      const row = Math.floor(index / cols);
       
-      const x = startX + col * (cardWidth + spacingX);
-      const y = startY + row * (cardHeight + spacingY);
+      const x = startX + col * (cardW + gapX);
+      const y = startY + row * (cardH + gapY);
       
-      this.createResourceCard(type, x, y, cardWidth, cardHeight);
+      this.createResourceCard(type, x, y, cardW, cardH);
     });
   }
   
@@ -71,77 +68,82 @@ export class ResourceWarehousePanel extends Phaser.GameObjects.Container {
     
     // 卡片背景
     const bg = this.scene.add.graphics();
-    bg.fillStyle(0x1a1a2e, 0.9);
-    bg.fillRoundedRect(-cardW/2, -cardH/2, cardW, cardH, 10);
-    bg.lineStyle(1, 0x444444, 0.5);
-    bg.strokeRoundedRect(-cardW/2, -cardH/2, cardW, cardH, 10);
+    bg.fillStyle(0x1a1a2e, 0.95);
+    bg.fillRoundedRect(-cardW/2, -cardH/2, cardW, cardH, 12);
+    bg.lineStyle(1, 0x333333, 1);
+    bg.strokeRoundedRect(-cardW/2, -cardH/2, cardW, cardH, 12);
     card.add(bg);
     
     // 左侧彩色条
     const colorBar = this.scene.add.graphics();
-    colorBar.fillStyle(0xffd700, 0.5);
-    colorBar.fillRoundedRect(-cardW/2 + 3, -cardH/2 + 3, 5, cardH - 6, 3);
+    colorBar.fillStyle(type.color, 1);
+    colorBar.fillRoundedRect(-cardW/2 + 3, -cardH/2 + 3, 4, cardH - 6, 2);
     card.add(colorBar);
     
+    // 图标背景
+    const iconBg = this.scene.add.graphics();
+    iconBg.fillStyle(type.color, 0.15);
+    iconBg.fillCircle(-cardW/2 + 35, -cardH/2 + 35, 22);
+    card.add(iconBg);
+    
     // 图标
-    const icon = this.scene.add.text(-cardW/2 + 25, -cardH/2 + 25, type.icon, {
-      fontSize: '28px'
+    const icon = this.scene.add.text(-cardW/2 + 35, -cardH/2 + 35, type.icon, {
+      fontSize: '26px'
     }).setOrigin(0.5);
     card.add(icon);
     
-    // 资源名称
-    const nameText = this.scene.add.text(-cardW/2 + 55, -cardH/2 + 18, type.name, {
-      fontSize: '16px',
+    // 资源名称（右上）
+    const nameText = this.scene.add.text(-cardW/2 + 70, -cardH/2 + 18, type.name, {
+      fontSize: '15px',
       fontFamily: 'Microsoft YaHei, Arial',
-      color: '#ffffff',
-      fontStyle: 'bold'
+      color: '#ffffff'
     });
     card.add(nameText);
     
-    // 数量 - 大字体
-    const valueText = this.scene.add.text(-cardW/2 + 55, -cardH/2 + 42, '0', {
-      fontSize: '20px',
+    // 上限（右上）
+    const maxText = this.scene.add.text(cardW/2 - 15, -cardH/2 + 18, '/ 1000', {
+      fontSize: '12px',
+      color: '#666666'
+    }).setOrigin(1, 0);
+    card.add(maxText);
+    
+    // 数量（中间大字体）
+    const valueText = this.scene.add.text(-cardW/2 + 70, -cardH/2 + 50, '0', {
+      fontSize: '26px',
       fontFamily: 'Arial',
       color: '#ffd700',
       fontStyle: 'bold'
     });
     card.add(valueText);
     
-    // 上限
-    const maxText = this.scene.add.text(cardW/2 - 10, -cardH/2 + 22, '/ 1000', {
-      fontSize: '12px',
-      color: '#888888'
-    }).setOrigin(1, 0);
-    card.add(maxText);
-    
     // 产出速率
-    const rateText = this.scene.add.text(-cardW/2 + 55, cardH/2 - 15, '+0.0/秒', {
+    const rateText = this.scene.add.text(-cardW/2 + 70, cardH/2 - 18, '+0.0/秒', {
       fontSize: '12px',
       color: '#4CAF50'
     });
     card.add(rateText);
     
-    // 进度条背景（显示容量百分比）
+    // 进度条背景
+    const progressY = cardH/2 - 6;
     const progressBg = this.scene.add.graphics();
-    progressBg.fillStyle(0x333333, 1);
-    progressBg.fillRoundedRect(-cardW/2 + 55, cardH/2 - 28, cardW - 70, 6, 3);
+    progressBg.fillStyle(0x000000, 0.5);
+    progressBg.fillRoundedRect(-cardW/2 + 70, progressY, cardW - 90, 6, 3);
     card.add(progressBg);
     
     // 进度条
     const progressBar = this.scene.add.graphics();
-    progressBar.fillStyle(parseInt(type.color.replace('#', '0x')), 1);
-    progressBar.fillRoundedRect(-cardW/2 + 55, cardH/2 - 28, 0, 6, 3);
+    progressBar.fillStyle(type.color, 1);
+    progressBar.fillRoundedRect(-cardW/2 + 70, progressY, 0, 6, 3);
     card.add(progressBar);
     
     this.cardsContainer.add(card);
     
-    // 保存引用
     this.resourceItems[type.key] = {
       value: valueText,
       max: maxText,
       rate: rateText,
       progressBar,
-      bg
+      cardBg: bg
     };
   }
 
@@ -160,22 +162,22 @@ export class ResourceWarehousePanel extends Phaser.GameObjects.Container {
         item.value.setText(Math.floor(amount).toString());
         item.max.setText(`/ ${Math.floor(max)}`);
         
-        // 更新产出速率
         const ratePerSecond = (rate / 3600).toFixed(1);
         item.rate.setText(`+${ratePerSecond}/秒`);
         
         // 更新进度条
         const progress = Math.min(1, amount / max);
+        const barWidth = (240 - 90) * progress;
+        
         item.progressBar.clear();
         
         // 根据容量改变颜色
-        let color = 0x4CAF50; // 绿色
-        if (progress > 0.9) color = 0xf44336; // 红色（快满）
-        else if (progress > 0.7) color = 0xff9800; // 橙色
+        let color = 0x4CAF50;
+        if (progress > 0.9) color = 0xf44336;
+        else if (progress > 0.7) color = 0xff9800;
         
-        const barWidth = (210 - 70) * progress;
         item.progressBar.fillStyle(color, 1);
-        item.progressBar.fillRoundedRect(-210/2 + 55, 95/2 - 28, barWidth, 6, 3);
+        item.progressBar.fillRoundedRect(-240/2 + 70, 110/2 - 6, barWidth, 6, 3);
       }
     }
   }
@@ -198,17 +200,17 @@ export class ResourceWarehousePanel extends Phaser.GameObjects.Container {
             if (item) {
               item.value.setText(Math.floor(data.amount).toString());
               
-              // 更新进度条
               const progress = Math.min(1, data.amount / max);
+              const barWidth = (240 - 90) * progress;
+              
               item.progressBar.clear();
               
               let color = 0x4CAF50;
               if (progress > 0.9) color = 0xf44336;
               else if (progress > 0.7) color = 0xff9800;
               
-              const barWidth = (210 - 70) * progress;
               item.progressBar.fillStyle(color, 1);
-              item.progressBar.fillRoundedRect(-210/2 + 55, 95/2 - 28, barWidth, 6, 3);
+              item.progressBar.fillRoundedRect(-240/2 + 70, 110/2 - 6, barWidth, 6, 3);
             }
           }
         }
@@ -216,7 +218,5 @@ export class ResourceWarehousePanel extends Phaser.GameObjects.Container {
     });
   }
   
-  onShow() {
-    // 面板显示时触发
-  }
+  onShow() {}
 }
