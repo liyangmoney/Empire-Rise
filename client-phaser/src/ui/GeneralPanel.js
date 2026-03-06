@@ -12,7 +12,7 @@ export class GeneralPanel extends Phaser.GameObjects.Container {
       color: '#fff'
     }).setOrigin(0.5);
     
-    this.add.text(0, 40, '（待实现）', {
+    this.add.text(0, 40, '（开发中）', {
       fontSize: '16px',
       color: '#aaa'
     }).setOrigin(0.5);
@@ -20,7 +20,7 @@ export class GeneralPanel extends Phaser.GameObjects.Container {
     scene.add.existing(this);
   }
 
-  updateData(generals) {
+  updateData(data) {
     // 待实现
   }
 

@@ -19,6 +19,9 @@ export class GameScene extends Phaser.Scene {
     this.empireData = data.empireData || {};
     this.currentTab = 'resources';
     this.panels = {};
+    this.allResources = null;
+    this.population = null;
+    this.stamina = null;
   }
 
   create() {
@@ -38,13 +41,16 @@ export class GameScene extends Phaser.Scene {
     this.initPanels();
     
     // 显示默认面板
-    this.switchTab('resources');
+    this.switchTab('buildings');
     
     // 注册 Socket 事件
     this.registerSocketEvents();
     
     // 启动定时更新
     this.startAutoUpdate();
+    
+    // 立即更新数据
+    this.updateAllData();
   }
 
   createTopBar() {
@@ -56,11 +62,11 @@ export class GameScene extends Phaser.Scene {
     // 时间显示
     this.timeDisplay = new TimeDisplay(this, 150, 30);
     
-    // 资源显示
-    this.resourcePanel = new ResourcePanel(this, 640, 30);
+    // 资源显示（包含体力和人口）
+    this.resourcePanel = new ResourcePanel(this, 600, 30);
     
     // 玩家信息
-    this.add.text(1100, 20, this.empireData.playerName || '未知玩家', {
+    this.add.text(1050, 20, this.empireData.playerName || '未知玩家', {
       fontSize: '16px',
       color: '#ffd700'
     });
@@ -81,12 +87,11 @@ export class GameScene extends Phaser.Scene {
 
   createTabBar() {
     const tabs = [
-      { key: 'resources', label: '📦 资源', x: 150 },
-      { key: 'buildings', label: '🏗️ 建筑', x: 300 },
-      { key: 'army', label: '⚔️ 军队', x: 450 },
-      { key: 'generals', label: '🎖️ 将领', x: 600 },
-      { key: 'battle', label: '🎯 战斗', x: 750 },
-      { key: 'tasks', label: '📋 任务', x: 900 }
+      { key: 'buildings', label: '🏗️ 建筑', x: 200 },
+      { key: 'army', label: '⚔️ 军队', x: 350 },
+      { key: 'generals', label: '🎖️ 将领', x: 500 },
+      { key: 'battle', label: '🎯 战斗', x: 650 },
+      { key: 'tasks', label: '📋 任务', x: 800 }
     ];
     
     this.tabButtons = {};
@@ -135,7 +140,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   initPanels() {
-    this.panels.resources = new ResourcePanel(this, 640, 400);
     this.panels.buildings = new BuildingPanel(this, 640, 400);
     this.panels.army = new ArmyPanel(this, 640, 400);
     this.panels.generals = new GeneralPanel(this, 640, 400);
@@ -179,45 +183,179 @@ export class GameScene extends Phaser.Scene {
     this.tabIndicator.fillStyle(0x4CAF50);
     this.tabIndicator.fillRect(btn.x - 40, 115, 80, 4);
   }
+  
+  updateAllData() {
+    // 更新资源显示
+    if (this.empireData.resources) {
+      this.allResources = this.empireData.resources;
+      this.resourcePanel.updateData(this.allResources);
+    }
+    
+    // 更新体力
+    if (this.empireData.stamina) {
+      this.stamina = this.empireData.stamina;
+      this.resourcePanel.updateStamina(this.stamina);
+    }
+    
+    // 更新人口
+    if (this.empireData.population) {
+      this.population = this.empireData.population;
+      this.resourcePanel.updatePopulation(this.population);
+    }
+    
+    // 更新建筑
+    if (this.empireData.buildings) {
+      this.panels.buildings.updateData(
+        this.empireData.buildings,
+        this.empireData.upgradeQueue || []
+      );
+    }
+    
+    // 更新军队
+    if (this.empireData.army) {
+      this.panels.army.updateData({
+        units: this.empireData.army,
+        currentSize: this.empireData.currentArmySize,
+        maxSize: this.empireData.maxArmySize,
+        trainingQueue: this.empireData.trainingQueue
+      });
+    }
+    
+    // 更新将领
+    if (this.empireData.generals) {
+      this.panels.generals.updateData(this.empireData.generals);
+    }
+    
+    // 更新时间
+    if (this.empireData.time) {
+      this.timeDisplay.updateTime(this.empireData.time);
+    }
+  }
 
   registerSocketEvents() {
     // 资源更新
     window.socketManager.on('resource:update', (data) => {
       if (data.allResources) {
-        this.empireData.resources = data.allResources;
-        this.panels.resources?.updateData(data.allResources);
+        this.allResources = data.allResources;
+        this.resourcePanel.updateData(this.allResources);
       }
     });
     
     // 建筑更新
     window.socketManager.on('building:update', (data) => {
       if (data.buildings) {
-        this.empireData.buildings = data.buildings;
-        this.panels.buildings?.updateData(data.buildings);
+        this.panels.buildings.updateData(data.buildings, data.upgradeQueue || []);
       }
+    });
+    
+    // 建筑升级开始
+    window.socketManager.on('building:upgradeStarted', (data) => {
+      if (data.buildings) {
+        this.panels.buildings.updateData(data.buildings, data.upgradeQueue || []);
+      }
+      if (data.population) {
+        this.population = data.population;
+        this.resourcePanel.updatePopulation(this.population);
+      }
+      if (data.resources) {
+        this.allResources = data.resources;
+        this.resourcePanel.updateData(this.allResources);
+      }
+    });
+    
+    // 建筑升级完成
+    window.socketManager.on('building:upgradeCompleted', (data) => {
+      if (data.buildings) {
+        this.panels.buildings.updateData(data.buildings, data.upgradeQueue || []);
+      }
+      if (data.population) {
+        this.population = data.population;
+        this.resourcePanel.updatePopulation(this.population);
+      }
+      if (data.resources) {
+        this.allResources = data.resources;
+        this.resourcePanel.updateData(this.allResources);
+      }
+      this.showToast(`建筑升级完成！`);
     });
     
     // 军队更新
     window.socketManager.on('army:update', (data) => {
-      if (data.units) {
-        this.empireData.army = data.units;
-        this.panels.army?.updateData(data);
-      }
+      this.panels.army.updateData(data);
+    });
+    
+    // 训练更新
+    window.socketManager.on('training:update', (data) => {
+      this.panels.army.updateData({
+        ...data,
+        trainingQueue: data.queue
+      });
     });
     
     // 时间更新
     window.socketManager.on('time:update', (data) => {
-      this.timeDisplay?.updateTime(data);
+      this.timeDisplay.updateTime(data);
     });
     
     // 战斗结果
     window.socketManager.on('battle:finished', (data) => {
-      this.panels.battle?.showBattleResult(data);
+      this.panels.battle.showBattleResult(data);
     });
     
     // 将领更新
     window.socketManager.on('general:update', (data) => {
-      this.panels.generals?.updateData(data);
+      this.panels.generals.updateData(data);
+    });
+    
+    // 人口更新
+    window.socketManager.on('population:update', (data) => {
+      this.population = data;
+      this.resourcePanel.updatePopulation(this.population);
+    });
+    
+    // 体力更新
+    window.socketManager.on('stamina:update', (data) => {
+      this.stamina = data;
+      this.resourcePanel.updateStamina(this.stamina);
+    });
+    
+    // 成功提示
+    window.socketManager.on('success', (data) => {
+      this.showToast(data.message);
+    });
+    
+    // 错误提示
+    window.socketManager.on('error', (data) => {
+      this.showToast(data.message || '操作失败', '#f44336');
+    });
+  }
+  
+  showToast(message, color = '#4CAF50') {
+    // 创建提示
+    const toast = this.add.container(640, 600);
+    
+    const bg = this.add.graphics();
+    bg.fillStyle(color === '#4CAF50' ? 0x4CAF50 : 0xf44336, 0.9);
+    bg.fillRoundedRect(-150, -20, 300, 40, 20);
+    toast.add(bg);
+    
+    const text = this.add.text(0, 0, message, {
+      fontSize: '16px',
+      color: '#fff',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+    toast.add(text);
+    
+    // 动画
+    this.tweens.add({
+      targets: toast,
+      y: 580,
+      alpha: 0,
+      duration: 2000,
+      ease: 'Power2',
+      onComplete: () => {
+        toast.destroy();
+      }
     });
   }
 

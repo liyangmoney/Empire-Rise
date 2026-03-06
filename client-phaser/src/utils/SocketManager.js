@@ -18,7 +18,7 @@ export class SocketManager {
       this.playerName = playerName;
       this.playerId = 'player_' + Math.random().toString(36).substr(2, 9);
       
-      this.socket = io(serverUrl || window.location.origin);
+      this.socket = io(serverUrl || 'http://localhost:3000');
       
       this.socket.on('connect', () => {
         console.log('✅ 已连接到服务器');
@@ -41,7 +41,7 @@ export class SocketManager {
       
       this.socket.on('error', (err) => {
         console.error('服务器错误:', err);
-        reject(err);
+        this.trigger('error', err);
       });
       
       // 通用成功/失败响应
@@ -68,14 +68,39 @@ export class SocketManager {
         this.trigger('building:update', data);
       });
       
+      // 建筑升级预览
+      this.socket.on('building:upgradePreview', (data) => {
+        this.trigger('building:upgradePreview', data);
+      });
+      
+      // 建筑升级开始
+      this.socket.on('building:upgradeStarted', (data) => {
+        this.trigger('building:upgradeStarted', data);
+      });
+      
+      // 建筑升级完成
+      this.socket.on('building:upgradeCompleted', (data) => {
+        this.trigger('building:upgradeCompleted', data);
+      });
+      
       // 军队更新
       this.socket.on('army:update', (data) => {
         this.trigger('army:update', data);
       });
       
+      // 兵种类型
+      this.socket.on('army:unitTypes', (data) => {
+        this.trigger('army:unitTypes', data);
+      });
+      
       // 训练更新
       this.socket.on('training:update', (data) => {
         this.trigger('training:update', data);
+      });
+      
+      // 训练预览
+      this.socket.on('training:preview', (data) => {
+        this.trigger('training:preview', data);
       });
       
       // 战斗结果
@@ -93,9 +118,34 @@ export class SocketManager {
         this.trigger('general:update', data);
       });
       
-      // 任务更新
-      this.socket.on('task:update', (data) => {
-        this.trigger('task:update', data);
+      // 将领招募结果
+      this.socket.on('general:recruitResult', (data) => {
+        this.trigger('general:recruitResult', data);
+      });
+      
+      // 任务列表
+      this.socket.on('task:list', (data) => {
+        this.trigger('task:list', data);
+      });
+      
+      // 任务奖励领取
+      this.socket.on('task:rewardClaimed', (data) => {
+        this.trigger('task:rewardClaimed', data);
+      });
+      
+      // 人口更新
+      this.socket.on('population:update', (data) => {
+        this.trigger('population:update', data);
+      });
+      
+      // 体力更新
+      this.socket.on('stamina:update', (data) => {
+        this.trigger('stamina:update', data);
+      });
+      
+      // 可攻击NPC列表
+      this.socket.on('battle:availableNpcs', (data) => {
+        this.trigger('battle:availableNpcs', data);
       });
     });
   }
@@ -149,10 +199,15 @@ export class SocketManager {
     }
   }
 
-  // API 方法
+  // ========== API 方法 ==========
+  
   // 建筑
-  upgradeBuilding(buildingId) {
-    this.emit('building:upgrade', { playerId: this.playerId, buildingId });
+  upgradeBuilding(buildingTypeId) {
+    this.emit('building:upgrade', { playerId: this.playerId, buildingTypeId });
+  }
+  
+  previewUpgrade(buildingTypeId) {
+    this.emit('building:upgradePreview', { playerId: this.playerId, buildingTypeId });
   }
 
   // 资源采集
@@ -161,23 +216,25 @@ export class SocketManager {
   }
 
   // 训练军队
-  startTraining(unitType, count) {
-    this.emit('training:start', { playerId: this.playerId, unitType, count });
+  startTraining(unitTypeId, count) {
+    this.emit('army:train', { playerId: this.playerId, unitTypeId, count });
+  }
+  
+  previewTraining(unitTypeId, count) {
+    this.emit('army:trainingPreview', { playerId: this.playerId, unitTypeId, count });
   }
 
   // 开始战斗
-  startBattle(npcId, formation, generalId) {
+  startBattle(npcTypeId) {
     this.emit('battle:start', {
       playerId: this.playerId,
-      npcId,
-      formation,
-      generalId
+      npcTypeId
     });
   }
 
   // 招募将领
-  recruitGeneral(type) {
-    this.emit('general:recruit', { playerId: this.playerId, type });
+  recruitGeneral(recruitType) {
+    this.emit('general:recruit', { playerId: this.playerId, recruitType });
   }
 
   // 获取NPC列表
@@ -187,11 +244,16 @@ export class SocketManager {
 
   // 获取任务列表
   getTasks() {
-    this.emit('task:get', { playerId: this.playerId });
+    this.emit('task:list', { playerId: this.playerId });
   }
 
-  // 完成任务
-  completeTask(taskId) {
-    this.emit('task:complete', { playerId: this.playerId, taskId });
+  // 领取任务奖励
+  claimTaskReward(taskId) {
+    this.emit('task:claimReward', { playerId: this.playerId, taskId });
+  }
+  
+  // 获取单位类型
+  getUnitTypes() {
+    this.emit('army:getUnitTypes', { playerId: this.playerId });
   }
 }

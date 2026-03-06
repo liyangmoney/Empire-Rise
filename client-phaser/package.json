@@ -1,16 +1,16 @@
 {
   "name": "empire-rise-phaser",
   "version": "1.0.0",
-  "description": "帝国崛起 - Phaser 3 客户端",
+  "description": "Empire Rise - Phaser 3 Client",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --port 13001",
     "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
     "phaser": "^3.70.0",
-    "socket.io-client": "^4.7.4"
+    "socket.io-client": "^4.7.0"
   },
   "devDependencies": {
     "vite": "^5.0.0"
