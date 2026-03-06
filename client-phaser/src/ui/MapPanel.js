@@ -1,17 +1,16 @@
 import Phaser from 'phaser';
-import { TERRAIN_TYPES } from '../shared/constants.js';
 
 /**
- * 地图面板
+ * 地图面板 - 世界地图显示
  */
 export class MapPanel extends Phaser.GameObjects.Container {
   constructor(scene, x, y) {
     super(scene, x, y);
     
     this.mapData = null;
-    this.fullMapData = null;
+    this.castlePosition = null;
     this.currentMode = 'view'; // 'view' 或 'world'
-    this.mapZoom = 1;
+    this.zoom = 1;
     
     this.scene = scene;
     
@@ -21,9 +20,9 @@ export class MapPanel extends Phaser.GameObjects.Container {
   
   createUI() {
     // 标题
-    this.scene.add.text(0, -240, '🗺️ 世界地图', {
+    this.scene.add.text(0, -260, '🗺️ 世界地图', {
       fontSize: '24px',
-      fontFamily: 'Arial',
+      fontFamily: 'Microsoft YaHei, Arial',
       color: '#ffd700',
       fontStyle: 'bold'
     }).setOrigin(0.5);
@@ -32,415 +31,238 @@ export class MapPanel extends Phaser.GameObjects.Container {
     this.mapContainer = this.scene.add.container(0, 0);
     this.add(this.mapContainer);
     
+    // 遮罩
+    const maskGraphics = this.scene.make.graphics();
+    maskGraphics.fillRect(-560, -220, 1120, 440);
+    const mask = maskGraphics.createGeometryMask();
+    this.mapContainer.setMask(mask);
+    
     // 控制按钮
     this.createControls();
     
-    // 城堡信息
-    this.castleInfo = this.scene.add.text(-550, 220, '🏰 城堡位置: 加载中...', {
-      fontSize: '14px',
-      color: '#ffd700'
-    });
-    this.add(this.castleInfo);
+    // 提示文字
+    this.hintText = this.scene.add.text(0, 240, '点击地块查看详情 | 鼠标滚轮缩放', {
+      fontSize: '12px',
+      color: '#888888'
+    }).setOrigin(0.5);
+    this.add(this.hintText);
   }
   
   createControls() {
-    const btnY = 240;
+    // 模式切换按钮
+    const viewBtn = this.createButton(-80, -230, '视野模式', () => this.switchMode('view'));
+    const worldBtn = this.createButton(80, -230, '世界地图', () => this.switchMode('world'));
     
-    // 视野模式按钮
-    this.viewBtn = this.createButton(-200, btnY, '👁️ 视野模式', () => {
-      this.switchMode('view');
-    });
-    
-    // 世界地图按钮
-    this.worldBtn = this.createButton(-50, btnY, '🌍 世界地图', () => {
-      this.switchMode('world');
-    });
-    
-    // 缩放控制
-    this.createButton(100, btnY, '🔍+', () => this.zoomIn());
-    this.createButton(180, btnY, '🔍-', () => this.zoomOut());
-    
-    // 刷新按钮
-    this.createButton(280, btnY, '🔄 刷新', () => {
-      window.socketManager.emit('map:getView', { playerId: window.socketManager.playerId });
-    });
+    this.modeButtons = { view: viewBtn, world: worldBtn };
   }
   
   createButton(x, y, label, callback) {
     const container = this.scene.add.container(x, y);
     
     const bg = this.scene.add.graphics();
-    bg.fillStyle(0x4a5568, 1);
-    bg.fillRoundedRect(-50, -18, 100, 36, 6);
+    bg.fillStyle(0x2a2a3e, 1);
+    bg.fillRoundedRect(-50, -15, 100, 30, 6);
+    bg.lineStyle(1, 0x666666, 1);
+    bg.strokeRoundedRect(-50, -15, 100, 30, 6);
+    container.add(bg);
     
     const text = this.scene.add.text(0, 0, label, {
       fontSize: '13px',
-      color: '#ffffff'
+      color: '#aaaaaa'
     }).setOrigin(0.5);
+    container.add(text);
     
-    container.add([bg, text]);
-    
-    const zone = this.scene.add.zone(0, 0, 100, 36).setInteractive({ useHandCursor: true });
+    const zone = this.scene.add.zone(0, 0, 100, 30).setInteractive({ useHandCursor: true });
     container.add(zone);
     
-    zone.on('pointerover', () => {
-      bg.clear();
-      bg.fillStyle(0x5a6578, 1);
-      bg.fillRoundedRect(-50, -18, 100, 36, 6);
-    });
-    
-    zone.on('pointerout', () => {
-      bg.clear();
-      bg.fillStyle(0x4a5568, 1);
-      bg.fillRoundedRect(-50, -18, 100, 36, 6);
-    });
-    
+    zone.on('pointerover', () => text.setColor('#ffffff'));
+    zone.on('pointerout', () => text.setColor('#aaaaaa'));
     zone.on('pointerup', callback);
     
-    return container;
+    return { container, bg, text };
   }
   
   switchMode(mode) {
     this.currentMode = mode;
     
-    // 更新按钮状态
-    this.viewBtn.getAt(0).clear();
-    this.worldBtn.getAt(0).clear();
+    // 更新按钮样式
+    Object.entries(this.modeButtons).forEach(([key, btn]) => {
+      if (key === mode) {
+        btn.bg.clear();
+        btn.bg.fillStyle(0x4CAF50, 0.3);
+        btn.bg.fillRoundedRect(-50, -15, 100, 30, 6);
+        btn.bg.lineStyle(1, 0x4CAF50, 1);
+        btn.bg.strokeRoundedRect(-50, -15, 100, 30, 6);
+        btn.text.setColor('#4CAF50');
+      } else {
+        btn.bg.clear();
+        btn.bg.fillStyle(0x2a2a3e, 1);
+        btn.bg.fillRoundedRect(-50, -15, 100, 30, 6);
+        btn.bg.lineStyle(1, 0x666666, 1);
+        btn.bg.strokeRoundedRect(-50, -15, 100, 30, 6);
+        btn.text.setColor('#aaaaaa');
+      }
+    });
     
-    if (mode === 'view') {
-      this.viewBtn.getAt(0).fillStyle(0x4CAF50, 1);
-      this.worldBtn.getAt(0).fillStyle(0x4a5568, 1);
-      if (this.mapData) this.renderViewMap();
-    } else {
-      this.viewBtn.getAt(0).fillStyle(0x4a5568, 1);
-      this.worldBtn.getAt(0).fillStyle(0x4CAF50, 1);
-      if (this.fullMapData) this.renderFullMap();
-    }
-    
-    this.viewBtn.getAt(0).fillRoundedRect(-50, -18, 100, 36, 6);
-    this.worldBtn.getAt(0).fillRoundedRect(-50, -18, 100, 36, 6);
+    this.renderMap();
   }
   
   updateData(data) {
     if (data.map) {
       this.mapData = data.map;
-      if (this.currentMode === 'view') {
-        this.renderViewMap();
-      }
-    }
-    if (data.fullMap) {
-      this.fullMapData = data.fullMap;
-      if (this.currentMode === 'world') {
-        this.renderFullMap();
-      }
+      this.castlePosition = data.map.castle;
+      this.renderMap();
     }
   }
   
-  renderViewMap() {
-    const map = this.mapData;
-    if (!map || !map.area) return;
-    
+  renderMap() {
+    // 清除旧地图
     this.mapContainer.removeAll(true);
     
-    // 更新城堡位置
-    if (map.castle) {
-      this.castleInfo.setText(`🏰 城堡位置: (${map.castle.x}, ${map.castle.y})`);
+    if (!this.mapData) {
+      // 显示提示
+      const hint = this.scene.add.text(0, 0, '暂无地图数据', {
+        fontSize: '16px',
+        color: '#888888'
+      }).setOrigin(0.5);
+      this.mapContainer.add(hint);
+      return;
     }
     
-    const cellSize = 24;
-    const cols = 21;
-    
-    // 排序确保正确渲染
-    const sorted = [...map.area].sort((a, b) => {
-      if (a.y !== b.y) return a.y - b.y;
-      return a.x - b.x;
-    });
-    
-    const terrainColors = {
-      plains: 0x7CFC00,
-      forest: 0x228B22,
-      hills: 0xDAA520,
-      mountains: 0x696969,
-      river: 0x1E90FF,
-      lake: 0x00BFFF,
-      desert: 0xF4A460,
-      swamp: 0x556B2F
-    };
-    
-    const terrainIcons = {
-      forest: '🌲',
-      hills: '⛰️',
-      mountains: '🏔️',
-      river: '💧',
-      lake: '🌊',
-      desert: '🏜️',
-      swamp: '🌿'
-    };
-    
-    sorted.forEach(tile => {
-      const col = tile.x;
-      const row = tile.y;
-      const x = (col - 10) * cellSize;
-      const y = (row - 10) * cellSize;
-      
-      // 地形背景
-      const bg = this.scene.add.graphics();
-      const color = terrainColors[tile.terrain?.id] || 0xcccccc;
-      bg.fillStyle(color, 0.9);
-      bg.fillRoundedRect(x - cellSize/2, y - cellSize/2, cellSize - 2, cellSize - 2, 4);
-      this.mapContainer.add(bg);
-      
-      // 图标
-      if (tile.hasCastle) {
-        // 城堡
-        const castle = this.scene.add.text(x, y, '🏰', {
-          fontSize: '18px'
-        }).setOrigin(0.5);
-        castle.setScale(1.2);
-        this.mapContainer.add(castle);
-        
-        // 金色发光效果
-        const glow = this.scene.add.graphics();
-        glow.lineStyle(2, 0xFFD700, 0.8);
-        glow.strokeRoundedRect(x - cellSize/2 - 2, y - cellSize/2 - 2, cellSize + 2, cellSize + 2, 4);
-        this.mapContainer.add(glow);
-      } else if (tile.npcs && tile.npcs.length > 0) {
-        // NPC
-        const npc = tile.npcs[0];
-        const icon = npc.isNeutral ? '🏪' : '⚔️';
-        const color = npc.isNeutral ? 0x9370DB : 0xFF4500;
-        
-        const npcIcon = this.scene.add.text(x, y, icon, {
-          fontSize: '16px'
-        }).setOrigin(0.5);
-        this.mapContainer.add(npcIcon);
-        
-        // NPC发光
-        const glow = this.scene.add.graphics();
-        glow.lineStyle(2, color, 0.6);
-        glow.strokeRoundedRect(x - cellSize/2, y - cellSize/2, cellSize - 2, cellSize - 2, 4);
-        this.mapContainer.add(glow);
-      } else {
-        // 地形图标
-        const icon = terrainIcons[tile.terrain?.id];
-        if (icon) {
-          const text = this.scene.add.text(x, y, icon, {
-            fontSize: '14px'
-          }).setOrigin(0.5);
-          this.mapContainer.add(text);
-        }
-      }
-      
-      // 点击区域
-      const zone = this.scene.add.zone(x, y, cellSize, cellSize).setInteractive();
-      this.mapContainer.add(zone);
-      
-      zone.on('pointerover', () => {
-        bg.clear();
-        bg.fillStyle(0xffffff, 0.3);
-        bg.fillRoundedRect(x - cellSize/2, y - cellSize/2, cellSize - 2, cellSize - 2, 4);
-      });
-      
-      zone.on('pointerout', () => {
-        const color2 = terrainColors[tile.terrain?.id] || 0xcccccc;
-        bg.clear();
-        bg.fillStyle(color2, 0.9);
-        bg.fillRoundedRect(x - cellSize/2, y - cellSize/2, cellSize - 2, cellSize - 2, 4);
-      });
-      
-      zone.on('pointerup', () => {
-        this.showTileInfo(tile);
-      });
-    });
-  }
-  
-  renderFullMap() {
-    const map = this.fullMapData;
-    if (!map) return;
-    
-    this.mapContainer.removeAll(true);
-    
-    // 简化显示，使用小格子
-    const cellSize = 6;
-    const size = map.size;
-    
-    const terrainColors = {
-      plains: 0x7CFC00,
-      forest: 0x228B22,
-      hills: 0xDAA520,
-      mountains: 0x696969,
-      river: 0x1E90FF,
-      lake: 0x00BFFF,
-      desert: 0xF4A460,
-      swamp: 0x556B2F
-    };
-    
-    // 创建NPC和城堡查找表
-    const npcLookup = {};
-    if (map.npcs) {
-      map.npcs.forEach(npc => {
-        npcLookup[`${npc.x},${npc.y}`] = npc;
-      });
+    if (this.currentMode === 'view') {
+      this.renderViewMode();
+    } else {
+      this.renderWorldMode();
     }
-    
-    const castleLookup = {};
-    if (map.castles) {
-      map.castles.forEach(castle => {
-        castleLookup[`${castle.x},${castle.y}`] = castle;
-      });
-    }
-    
-    // 渲染地形
-    for (let y = 0; y < size; y++) {
-      for (let x = 0; x < size; x++) {
-        const terrainId = map.terrain?.[y]?.[x] || 'plains';
-        const npc = npcLookup[`${x},${y}`];
-        const castle = castleLookup[`${x},${y}`];
-        
-        const px = (x - size/2) * cellSize;
-        const py = (y - size/2) * cellSize;
-        
-        const cell = this.scene.add.graphics();
-        
-        if (castle) {
-          cell.fillStyle(castle.isOwn ? 0x8B4513 : 0x4a4a4a, 1);
-        } else if (npc) {
-          cell.fillStyle(npc.hasMerchant ? 0x9370DB : 0xFF4500, 1);
-        } else {
-          cell.fillStyle(terrainColors[terrainId] || 0xcccccc, 1);
-        }
-        
-        cell.fillRect(px, py, cellSize - 1, cellSize - 1);
-        this.mapContainer.add(cell);
-      }
-    }
-    
-    // 应用缩放
-    this.mapContainer.setScale(this.mapZoom);
   }
   
-  zoomIn() {
-    this.mapZoom = Math.min(2, this.mapZoom + 0.2);
-    this.mapContainer.setScale(this.mapZoom);
-  }
-  
-  zoomOut() {
-    this.mapZoom = Math.max(0.5, this.mapZoom - 0.2);
-    this.mapContainer.setScale(this.mapZoom);
-  }
-  
-  showTileInfo(tile) {
-    const terrainNames = {
-      plains: '平原', forest: '森林', hills: '丘陵',
-      mountains: '山地', river: '河流', lake: '湖泊',
-      desert: '沙漠', swamp: '沼泽'
-    };
+  renderViewMode() {
+    // 视野模式 - 显示21x21区域
+    const viewSize = 21;
+    const tileSize = 24;
+    const halfSize = Math.floor(viewSize / 2);
     
-    const modal = this.scene.add.container(640, 360);
-    modal.setDepth(1000);
+    const cx = this.castlePosition?.x || 50;
+    const cy = this.castlePosition?.y || 50;
     
     // 背景
-    const overlay = this.scene.add.graphics();
-    overlay.fillStyle(0x000000, 0.7);
-    overlay.fillRect(-640, -360, 1280, 720);
-    overlay.setInteractive();
-    overlay.on('pointerup', () => modal.destroy());
-    modal.add(overlay);
-    
-    // 弹窗
     const bg = this.scene.add.graphics();
-    bg.fillStyle(0x1a1a2e, 1);
-    bg.fillRoundedRect(-200, -150, 400, 300, 12);
-    bg.lineStyle(2, 0xffd700, 1);
-    bg.strokeRoundedRect(-200, -150, 400, 300, 12);
-    modal.add(bg);
+    bg.fillStyle(0x000000, 0.5);
+    bg.fillRect(-halfSize * tileSize - 10, -halfSize * tileSize - 10, 
+                viewSize * tileSize + 20, viewSize * tileSize + 20);
+    this.mapContainer.add(bg);
     
-    // 标题
-    const title = this.scene.add.text(0, -120, `位置 (${tile.x}, ${tile.y})`, {
-      fontSize: '20px',
-      color: '#ffd700',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-    modal.add(title);
-    
-    // 地形
-    const terrainName = terrainNames[tile.terrain?.id] || tile.terrain?.id || '未知';
-    const terrain = this.scene.add.text(0, -80, `地形: ${terrainName}`, {
-      fontSize: '16px',
-      color: '#ffffff'
-    }).setOrigin(0.5);
-    modal.add(terrain);
-    
-    // 防御加成
-    let defenseBonus = 0;
-    if (tile.terrain?.id === 'mountains') defenseBonus = 25;
-    else if (tile.terrain?.id === 'hills') defenseBonus = 15;
-    else if (tile.terrain?.id === 'forest') defenseBonus = 10;
-    
-    if (defenseBonus > 0) {
-      const defense = this.scene.add.text(0, -50, `防御加成: +${defenseBonus}%`, {
-        fontSize: '14px',
-        color: '#4CAF50'
-      }).setOrigin(0.5);
-      modal.add(defense);
-    }
-    
-    // NPC信息
-    if (tile.npcs && tile.npcs.length > 0) {
-      const npc = tile.npcs[0];
-      const npcType = npc.isNeutral ? '商人商队 🏪' : '敌对势力 ⚔️';
-      const npcText = this.scene.add.text(0, -10, npcType, {
-        fontSize: '16px',
-        color: npc.isNeutral ? '#9370DB' : '#FF4500'
-      }).setOrigin(0.5);
-      modal.add(npcText);
-      
-      if (!npc.isNeutral) {
-        const attackBtn = this.scene.add.text(0, 50, '⚔️ 攻击', {
-          fontSize: '16px',
-          color: '#ffffff',
-          backgroundColor: '#f44336',
-          padding: { x: 30, y: 10 }
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    // 渲染地块
+    for (let dy = -halfSize; dy <= halfSize; dy++) {
+      for (let dx = -halfSize; dx <= halfSize; dx++) {
+        const x = cx + dx;
+        const y = cy + dy;
         
-        attackBtn.on('pointerup', () => {
-          window.socketManager.emit('battle:start', {
-            playerId: window.socketManager.playerId,
-            npcTypeId: npc.type
-          });
-          modal.destroy();
-        });
-        modal.add(attackBtn);
+        if (x >= 0 && x < 100 && y >= 0 && y < 100) {
+          this.renderTile(x, y, dx * tileSize, dy * tileSize, tileSize);
+        }
       }
     }
     
-    // 城堡信息
-    if (tile.hasCastle) {
-      const castleText = this.scene.add.text(0, 20, '🏰 我的城堡', {
-        fontSize: '18px',
-        color: '#ffd700'
-      }).setOrigin(0.5);
-      modal.add(castleText);
+    // 渲染城堡
+    if (this.castlePosition) {
+      const castleX = 0;
+      const castleY = 0;
+      this.renderCastle(castleX, castleY, tileSize);
+    }
+  }
+  
+  renderWorldMode() {
+    // 世界模式 - 缩略图
+    const mapSize = 100;
+    const tileSize = 4;
+    
+    // 背景
+    const bg = this.scene.add.graphics();
+    bg.fillStyle(0x000000, 0.5);
+    bg.fillRect(-mapSize * tileSize / 2 - 5, -mapSize * tileSize / 2 - 5,
+                mapSize * tileSize + 10, mapSize * tileSize + 10);
+    this.mapContainer.add(bg);
+    
+    // 简化渲染 - 只显示地形颜色
+    // 实际实现中应该根据地图数据渲染
+    const terrainColors = {
+      plains: 0x4CAF50,
+      forest: 0x2E7D32,
+      hills: 0x8D6E63,
+      mountains: 0x757575,
+      river: 0x2196F3,
+      desert: 0xFFC107,
+      swamp: 0x795548
+    };
+    
+    // 这里简化处理，实际应该从mapData获取
+    for (let y = 0; y < mapSize; y += 2) {
+      for (let x = 0; x < mapSize; x += 2) {
+        const color = terrainColors.plains;
+        const px = (x - mapSize / 2) * tileSize;
+        const py = (y - mapSize / 2) * tileSize;
+        
+        const tile = this.scene.add.rectangle(px, py, tileSize * 2, tileSize * 2, color);
+        tile.setAlpha(0.6);
+        this.mapContainer.add(tile);
+      }
     }
     
-    // 关闭按钮
-    const closeBtn = this.scene.add.text(0, 100, '关闭', {
-      fontSize: '14px',
-      color: '#ffffff',
-      backgroundColor: '#666666',
-      padding: { x: 40, y: 8 }
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    // 城堡位置
+    if (this.castlePosition) {
+      const px = (this.castlePosition.x - mapSize / 2) * tileSize;
+      const py = (this.castlePosition.y - mapSize / 2) * tileSize;
+      
+      const castle = this.scene.add.text(px, py, '🏰', {
+        fontSize: '16px'
+      }).setOrigin(0.5);
+      this.mapContainer.add(castle);
+    }
+  }
+  
+  renderTile(x, y, px, py, size) {
+    // 简化地形渲染
+    const colors = {
+      plains: 0x4CAF50,
+      forest: 0x2E7D32,
+      hills: 0x8D6E63,
+      mountains: 0x757575,
+      river: 0x2196F3
+    };
     
-    closeBtn.on('pointerup', () => modal.destroy());
-    modal.add(closeBtn);
+    // 默认平原
+    const color = colors.plains;
     
-    this.scene.add.existing(modal);
+    const tile = this.scene.add.rectangle(px, py, size - 1, size - 1, color);
+    tile.setAlpha(0.8);
+    tile.setInteractive();
+    tile.on('pointerup', () => this.onTileClick(x, y));
+    this.mapContainer.add(tile);
+  }
+  
+  renderCastle(x, y, size) {
+    const castle = this.scene.add.text(x, y, '🏰', {
+      fontSize: `${size}px`
+    }).setOrigin(0.5);
+    
+    // 发光效果
+    const glow = this.scene.add.graphics();
+    glow.fillStyle(0xffd700, 0.3);
+    glow.fillCircle(x, y, size * 0.8);
+    
+    this.mapContainer.add([glow, castle]);
+  }
+  
+  onTileClick(x, y) {
+    console.log('Clicked tile:', x, y);
+    // 可以显示地块详情弹窗
   }
   
   onShow() {
-    // 请求地图数据
-    window.socketManager.emit('map:getView', {
-      playerId: window.socketManager.playerId
-    });
+    // 获取地图数据
+    if (!this.mapData) {
+      // 触发获取地图数据
+    }
   }
 }

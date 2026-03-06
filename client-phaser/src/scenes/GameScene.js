@@ -243,6 +243,9 @@ export class GameScene extends Phaser.Scene {
     if (this.empireData.time) {
       this.timeDisplay.updateTime(this.empireData.time);
     }
+    if (this.empireData.map) {
+      this.panels.map.updateData({ map: this.empireData.map });
+    }
   }
 
   registerEvents() {
