@@ -567,9 +567,17 @@ function renderBuildings(buildings, upgradeQueue = []) {
         upgradeHtml = '<p style="color:#666;margin-top:10px;">已满级</p>';
       }
       
+      const iconPath = getBuildingIcon(building.id);
+      const iconHtml = iconPath ? `<img src="${iconPath}" alt="" style="width:48px;height:48px;margin-right:10px;vertical-align:middle;background:rgba(0,0,0,0.3);border-radius:8px;padding:4px;">` : '';
+      
       item.innerHTML = `
-        <h4>${getBuildingName(building.id)} - Lv.${building.level}</h4>
-        <p style="color:#888;font-size:12px;">最高等级: ${building.maxLevel}</p>
+        <div style="display:flex;align-items:center;margin-bottom:10px;">
+          ${iconHtml}
+          <div>
+            <h4 style="margin:0;">${getBuildingName(building.id)} - Lv.${building.level}</h4>
+            <p style="color:#888;font-size:12px;margin:4px 0 0 0;">最高等级: ${building.maxLevel}</p>
+          </div>
+        </div>
         <p style="color:#aaa;font-size:13px;margin-top:8px;line-height:1.4;">${building.description || '暂无介绍'}</p>
         ${upgradeHtml}
       `;
@@ -619,6 +627,28 @@ function getBuildingName(buildingId) {
     general_camp: '🎖️ 将领营'
   };
   return names[buildingId] || buildingId;
+}
+
+// 获取建筑图标路径
+function getBuildingIcon(buildingId) {
+  const iconMap = {
+    lumber_mill: 'lumber_mill.png',
+    farm: 'farm.png',
+    quarry: 'quarry.png',
+    iron_mine: 'iron_mine.png',
+    barracks: 'barracks.png',
+    hospital: 'hospital.png',
+    wall: 'wall.png',
+    tower: 'tower.png',
+    house: 'house.png',
+    market: 'market.png',
+    blacksmith: 'blacksmith.png',
+    tavern: 'tavern.png',
+    warehouse_basic: 'warehouse.png',
+    stables: 'stables.png'
+  };
+  const iconFile = iconMap[buildingId];
+  return iconFile ? `assets/icons/buildings/${iconFile}` : null;
 }
 
 // 显示建筑详细信息
@@ -1847,13 +1877,49 @@ function renderViewMap(map) {
   }
   container.innerHTML = '';
   map.area.sort((a, b) => { if (a.y !== b.y) return a.y - b.y; return a.x - b.x; });
-  const terrainColors = { plains: '#90EE90', forest: '#228B22', hills: '#DAA520', mountains: '#808080', river: '#4169E1', lake: '#1E90FF', desert: '#FFD700', swamp: '#556B2F' };
+  
+  // 更美观的地形颜色
+  const terrainColors = { 
+    plains: '#7CFC00',
+    forest: '#228B22',
+    hills: '#DAA520',
+    mountains: '#696969',
+    river: '#1E90FF',
+    lake: '#00BFFF',
+    desert: '#F4A460',
+    swamp: '#556B2F'
+  };
+  
+  const terrainIcons = {
+    plains: '',
+    forest: '🌲',
+    hills: '⛰️',
+    mountains: '🏔️',
+    river: '💧',
+    lake: '🌊',
+    desert: '🏜️',
+    swamp: '🌿'
+  };
+
   map.area.forEach(tile => {
     const cell = document.createElement('div');
-    cell.style.cssText = 'width: 24px; height: 24px; border-radius: 3px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px;';
+    cell.style.cssText = 'width: 24px; height: 24px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; border: 1px solid rgba(255,255,255,0.1); box-shadow: inset 0 0 4px rgba(0,0,0,0.3);';
     cell.style.background = terrainColors[tile.terrain.id] || '#ccc';
-    if (tile.hasCastle) { cell.style.background = '#8B4513'; cell.textContent = '🏰'; cell.style.fontSize = '16px'; }
-    else if (tile.npcs && tile.npcs.length > 0) { cell.textContent = tile.npcs[0].isNeutral ? '🏪' : '⚔️'; }
+    
+    if (tile.hasCastle) {
+      cell.style.background = '#8B4513';
+      cell.innerHTML = '🏰';
+      cell.style.fontSize = '16px';
+      cell.style.boxShadow = '0 0 8px #FFD700';
+    } else if (tile.npcs && tile.npcs.length > 0) {
+      const npc = tile.npcs[0];
+      cell.innerHTML = npc.isNeutral ? '🏪' : '⚔️';
+      cell.style.boxShadow = npc.isNeutral ? '0 0 6px #9370DB' : '0 0 6px #FF4500';
+    } else {
+      cell.innerHTML = terrainIcons[tile.terrain.id] || '';
+      cell.style.opacity = '0.9';
+    }
+    
     cell.onclick = () => showTileInfo(tile);
     container.appendChild(cell);
   });
