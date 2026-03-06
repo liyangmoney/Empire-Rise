@@ -20,7 +20,7 @@ export class ArmyPanel extends Phaser.GameObjects.Container {
   
   createUI() {
     // 标题
-    this.add.text(0, -250, '⚔️ 军队管理', {
+    this.scene.add.text(0, -250, '⚔️ 军队管理', {
       fontSize: '28px',
       fontFamily: 'Microsoft YaHei',
       color: '#ffd700',

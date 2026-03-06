@@ -7,12 +7,12 @@ export class BattlePanel extends Phaser.GameObjects.Container {
   constructor(scene, x, y) {
     super(scene, x, y);
     
-    this.add.text(0, 0, '🎯 战斗系统', {
+    this.scene.add.text(0, 0, '🎯 战斗系统', {
       fontSize: '24px',
       color: '#fff'
     }).setOrigin(0.5);
     
-    this.add.text(0, 40, '（开发中）', {
+    this.scene.add.text(0, 40, '（开发中）', {
       fontSize: '16px',
       color: '#aaa'
     }).setOrigin(0.5);
