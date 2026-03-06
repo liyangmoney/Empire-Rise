@@ -192,6 +192,7 @@ export function registerSocketHandlers(io, gameWorld) {
           duration: task.duration,
           durationFormatted: formatDuration(task.duration / 1000)
         },
+        buildings: empire.buildings.getSnapshot(),
         upgradeQueue: empire.buildings.upgradeQueue || [],
         resources: empire.resources.getSnapshot(empire.buildings),
         population: empire.population?.getSnapshot()

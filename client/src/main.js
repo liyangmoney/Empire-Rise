@@ -334,9 +334,13 @@ function connect() {
   // 监听升级开始
   socket.on('building:upgradeStarted', (data) => {
     console.log('Building upgrade started:', data);
+    // 更新建筑数据，避免等级显示错误
+    if (data.buildings && empireData) {
+      empireData.buildings = data.buildings;
+    }
+    renderBuildings(data.buildings || empireData.buildings, data.upgradeQueue || []);
     renderResources(data.resources);
     updateBuildingQueue(data.upgradeQueue || []);
-    // 不在这里显示提示，由服务器发送的 success 事件统一处理
   });
 
   // 监听升级完成
