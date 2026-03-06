@@ -17,9 +17,9 @@ export class GameLoop {
   start() {
     if (this.isRunning) return;
     this.isRunning = true;
-    
+
     console.log('🎮 GameLoop started');
-    
+
     this.intervalId = setInterval(() => {
       this.tick();
     }, TICK_RATE);
@@ -92,7 +92,7 @@ export class GameLoop {
       iron: empire.buildings.getProductionRate('iron'),
       crystal: empire.buildings.getProductionRate('crystal')
     };
-    
+
     for (const [resId, rate] of Object.entries(productionRates)) {
       if (rate > 0) {
         const actualRate = rate * timeScale;
@@ -114,7 +114,7 @@ export class GameLoop {
           if (task.buildingTypeId === 'warehouse_basic') {
             const level = empire.buildings.getLevel('warehouse_basic');
             for (const resId of ['wood', 'stone', 'food']) {
-              empire.resources.storage[resId].maxCapacity = 1000 * Math.pow(1.5, level - 1);
+              empire.resources.storage[resId].maxCapacity = 10000 * Math.pow(1.5, level - 1);
             }
           }
           
@@ -122,7 +122,7 @@ export class GameLoop {
           if (empire.tasks) {
             empire.tasks.updateProgress('upgradeBuilding', 1);
           }
-          
+
           empire._io.to(empire.socketId).emit('building:upgradeCompleted', {
             task,
             buildings: empire.buildings.getSnapshot(),
@@ -130,6 +130,18 @@ export class GameLoop {
             resources: empire.resources.getSnapshot(empire.buildings)
           });
         }
+      }
+    }
+
+    // ===== 人口系统更新 =====
+    if (empire.population) {
+      // 自然增长
+      const hoursElapsed = deltaTime / 3600;
+      empire.population.grow(hoursElapsed * timeScale);
+      
+      // 每5秒广播人口更新
+      if (Math.floor(Date.now() / 5000) % 1 === 0 && empire.socketId && empire._io) {
+        empire._io.to(empire.socketId).emit('population:update', empire.population.getSnapshot());
       }
     }
 
@@ -163,7 +175,7 @@ export class GameLoop {
               console.log(`[TimeSync] Sending: ${timeSnapshot.gameDate} ${timeSnapshot.realTime}`);
             }
             io.to(e.socketId).emit('time:update', timeSnapshot);
-            
+
             if (e.army) {
               io.to(e.socketId).emit('army:update', e.army.getSnapshot());
             }
@@ -171,7 +183,7 @@ export class GameLoop {
         }
       }
     }
-    
+
     // 触发资源更新事件（每5秒）
     if (this.gameWorld.tick % 5 === 0) {
       for (const empire of this.gameWorld.empires.values()) {
@@ -179,7 +191,7 @@ export class GameLoop {
           const io = empire._io;
           if (io) {
             io.to(empire.socketId).emit('resource:update', empire.resources.getSnapshot(empire.buildings));
-            
+
             if (empire.army) {
               io.to(empire.socketId).emit('army:update', empire.army.getSnapshot());
             }
@@ -195,7 +207,7 @@ export class GameLoop {
   updateArmy(empire, deltaTime) {
     const army = empire.army;
     const timeScale = empire.time?.speed || 1;
-    
+
     // 1. 处理训练队列（考虑时间加速）
     // 时间加速时，训练进度也加快
     if (army.trainingQueue.length > 0) {
@@ -205,11 +217,11 @@ export class GameLoop {
           // 实际经过的时间 × 时间倍率 = 游戏内经过的时间
           const gameTimeElapsed = deltaTime * timeScale * 1000; // 转换为毫秒
           task._progress = (task._progress || 0) + gameTimeElapsed;
-          
+
           if (task._progress >= task.duration) {
             task.completed = true;
             army.addUnits(task.unitTypeId, task.count);
-            
+
             // 通知客户端
             if (empire.socketId && empire._io) {
               empire._io.to(empire.socketId).emit('army:trainingCompleted', {
@@ -227,14 +239,14 @@ export class GameLoop {
     // 2. 计算军队粮食消耗
     const foodConsumption = army.calculateFoodConsumption();
     const foodConsumed = foodConsumption * (deltaTime / 3600);
-    
+
     if (foodConsumed > 0) {
       const hasEnoughFood = empire.resources.consume('food', foodConsumed);
-      
+
       if (!hasEnoughFood) {
         const moralePenalty = (foodConsumed / Math.max(1, empire.resources.get('food'))) * 10;
         army.updateMorale(-moralePenalty);
-        
+
         if (army.morale < 30 && empire.socketId && empire._io) {
           empire._io.to(empire.socketId).emit('army:moraleWarning', {
             morale: army.morale,
@@ -332,7 +344,7 @@ export class GameLoop {
     if (npc.resources) {
       npc.resources.produce(deltaTime / 3600);
     }
-    
+
     if (npc.army && npc.army.morale < 100) {
       npc.army.updateMorale(deltaTime / 120);
     }

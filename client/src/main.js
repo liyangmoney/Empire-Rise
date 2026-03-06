@@ -266,6 +266,11 @@ function connect() {
     }
   });
 
+  // 人口更新事件
+  socket.on('population:update', (data) => {
+    updatePopulationDisplay(data);
+  });
+
   // 任务系统事件监听
   socket.on('task:list', (data) => {
     console.log('Tasks:', data);
@@ -341,6 +346,10 @@ function connect() {
     renderBuildings(data.buildings || empireData.buildings, data.upgradeQueue || []);
     renderResources(data.resources);
     updateBuildingQueue(data.upgradeQueue || []);
+    // 更新人口显示
+    if (data.population) {
+      updatePopulationDisplay(data.population);
+    }
   });
 
   // 监听升级完成
