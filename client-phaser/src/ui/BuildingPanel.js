@@ -32,12 +32,12 @@ export class BuildingPanel extends Phaser.GameObjects.Container {
   
   createUI() {
     // 标题
-    this.add.text(0, -250, '🏗️ 建筑系统', {
+    this.scene.add.text(0, -250, '🏗️ 建筑系统', {
       fontSize: '28px',
       fontFamily: 'Microsoft YaHei',
       color: '#ffd700',
       fontStyle: 'bold'
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setScrollFactor(0);
     
     // 创建分类容器
     const categories = ['production', 'military', 'economy', 'storage', 'technology', 'special'];
