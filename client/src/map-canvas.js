@@ -147,6 +147,11 @@ function renderMap(map) {
     initMapCanvases();
   }
   
+  if (!viewMapCanvas) {
+    console.error('Map canvas initialization failed');
+    return;
+  }
+  
   if (currentMapMode === 'world' && fullMapData) {
     renderFullMap(fullMapData);
   } else {
@@ -155,6 +160,11 @@ function renderMap(map) {
 }
 
 function renderViewMap(map, selectedX = -1, selectedY = -1) {
+  // 确保 Canvas 已创建
+  if (!viewMapCanvas) {
+    initMapCanvases();
+  }
+  
   if (!viewMapCanvas || !map) return;
   
   currentViewMapData = map;
@@ -242,6 +252,11 @@ function renderViewMap(map, selectedX = -1, selectedY = -1) {
 }
 
 function renderFullMap(fullMap, selectedX = -1, selectedY = -1) {
+  // 确保 Canvas 已创建
+  if (!worldMapCanvas) {
+    initMapCanvases();
+  }
+  
   if (!worldMapCanvas || !fullMap) return;
   
   fullMapData = fullMap;
