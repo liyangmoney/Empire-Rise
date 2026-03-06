@@ -36,6 +36,12 @@ export class MenuScene extends Phaser.Scene {
       fontSize: '14px',
       color: '#666'
     }).setOrigin(1, 0.5);
+    
+    // 提前监听帝国初始化事件（避免错过）
+    window.socketManager.on('empire:init', (data) => {
+      console.log('Empire init received:', data);
+      this.scene.start('GameScene', { empireData: data });
+    });
   }
 
   createConnectPanel() {
@@ -49,40 +55,30 @@ export class MenuScene extends Phaser.Scene {
       color: '#fff'
     }).setOrigin(0.5);
     
-    // 服务器地址输入
-    this.add.text(500, 340, '服务器:', {
+    // 使用纯 Phaser 文本输入替代 DOM 元素
+    // 服务器输入
+    this.add.text(450, 340, '服务器:', {
       fontSize: '16px',
       color: '#aaa'
     }).setOrigin(1, 0.5);
     
-    // 服务器输入框（使用 DOM 元素）
-    const serverInput = this.add.dom(700, 340).createFromHTML(`
-      <input type="text" id="serverUrl" placeholder="默认: 当前服务器" 
-        style="width: 240px; padding: 10px; border-radius: 6px; border: 1px solid #444; 
-               background: rgba(0,0,0,0.5); color: #fff; font-size: 14px;"
-        value="">
-    `);
+    this.serverInput = this.createInputField(580, 340, 200, 30, '');
     
     // 玩家名称输入
-    this.add.text(500, 400, '玩家名称:', {
+    this.add.text(450, 390, '玩家名称:', {
       fontSize: '16px',
       color: '#aaa'
     }).setOrigin(1, 0.5);
     
-    const nameInput = this.add.dom(700, 400).createFromHTML(`
-      <input type="text" id="playerName" placeholder="输入你的名字" 
-        style="width: 240px; padding: 10px; border-radius: 6px; border: 1px solid #444; 
-               background: rgba(0,0,0,0.5); color: #fff; font-size: 14px;"
-        value="领主${Math.floor(Math.random() * 1000)}">
-    `);
+    this.nameInput = this.createInputField(580, 390, 200, 30, `领主${Math.floor(Math.random() * 1000)}`);
     
     // 连接按钮
-    const connectBtn = this.createButton(640, 480, '连接并创建帝国', () => {
+    const connectBtn = this.createButton(640, 460, '连接并创建帝国', () => {
       this.handleConnect();
     });
     
     // 状态文本
-    this.statusText = this.add.text(640, 540, '', {
+    this.statusText = this.add.text(640, 520, '', {
       fontSize: '14px',
       color: '#888'
     }).setOrigin(0.5);
@@ -93,18 +89,58 @@ export class MenuScene extends Phaser.Scene {
       color: '#666'
     }).setOrigin(0.5);
   }
+  
+  createInputField(x, y, width, height, defaultValue) {
+    // 背景
+    const bg = this.add.rectangle(x, y, width, height, 0x000000, 0.5);
+    bg.setStrokeStyle(1, 0x444444);
+    bg.setOrigin(0, 0.5);
+    
+    // 文本
+    const text = this.add.text(x + 10, y, defaultValue, {
+      fontSize: '14px',
+      color: '#fff',
+      fontFamily: 'Microsoft YaHei'
+    }).setOrigin(0, 0.5);
+    
+    // 提示文本
+    const placeholder = this.add.text(x + 10, y, defaultValue ? '' : '输入...', {
+      fontSize: '14px',
+      color: '#666'
+    }).setOrigin(0, 0.5);
+    
+    // 交互
+    bg.setInteractive({ useHandCursor: true });
+    
+    bg.on('pointerdown', () => {
+      // 使用浏览器 prompt 简单实现输入
+      const newValue = prompt(defaultValue.includes('领主') ? '请输入玩家名称' : '请输入服务器地址', text.text);
+      if (newValue !== null) {
+        text.setText(newValue);
+        placeholder.setVisible(false);
+      }
+    });
+    
+    return {
+      getValue: () => text.text,
+      setValue: (val) => {
+        text.setText(val);
+        placeholder.setVisible(!!val);
+      }
+    };
+  }
 
-  createButton(x, y, text, callback) {
+  createButton(x, y, label, callback) {
     const container = this.add.container(x, y);
     
     const bg = this.add.image(0, 0, 'btn-normal');
-    const label = this.add.text(0, 0, text, {
+    const text = this.add.text(0, 0, label, {
       fontSize: '18px',
       fontFamily: 'Microsoft YaHei',
       color: '#fff'
     }).setOrigin(0.5);
     
-    container.add([bg, label]);
+    container.add([bg, text]);
     
     // 交互
     bg.setInteractive({ useHandCursor: true });
@@ -130,10 +166,10 @@ export class MenuScene extends Phaser.Scene {
   }
 
   async handleConnect() {
-    const serverUrl = document.getElementById('serverUrl')?.value || '';
-    const playerName = document.getElementById('playerName')?.value || '无名玩家';
+    const serverUrl = this.serverInput.getValue() || '';
+    const playerName = this.nameInput.getValue() || '无名玩家';
     
-    if (!playerName.trim()) {
+    if (!playerName.trim() || playerName === '输入...') {
       this.showStatus('请输入玩家名称', 'error');
       return;
     }
@@ -142,13 +178,7 @@ export class MenuScene extends Phaser.Scene {
     
     try {
       await window.socketManager.connect(serverUrl, playerName);
-      this.showStatus('连接成功！', 'success');
-      
-      // 等待帝国数据初始化
-      window.socketManager.on('empire:init', (data) => {
-        this.scene.start('GameScene', { empireData: data });
-      });
-      
+      this.showStatus('连接成功！等待帝国数据...', 'success');
     } catch (err) {
       this.showStatus('连接失败: ' + (err.message || '未知错误'), 'error');
     }
