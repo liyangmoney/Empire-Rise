@@ -333,7 +333,8 @@ function connect() {
         socket.emit('building:upgrade', { playerId, buildingTypeId: preview.buildingTypeId });
       },
       `预计升级时间: ${durationText}`,
-      currentResources
+      currentResources,
+      preview.populationCost
     );
   });
 
@@ -1424,7 +1425,7 @@ function onBattleGeneralChange() {
 }
 
 // 显示资源消耗确认弹窗
-function showCostConfirm(title, cost, onConfirm, extraInfo = null, currentResources = null) {
+function showCostConfirm(title, cost, onConfirm, extraInfo = null, currentResources = null, populationCost = 0) {
   // 资源名称映射
   const resourceNames = {
     wood: '木材',
@@ -1463,6 +1464,22 @@ function showCostConfirm(title, cost, onConfirm, extraInfo = null, currentResour
       <span style="color: ${color}; font-weight: bold;">${icon} -${amount} <span style="font-size: 12px; color: #888;">(拥有: ${Math.floor(currentAmount)})</span></span>
     </li>`;
   }
+  
+  // 添加人口消耗
+  if (populationCost > 0) {
+    const currentPop = empireData?.population?.current || 0;
+    const isEnoughPop = currentPop >= populationCost;
+    if (!isEnoughPop) hasEnoughResources = false;
+    
+    const popColor = isEnoughPop ? '#4CAF50' : '#f44336';
+    const popIcon = isEnoughPop ? '✓' : '✗';
+    
+    costHtml += `<li style="padding: 5px 0; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,215,0,0.3); margin-top: 8px; padding-top: 8px;">
+      <span>👥 人口:</span>
+      <span style="color: ${popColor}; font-weight: bold;">${popIcon} -${populationCost} <span style="font-size: 12px; color: #888;">(可用: ${currentPop})</span></span>
+    </li>`;
+  }
+  
   costHtml += '</ul></div>';
   
   // 如果有资源不足，显示警告
