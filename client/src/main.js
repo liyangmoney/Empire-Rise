@@ -1938,7 +1938,14 @@ function renderFullMap(fullMap) {
   fullMap.npcs.forEach(npc => { npcLookup[npc.x + ',' + npc.y] = npc; });
   const castleLookup = {};
   fullMap.castles.forEach(castle => { castleLookup[castle.x + ',' + castle.y] = castle; });
-  const terrainColors = { plains: '#90EE90', forest: '#228B22', hills: '#DAA520', mountains: '#808080', river: '#4169E1', lake: '#1E90FF', desert: '#FFD700', swamp: '#556B2F' };
+  
+  // 更好的颜色 + 图标
+  const terrainColors = { plains: '#7CFC00', forest: '#228B22', hills: '#DAA520', mountains: '#696969', river: '#1E90FF', lake: '#00BFFF', desert: '#F4A460', swamp: '#556B2F' };
+  const terrainIcons = { forest: '🌲', hills: '⛰️', mountains: '🏔️', river: '💧', lake: '🌊', desert: '🏜️', swamp: '🌿' };
+  
+  // 使用文档片段优化性能
+  const fragment = document.createDocumentFragment();
+  
   for (let y = 0; y < fullMap.size; y++) {
     for (let x = 0; x < fullMap.size; x++) {
       const terrainId = fullMap.terrain[y][x];
@@ -1948,16 +1955,38 @@ function renderFullMap(fullMap) {
       cell.style.width = cellSize + 'px';
       cell.style.height = cellSize + 'px';
       cell.style.cursor = 'pointer';
-      if (castle) cell.style.background = castle.isOwn ? '#8B4513' : '#4a4a4a';
-      else if (npc) cell.style.background = npc.hasMerchant ? '#9370DB' : '#FF4500';
-      else cell.style.background = terrainColors[terrainId] || '#ccc';
+      cell.style.display = 'flex';
+      cell.style.alignItems = 'center';
+      cell.style.justifyContent = 'center';
+      cell.style.fontSize = '4px';
+      cell.style.border = '1px solid rgba(255,255,255,0.05)';
+      
+      if (castle) {
+        cell.style.background = castle.isOwn ? '#8B4513' : '#4a4a4a';
+        cell.innerHTML = '🏰';
+        cell.style.boxShadow = castle.isOwn ? '0 0 4px #FFD700' : 'none';
+        cell.style.zIndex = '10';
+      } else if (npc) {
+        cell.style.background = npc.hasMerchant ? '#9370DB' : '#FF4500';
+        cell.innerHTML = npc.hasMerchant ? '🏪' : '⚔️';
+        cell.style.zIndex = '5';
+      } else {
+        cell.style.background = terrainColors[terrainId] || '#ccc';
+        // 大地图上也显示图标，但只有特定地形
+        if (terrainIcons[terrainId]) {
+          cell.innerHTML = terrainIcons[terrainId];
+          cell.style.opacity = '0.8';
+        }
+      }
+      
       cell.onclick = () => {
-        const tileData = { x, y, terrain: { id: terrainId, name: getTerrainName(terrainId) }, npcs: npc ? [{ name: npc.hasMerchant ? '商人商队' : '敌对势力', isNeutral: npc.hasMerchant }] : [], hasCastle: !!castle };
-        showTileInfo(tileData);
+        const tileData = { x, y, terrain: { id: terrainId, name: getTerrainName(terrainId), defenseBonus: terrainId === 'mountains' ? 25 : terrainId === 'hills' ? 15 : terrainId === 'forest' ? 10 : 0 }, npcs: npc ? [{ name: npc.hasMerchant ? '商人商队' : '敌对势力', isNeutral: npc.hasMerchant, power: '???' }] : [], hasCastle: !!castle };
+        showTileModal(tileData);
       };
-      container.appendChild(cell);
+      fragment.appendChild(cell);
     }
   }
+  container.appendChild(fragment);
   renderMiniMap(fullMap);
 }
 
@@ -2037,4 +2066,65 @@ function migrateCastleTo(x, y) {
   if (confirm('确定要迁移城堡到 (' + x + ', ' + y + ') 吗？需要消耗大量资源。')) {
     socket.emit('map:migrateCastle', { playerId, targetX: x, targetY: y });
   }
+}
+
+
+// ==================== 地图弹窗功能 ====================
+
+// 显示区域信息弹窗
+function showTileModal(tile) {
+  const modal = document.getElementById('tileModal');
+  const title = document.getElementById('modalTitle');
+  const content = document.getElementById('modalContent');
+  if (!modal || !content) return;
+  
+  const terrainNames = { plains: '平原', forest: '森林', hills: '丘陵', mountains: '山地', river: '河流', lake: '湖泊', desert: '沙漠', swamp: '沼泽' };
+  const terrainIcons = { plains: '🌾', forest: '🌲', hills: '⛰️', mountains: '🏔️', river: '💧', lake: '🌊', desert: '🏜️', swamp: '🌿' };
+  const terrainName = terrainNames[tile.terrain?.id] || tile.terrain?.id || '未知';
+  const terrainIcon = terrainIcons[tile.terrain?.id] || '📍';
+  
+  title.innerHTML = terrainIcon + ' ' + terrainName;
+  
+  let html = '<p style="color: #888; margin-bottom: 15px;"><strong>坐标:</strong> (' + tile.x + ', ' + tile.y + ')</p>';
+  
+  if (tile.terrain?.defenseBonus) {
+    html += '<p style="color: #4CAF50;"><strong>防御加成:</strong> ' + (tile.terrain.defenseBonus > 0 ? '+' : '') + tile.terrain.defenseBonus + '%</p>';
+  }
+  
+  if (tile.hasCastle) {
+    html += '<div style="background: rgba(255,215,0,0.2); padding: 15px; border-radius: 8px; margin: 15px 0; text-align: center;"><p style="color: #ffd700; font-size: 48px; margin: 0;">🏰</p><p style="color: #ffd700; margin: 5px 0;">城堡</p></div>';
+  }
+  
+  if (tile.npcs && tile.npcs.length > 0) {
+    html += '<div style="margin-top: 15px;"><h4 style="color: #ffd700; margin-bottom: 10px;">单位</h4>';
+    tile.npcs.forEach((npc, index) => {
+      html += '<div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">';
+      html += '<div><span style="font-size: 24px;">' + (npc.isNeutral ? '🏪' : '⚔️') + '</span> <strong>' + npc.name + '</strong>' + (npc.power ? ' <span style="color: #888;">(战力: ' + npc.power + ')</span>' : '') + '</div>';
+      if (!npc.isNeutral) {
+        html += '<button onclick="attackMapNpc(' + tile.x + ', ' + tile.y + ', ' + index + '); closeTileModal();" style="background: #f44336; color: white; border: none; padding: 5px 15px; border-radius: 4px; cursor: pointer;">攻击</button>';
+      } else {
+        html += '<button onclick="tradeWithNpc(' + tile.x + ', ' + tile.y + ', ' + index + '); closeTileModal();" style="background: #4CAF50; color: white; border: none; padding: 5px 15px; border-radius: 4px; cursor: pointer;">交易</button>';
+      }
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+  
+  if (!tile.hasCastle && !tile.npcs?.length) {
+    html += '<div style="margin-top: 20px; text-align: center;"><button onclick="migrateCastleTo(' + tile.x + ', ' + tile.y + '); closeTileModal();" style="background: linear-gradient(90deg, #ffd700, #ffed4e); color: #1a1a2e; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer;">🏰 迁移城堡至此</button></div>';
+  }
+  
+  content.innerHTML = html;
+  modal.style.display = 'flex';
+}
+
+// 关闭区域信息弹窗
+function closeTileModal() {
+  const modal = document.getElementById('tileModal');
+  if (modal) modal.style.display = 'none';
+}
+
+// 点击视野地图显示弹窗（原 showTileInfo 改为弹窗）
+function showTileInfo(tile) {
+  showTileModal(tile);
 }
