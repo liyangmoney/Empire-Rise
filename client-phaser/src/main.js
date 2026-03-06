@@ -28,7 +28,8 @@ const config = {
   },
   scene: [BootScene, MenuScene, GameScene, BattleScene],
   pixelArt: false,
-  antialias: true
+  antialias: true,
+  resolution: window.devicePixelRatio || 1
 };
 
 // 初始化 Socket 管理器
