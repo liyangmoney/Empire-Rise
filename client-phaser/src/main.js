@@ -29,6 +29,7 @@ const config = {
   scene: [BootScene, MenuScene, GameScene, BattleScene],
   pixelArt: false,
   antialias: true,
+  roundPixels: true,
   resolution: window.devicePixelRatio || 1
 };
 
