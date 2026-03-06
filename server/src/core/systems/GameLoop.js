@@ -110,6 +110,11 @@ export class GameLoop {
       // 通知客户端升级完成
       if (completedUpgrades.length > 0 && empire.socketId && empire._io) {
         for (const task of completedUpgrades) {
+          // 释放占用的人口
+          if (task.populationCost > 0 && empire.population) {
+            empire.population.release(task.populationCost);
+          }
+          
           // 更新仓库容量
           if (task.buildingTypeId === 'warehouse_basic') {
             const level = empire.buildings.getLevel('warehouse_basic');
@@ -127,7 +132,8 @@ export class GameLoop {
             task,
             buildings: empire.buildings.getSnapshot(),
             upgradeQueue: empire.buildings.upgradeQueue || [],
-            resources: empire.resources.getSnapshot(empire.buildings)
+            resources: empire.resources.getSnapshot(empire.buildings),
+            population: empire.population?.getSnapshot()
           });
         }
       }

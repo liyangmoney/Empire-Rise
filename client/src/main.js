@@ -358,6 +358,9 @@ function connect() {
     console.log('Building upgrade completed:', data);
     renderBuildings(data.buildings, data.upgradeQueue || []);
     renderResources(data.resources);
+    if (data.population) {
+      updatePopulationDisplay(data.population);
+    }
     showSuccess(`建筑升级完成！升级至Lv.${data.task.toLevel}`);
   });
 }

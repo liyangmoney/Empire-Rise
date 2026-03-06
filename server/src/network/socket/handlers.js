@@ -166,7 +166,7 @@ export function registerSocketHandlers(io, gameWorld) {
       }
 
       // 开始升级（加入队列）
-      const task = empire.buildings.startUpgrade(buildingTypeId);
+      const task = empire.buildings.startUpgrade(buildingTypeId, popCost);
       if (!task) {
         // 返还资源和人口
         for (const [resId, amount] of Object.entries(preview.cost)) {

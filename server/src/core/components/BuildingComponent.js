@@ -35,7 +35,7 @@ export class BuildingComponent {
    * 开始升级建筑（加入队列）
    * @returns {Object|null} 升级任务
    */
-  startUpgrade(buildingTypeId) {
+  startUpgrade(buildingTypeId, populationCost = 0) {
     const building = this.buildings.get(buildingTypeId);
     if (!building) return null;
     if (building.level >= building.maxLevel) return null;
@@ -54,7 +54,8 @@ export class BuildingComponent {
       toLevel: nextLevel,
       duration,
       _progress: 0,
-      completed: false
+      completed: false,
+      populationCost
     };
 
     this.upgradeQueue.push(task);
