@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { BUILDING_TYPES } from '../shared/constants.js';
 
 /**
- * 建筑面板 - 美化版
+ * 建筑面板 - 参考原HTML客户端设计
  */
 export class BuildingPanel extends Phaser.GameObjects.Container {
   constructor(scene, x, y) {
@@ -11,26 +11,17 @@ export class BuildingPanel extends Phaser.GameObjects.Container {
     this.buildings = {};
     this.upgradeQueue = [];
     this.buildingCards = {};
-    this.categoryContainers = {};
     
     this.scene = scene;
     
     this.categoryNames = {
-      production: '⛏️ 生产建筑',
-      military: '⚔️ 军事建筑', 
-      economy: '💰 经济建筑',
-      storage: '📦 仓储建筑',
-      technology: '🔬 科技建筑',
-      special: '👑 特殊建筑'
-    };
-    
-    this.categoryColors = {
-      production: 0x8B4513,
-      military: 0x8B0000,
-      economy: 0xFFD700,
-      storage: 0x4a5568,
-      technology: 0x4169E1,
-      special: 0x9370DB
+      production: '🌾 资源生产',
+      storage: '📦 仓库',
+      military: '⚔️ 军事',
+      economy: '💰 经济',
+      technology: '🔬 科技',
+      special: '👑 特殊',
+      other: '🏛️ 其他'
     };
     
     this.createUI();
@@ -38,221 +29,348 @@ export class BuildingPanel extends Phaser.GameObjects.Container {
   }
   
   createUI() {
-    // 标题
-    this.scene.add.text(0, -240, '🏗️ 建筑管理', {
-      fontSize: '28px',
-      fontFamily: 'Arial',
-      color: '#ffd700',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
+    // 滚动容器
+    this.scrollY = 0;
+    this.contentHeight = 0;
     
-    // 创建分类
-    const categories = ['production', 'military', 'economy', 'storage', 'technology', 'special'];
-    let currentY = -180;
+    // 内容容器
+    this.content = this.scene.add.container(0, 0);
+    this.add(this.content);
     
-    categories.forEach((cat, index) => {
-      // 分类标题区域
-      const catHeader = this.scene.add.container(-580, currentY);
+    // 遮罩（限制显示区域）
+    const maskGraphics = this.scene.make.graphics();
+    maskGraphics.fillRect(-600, -280, 1200, 560);
+    const mask = maskGraphics.createGeometryMask();
+    this.content.setMask(mask);
+    
+    // 滚动事件
+    this.scene.input.on('wheel', (pointer, gameObjects, deltaX, deltaY) => {
+      if (this.visible && pointer.y > 120 && pointer.y < 680) {
+        this.scrollY -= deltaY;
+        this.scrollY = Math.max(-this.contentHeight + 500, Math.min(0, this.scrollY));
+        this.content.y = this.scrollY;
+      }
+    });
+  }
+  
+  updateData(buildings, upgradeQueue = []) {
+    this.buildings = buildings;
+    this.upgradeQueue = upgradeQueue;
+    
+    // 清除旧内容
+    this.content.removeAll(true);
+    this.buildingCards = {};
+    
+    let currentY = -250;
+    
+    // 按分类组织建筑
+    const buildingsByCategory = {};
+    for (const [id, data] of Object.entries(buildings)) {
+      const cat = data.category || 'other';
+      if (!buildingsByCategory[cat]) buildingsByCategory[cat] = [];
+      buildingsByCategory[cat].push({ id, ...data });
+    }
+    
+    // 按分类渲染
+    for (const [catKey, catName] of Object.entries(this.categoryNames)) {
+      const catBuildings = buildingsByCategory[catKey];
+      if (!catBuildings || catBuildings.length === 0) continue;
       
-      // 分类图标背景
-      const iconBg = this.scene.add.graphics();
-      iconBg.fillStyle(this.categoryColors[cat], 0.3);
-      iconBg.fillCircle(0, 0, 18);
-      catHeader.add(iconBg);
+      // 分类标题
+      const titleBg = this.scene.add.graphics();
+      titleBg.fillStyle(0xffd700, 0.1);
+      titleBg.fillRect(-580, currentY - 5, 1160, 35);
+      this.content.add(titleBg);
       
-      // 分类名称
-      const name = this.scene.add.text(30, 0, this.categoryNames[cat], {
-        fontSize: '18px',
-        fontFamily: 'Arial',
-        color: '#ffffff',
+      const title = this.scene.add.text(-570, currentY, catName, {
+        fontSize: '20px',
+        fontFamily: 'Microsoft YaHei, Arial',
+        color: '#ffd700',
         fontStyle: 'bold'
-      }).setOrigin(0, 0.5);
-      catHeader.add(name);
+      });
+      this.content.add(title);
       
-      this.add(catHeader);
+      // 底部分隔线
+      const line = this.scene.add.graphics();
+      line.lineStyle(1, 0xffd700, 0.3);
+      line.lineBetween(-580, currentY + 25, 580, currentY + 25);
+      this.content.add(line);
       
-      // 建筑卡片区域
-      const cardContainer = this.scene.add.container(0, currentY + 50);
-      this.categoryContainers[cat] = cardContainer;
-      this.add(cardContainer);
+      currentY += 45;
       
-      // 创建该分类的建筑卡片
-      this.createCategoryBuildings(cat, cardContainer);
+      // 建筑网格 - 每行3个
+      let col = 0;
+      catBuildings.forEach((building, index) => {
+        const x = -380 + col * 390;
+        this.createBuildingCard(building, x, currentY);
+        
+        col++;
+        if (col >= 3) {
+          col = 0;
+          currentY += 160;
+        }
+      });
       
-      currentY += 110;
-    });
-  }
-  
-  createCategoryBuildings(category, container) {
-    const buildingTypes = Object.values(BUILDING_TYPES).filter(b => b.category === category);
+      if (col > 0) {
+        currentY += 160;
+      }
+      
+      currentY += 20;
+    }
     
-    let offsetX = -520;
-    buildingTypes.forEach((type, index) => {
-      this.createBuildingCard(type, offsetX, 0, container);
-      offsetX += 290;
-    });
+    this.contentHeight = Math.abs(currentY);
   }
   
-  createBuildingCard(type, x, y, container) {
+  createBuildingCard(building, x, y) {
+    const cardW = 360;
+    const cardH = 140;
+    
     const card = this.scene.add.container(x, y);
-    
-    const cardW = 270;
-    const cardH = 80;
     
     // 卡片背景
     const bg = this.scene.add.graphics();
-    bg.fillStyle(0x1a1a2e, 0.95);
+    bg.fillStyle(0x000000, 0.4);
     bg.fillRoundedRect(-cardW/2, -cardH/2, cardW, cardH, 10);
-    bg.lineStyle(1, 0xffd700, 0.2);
+    bg.lineStyle(1, 0x666666, 0.5);
     bg.strokeRoundedRect(-cardW/2, -cardH/2, cardW, cardH, 10);
     card.add(bg);
     
-    // 左侧彩色条
-    const colorBar = this.scene.add.graphics();
-    colorBar.fillStyle(this.categoryColors[type.category] || 0x666666, 1);
-    colorBar.fillRoundedRect(-cardW/2 + 2, -cardH/2 + 2, 6, cardH - 4, 3);
-    card.add(colorBar);
+    // 图标背景
+    const iconBg = this.scene.add.graphics();
+    iconBg.fillStyle(0x000000, 0.3);
+    iconBg.fillRoundedRect(-cardW/2 + 15, -cardH/2 + 15, 60, 60, 8);
+    card.add(iconBg);
     
-    // 建筑名称 - 使用更大区域
-    const name = this.scene.add.text(-cardW/2 + 20, -cardH/2 + 18, type.name, {
-      fontSize: '15px',
+    // 图标（使用emoji代替）
+    const iconMap = {
+      lumber_mill: '🌲',
+      farm: '🌾',
+      quarry: '⛰️',
+      iron_mine: '⚙️',
+      crystal_mine: '💎',
+      fishery: '🐟',
+      orchard: '🍎',
+      barracks: '⚔️',
+      hospital: '🏥',
+      wall: '🛡️',
+      tower: '🏹',
+      watchtower: '👁️',
+      moat: '🌊',
+      stables: '🐴',
+      arsenal: '⚒️',
+      house: '🏠',
+      market: '🏪',
+      tavern: '🍺',
+      port: '⚓',
+      blacksmith: '🔨',
+      tech_institute: '🔬',
+      imperial_palace: '👑',
+      general_camp: '🎖️',
+      warehouse_basic: '📦',
+      warehouse_special: '📦'
+    };
+    
+    const icon = this.scene.add.text(-cardW/2 + 45, -cardH/2 + 45, iconMap[building.id] || '🏛️', {
+      fontSize: '36px'
+    }).setOrigin(0.5);
+    card.add(icon);
+    
+    // 建筑名称
+    const nameText = this.scene.add.text(-cardW/2 + 90, -cardH/2 + 25, this.getBuildingName(building.id), {
+      fontSize: '18px',
       fontFamily: 'Microsoft YaHei, Arial',
       color: '#ffffff',
       fontStyle: 'bold'
     });
-    card.add(name);
+    card.add(nameText);
     
-    // 等级 - 放在右侧
-    const level = this.scene.add.text(cardW/2 - 10, -cardH/2 + 18, 'Lv.1', {
-      fontSize: '13px',
+    // 等级
+    const levelText = this.scene.add.text(cardW/2 - 20, -cardH/2 + 25, `Lv.${building.level}`, {
+      fontSize: '16px',
       fontFamily: 'Arial',
-      color: '#4CAF50'
+      color: '#ffd700'
     }).setOrigin(1, 0);
-    card.add(level);
+    card.add(levelText);
     
-    // 人口消耗
-    const pop = this.scene.add.text(-cardW/2 + 20, 5, `👥 ${type.populationCost || 0}`, {
+    // 最高等级提示
+    const maxLevelText = this.scene.add.text(-cardW/2 + 90, -cardH/2 + 48, `最高等级: ${building.maxLevel}`, {
       fontSize: '12px',
-      color: '#aaaaaa'
+      color: '#888888'
     });
-    card.add(pop);
+    card.add(maxLevelText);
     
-    // 升级按钮
-    const btnW = 90;
-    const btnH = 26;
-    const btnBg = this.scene.add.graphics();
-    btnBg.fillStyle(0x2d5a3d, 1);
-    btnBg.fillRoundedRect(-btnW/2, 20, btnW, btnH, 6);
-    card.add(btnBg);
-    
-    const btnText = this.scene.add.text(0, 33, '🔨 升级', {
-      fontSize: '12px',
-      fontFamily: 'Arial',
-      color: '#ffffff'
-    }).setOrigin(0.5);
-    card.add(btnText);
-    
-    // 按钮交互
-    const btnZone = this.scene.add.zone(0, 33, btnW, btnH).setInteractive({ useHandCursor: true });
-    card.add(btnZone);
-    
-    btnZone.on('pointerover', () => {
-      btnBg.clear();
-      btnBg.fillStyle(0x3d7a4d, 1);
-      btnBg.fillRoundedRect(-btnW/2, 20, btnW, btnH, 6);
+    // 描述
+    const descText = this.scene.add.text(-cardW/2 + 20, -cardH/2 + 70, building.description || '暂无介绍', {
+      fontSize: '13px',
+      fontFamily: 'Microsoft YaHei, Arial',
+      color: '#aaaaaa',
+      wordWrap: { width: cardW - 40 }
     });
+    card.add(descText);
     
-    btnZone.on('pointerout', () => {
-      btnBg.clear();
-      btnBg.fillStyle(0x2d5a3d, 1);
-      btnBg.fillRoundedRect(-btnW/2, 20, btnW, btnH, 6);
-    });
+    // 检查是否正在升级
+    const upgradingTask = this.upgradeQueue.find(t => t.buildingTypeId === building.id && !t.completed);
     
-    btnZone.on('pointerup', () => {
-      this.onUpgradeClick(type.id);
-    });
+    if (upgradingTask) {
+      // 进度条背景
+      const progressBg = this.scene.add.graphics();
+      progressBg.fillStyle(0x333333, 1);
+      progressBg.fillRoundedRect(-cardW/2 + 20, cardH/2 - 35, cardW - 40, 20, 10);
+      card.add(progressBg);
+      
+      // 进度条
+      const progress = Math.min(100, (upgradingTask._progress / upgradingTask.duration) * 100);
+      const progressBar = this.scene.add.graphics();
+      progressBar.fillGradientStyle(0x4CAF50, 0x4CAF50, 0x8BC34A, 0x8BC34A, 1);
+      progressBar.fillRoundedRect(-cardW/2 + 20, cardH/2 - 35, (cardW - 40) * progress / 100, 20, 10);
+      card.add(progressBar);
+      
+      // 时间文字
+      const remaining = Math.ceil((upgradingTask.duration - upgradingTask._progress) / 1000);
+      const timeText = this.scene.add.text(0, cardH/2 - 25, `升级中... ${remaining}秒`, {
+        fontSize: '12px',
+        color: '#ffffff'
+      }).setOrigin(0.5);
+      card.add(timeText);
+      
+      // 保存引用以便更新
+      this.buildingCards[building.id] = { progressBar, timeText, bg, upgrading: true };
+    } else if (building.level < building.maxLevel) {
+      // 升级按钮
+      const btnBg = this.scene.add.graphics();
+      btnBg.fillStyle(0x4CAF50, 1);
+      btnBg.fillRoundedRect(-50, cardH/2 - 40, 100, 32, 6);
+      card.add(btnBg);
+      
+      const btnText = this.scene.add.text(0, cardH/2 - 24, '升级', {
+        fontSize: '14px',
+        fontFamily: 'Arial',
+        color: '#ffffff',
+        fontStyle: 'bold'
+      }).setOrigin(0.5);
+      card.add(btnText);
+      
+      // 按钮交互区
+      const btnZone = this.scene.add.zone(0, cardH/2 - 24, 100, 32).setInteractive({ useHandCursor: true });
+      card.add(btnZone);
+      
+      btnZone.on('pointerover', () => {
+        btnBg.clear();
+        btnBg.fillStyle(0x5CBF60, 1);
+        btnBg.fillRoundedRect(-50, cardH/2 - 40, 100, 32, 6);
+      });
+      
+      btnZone.on('pointerout', () => {
+        btnBg.clear();
+        btnBg.fillStyle(0x4CAF50, 1);
+        btnBg.fillRoundedRect(-50, cardH/2 - 40, 100, 32, 6);
+      });
+      
+      btnZone.on('pointerup', () => {
+        window.socketManager.upgradeBuilding(building.id);
+      });
+      
+      // 点击卡片显示详情
+      const cardZone = this.scene.add.zone(0, 0, cardW - 100, cardH - 50).setInteractive({ useHandCursor: true });
+      cardZone.on('pointerup', () => this.showBuildingDetail(building));
+      card.add(cardZone);
+      
+      this.buildingCards[building.id] = { btnBg, btnText, btnZone, cardZone, bg, upgrading: false };
+    } else {
+      // 已满级
+      const maxText = this.scene.add.text(0, cardH/2 - 24, '已满级', {
+        fontSize: '14px',
+        color: '#666666'
+      }).setOrigin(0.5);
+      card.add(maxText);
+    }
     
-    // 进度条（初始隐藏）
-    const progressBg = this.scene.add.graphics();
-    progressBg.fillStyle(0x333333, 1);
-    progressBg.fillRoundedRect(-cardW/2 + 15, 22, cardW - 30, 6, 3);
-    progressBg.setVisible(false);
-    card.add(progressBg);
-    
-    const progressBar = this.scene.add.graphics();
-    progressBar.fillStyle(0x4CAF50, 1);
-    progressBar.fillRoundedRect(-cardW/2 + 15, 22, 0, 6, 3);
-    progressBar.setVisible(false);
-    card.add(progressBar);
-    
-    const progressText = this.scene.add.text(0, 36, '', {
-      fontSize: '10px',
-      color: '#4CAF50'
-    }).setOrigin(0.5);
-    progressText.setVisible(false);
-    card.add(progressText);
-    
-    container.add(card);
-    
-    // 保存引用
-    this.buildingCards[type.id] = {
-      card, bg, name, level, pop, btnBg, btnText, btnZone,
-      progressBg, progressBar, progressText
+    this.content.add(card);
+  }
+  
+  getBuildingName(buildingId) {
+    const names = {
+      warehouse_basic: '📦 基础仓库',
+      warehouse_special: '📦 特殊仓库',
+      lumber_mill: '🌲 伐木场',
+      farm: '🌾 农场',
+      quarry: '⛰️ 采石场',
+      iron_mine: '⚙️ 铁矿场',
+      crystal_mine: '💎 水晶矿',
+      fishery: '🐟 鱼塘',
+      orchard: '🍎 果园',
+      barracks: '⚔️ 兵营',
+      hospital: '🏥 医院',
+      wall: '🛡️ 城墙',
+      tower: '🏹 箭塔',
+      watchtower: '👁️ 瞭望塔',
+      moat: '🌊 护城河',
+      stables: '🐴 马厩',
+      arsenal: '⚒️ 军械库',
+      house: '🏠 民居',
+      market: '🏪 市场',
+      tavern: '🍺 酒馆',
+      port: '⚓ 港口',
+      blacksmith: '🔨 铁匠铺',
+      tech_institute: '🔬 研究院',
+      imperial_palace: '👑 皇宫',
+      general_camp: '🎖️ 将领营'
     };
+    return names[buildingId] || buildingId;
   }
   
-  onUpgradeClick(buildingTypeId) {
-    window.socketManager.upgradeBuilding(buildingTypeId);
-  }
-  
-  updateData(buildings, upgradeQueue) {
-    this.buildings = buildings;
-    this.upgradeQueue = upgradeQueue || [];
+  showBuildingDetail(building) {
+    // 简单的详情弹窗
+    const modal = this.scene.add.container(640, 360);
+    modal.setDepth(1000);
     
-    Object.entries(buildings).forEach(([id, building]) => {
-      const card = this.buildingCards[id];
-      if (card) {
-        // 更新等级
-        card.level.setText(`Lv.${building.level || 1}`);
-        
-        // 更新人口
-        const type = BUILDING_TYPES[id];
-        if (type) {
-          const popCost = Math.floor((type.populationCost || 0) * Math.pow(1.2, building.level - 1));
-          card.pop.setText(`👥 ${popCost}`);
-        }
-        
-        // 检查是否在升级队列中
-        const upgradeTask = this.upgradeQueue.find(t => t.buildingTypeId === id);
-        if (upgradeTask) {
-          // 显示进度条，隐藏按钮
-          card.btnBg.setVisible(false);
-          card.btnText.setVisible(false);
-          card.btnZone.disableInteractive();
-          card.progressBg.setVisible(true);
-          card.progressBar.setVisible(true);
-          card.progressText.setVisible(true);
-          
-          // 更新进度
-          const progress = upgradeTask._progress / upgradeTask.duration;
-          card.progressBar.clear();
-          card.progressBar.fillStyle(0x4CAF50, 1);
-          card.progressBar.fillRoundedRect(-120, 10, 240 * progress, 8, 4);
-          
-          const remaining = Math.ceil(upgradeTask.duration - upgradeTask._progress);
-          const minutes = Math.floor(remaining / 60);
-          const seconds = remaining % 60;
-          card.progressText.setText(`升级中 ${minutes}:${seconds.toString().padStart(2, '0')}`);
-        } else {
-          // 显示按钮，隐藏进度条
-          card.btnBg.setVisible(true);
-          card.btnText.setVisible(true);
-          card.btnZone.setInteractive({ useHandCursor: true });
-          card.progressBg.setVisible(false);
-          card.progressBar.setVisible(false);
-          card.progressText.setVisible(false);
-        }
-      }
-    });
+    // 半透明背景
+    const overlay = this.scene.add.graphics();
+    overlay.fillStyle(0x000000, 0.8);
+    overlay.fillRect(-640, -360, 1280, 720);
+    overlay.setInteractive();
+    overlay.on('pointerup', () => modal.destroy());
+    modal.add(overlay);
+    
+    // 弹窗背景
+    const bg = this.scene.add.graphics();
+    bg.fillStyle(0x1a1a2e, 1);
+    bg.fillRoundedRect(-250, -180, 500, 360, 12);
+    bg.lineStyle(2, 0xffd700, 1);
+    bg.strokeRoundedRect(-250, -180, 500, 360, 12);
+    modal.add(bg);
+    
+    // 标题
+    const title = this.scene.add.text(0, -150, this.getBuildingName(building.id), {
+      fontSize: '24px',
+      fontFamily: 'Microsoft YaHei, Arial',
+      color: '#ffd700',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+    modal.add(title);
+    
+    // 信息
+    const info = this.scene.add.text(0, -50, 
+      `当前等级: Lv.${building.level} / ${building.maxLevel}\n\n${building.description || '暂无详细介绍'}`, {
+      fontSize: '14px',
+      fontFamily: 'Microsoft YaHei, Arial',
+      color: '#ffffff',
+      align: 'center',
+      lineSpacing: 10
+    }).setOrigin(0.5);
+    modal.add(info);
+    
+    // 关闭按钮
+    const closeBtn = this.scene.add.text(0, 100, '关闭', {
+      fontSize: '16px',
+      color: '#ffffff',
+      backgroundColor: '#666666',
+      padding: { x: 30, y: 10 }
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    
+    closeBtn.on('pointerup', () => modal.destroy());
+    modal.add(closeBtn);
+    
+    this.scene.add.existing(modal);
   }
 }
