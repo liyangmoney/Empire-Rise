@@ -332,7 +332,8 @@ function connect() {
       () => {
         socket.emit('building:upgrade', { playerId, buildingTypeId: preview.buildingTypeId });
       },
-      `预计升级时间: ${durationText}`
+      `预计升级时间: ${durationText}`,
+      currentResources
     );
   });
 
@@ -1192,7 +1193,7 @@ function startTraining() {
   
   showCostConfirm(`训练${unitNames[unitTypeId]} x${count}`, totalCost, () => {
     socket.emit('army:train', { playerId, unitTypeId, count });
-  });
+  }, null, currentResources);
 }
 
 // ==================== 将领系统功能 ====================
@@ -1347,7 +1348,7 @@ function recruitGeneral(type) {
   const cost = costs[type];
   showCostConfirm(names[type], cost, () => {
     socket.emit('general:recruit', { playerId, recruitType: type });
-  });
+  }, null, currentResources);
 }
 
 function showRecruitResult(data) {
@@ -1420,7 +1421,7 @@ function onBattleGeneralChange() {
 }
 
 // 显示资源消耗确认弹窗
-function showCostConfirm(title, cost, onConfirm, extraInfo = null) {
+function showCostConfirm(title, cost, onConfirm, extraInfo = null, currentResources = null) {
   // 资源名称映射
   const resourceNames = {
     wood: '木材',
@@ -1441,14 +1442,30 @@ function showCostConfirm(title, cost, onConfirm, extraInfo = null) {
   
   costHtml += '<h4 style="margin-bottom: 10px; color: #ffd700;">资源消耗:</h4><ul style="list-style: none; padding: 0;">';
   
+  // 检查资源是否足够
+  let hasEnoughResources = true;
+  
   for (const [resource, amount] of Object.entries(cost)) {
     const resourceName = resourceNames[resource] || resource;
-    costHtml += `<li style="padding: 5px 0; display: flex; justify-content: space-between;">
+    const currentAmount = currentResources?.[resource]?.amount || currentResources?.[resource] || 0;
+    const isEnough = currentAmount >= amount;
+    
+    if (!isEnough) hasEnoughResources = false;
+    
+    const color = isEnough ? '#4CAF50' : '#f44336'; // 绿色或红色
+    const icon = isEnough ? '✓' : '✗';
+    
+    costHtml += `<li style="padding: 5px 0; display: flex; justify-content: space-between; align-items: center;">
       <span>${resourceName}:</span>
-      <span style="color: #f44336; font-weight: bold;">-${amount}</span>
+      <span style="color: ${color}; font-weight: bold;">${icon} -${amount} <span style="font-size: 12px; color: #888;">(拥有: ${Math.floor(currentAmount)})</span></span>
     </li>`;
   }
   costHtml += '</ul></div>';
+  
+  // 如果有资源不足，显示警告
+  if (!hasEnoughResources) {
+    costHtml += '<p style="color: #f44336; font-weight: bold; margin-top: 10px;">⚠️ 资源不足！</p>';
+  }
   
   // 创建弹窗
   const modal = document.createElement('div');
@@ -1478,13 +1495,14 @@ function showCostConfirm(title, cost, onConfirm, extraInfo = null) {
       <h3 style="color: #ffd700; margin-bottom: 15px;">${title}</h3>
       ${costHtml}
       
-      <p style="color: #888; font-size: 14px; margin: 15px 0;">确定要执行此操作吗？</p>
+      <p style="color: #888; font-size: 14px; margin: 15px 0;">${hasEnoughResources ? '确定要执行此操作吗？' : '资源不足，无法执行此操作'}</p>
       
       <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: center;">
         <button onclick="this.closest('.cost-confirm-modal').remove()" 
                 style="background: #666; padding: 12px 30px;">取消</button>
         <button id="costConfirmBtn" 
-                style="background: #4CAF50; padding: 12px 30px;">确定</button>
+                style="background: ${hasEnoughResources ? '#4CAF50' : '#666'}; padding: 12px 30px; ${!hasEnoughResources ? 'cursor: not-allowed; opacity: 0.5;' : ''}"
+                ${!hasEnoughResources ? 'disabled' : ''}>确定</button>
       </div>
     </div>
   `;
@@ -1492,11 +1510,13 @@ function showCostConfirm(title, cost, onConfirm, extraInfo = null) {
   modal.className = 'cost-confirm-modal';
   document.body.appendChild(modal);
   
-  // 绑定确认按钮
-  document.getElementById('costConfirmBtn').addEventListener('click', () => {
-    modal.remove();
-    onConfirm();
-  });
+  // 绑定确认按钮（只在资源足够时绑定）
+  if (hasEnoughResources) {
+    document.getElementById('costConfirmBtn').addEventListener('click', () => {
+      modal.remove();
+      onConfirm();
+    });
+  }
 }
 
 // 修改开始战斗函数，加入将领选择
