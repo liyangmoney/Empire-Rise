@@ -13,12 +13,8 @@ const config = {
   parent: 'game-container',
   backgroundColor: '#1a1a2e',
   scale: {
-    mode: Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
-    min: {
-      width: 800,
-      height: 600
-    }
+    mode: Phaser.Scale.NONE,
+    autoCenter: Phaser.Scale.CENTER_BOTH
   },
   physics: {
     default: 'arcade',
@@ -27,12 +23,10 @@ const config = {
       debug: false
     }
   },
-  dom: {
-    createContainer: true
-  },
   scene: [BootScene, MenuScene, GameScene, BattleScene],
   pixelArt: false,
-  antialias: true
+  antialias: false,
+  roundPixels: true
 };
 
 // 初始化 Socket 管理器
