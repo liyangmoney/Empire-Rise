@@ -5,9 +5,9 @@
  */
 export class PopulationComponent {
   constructor() {
-    this.current = 0;      // 当前人口
-    this.max = 0;          // 人口上限
-    this.growthRate = 0.5; // 每小时自然增长
+    this.current = 50;     // 初始人口
+    this.max = 50;         // 初始人口上限（1级民居）
+    this.growthRate = 0;   // 无自然增长
   }
 
   /**

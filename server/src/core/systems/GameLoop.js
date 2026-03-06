@@ -141,10 +141,6 @@ export class GameLoop {
 
     // ===== 人口系统更新 =====
     if (empire.population) {
-      // 自然增长
-      const hoursElapsed = deltaTime / 3600;
-      empire.population.grow(hoursElapsed * timeScale);
-      
       // 每5秒广播人口更新
       if (Math.floor(Date.now() / 5000) % 1 === 0 && empire.socketId && empire._io) {
         empire._io.to(empire.socketId).emit('population:update', empire.population.getSnapshot());
