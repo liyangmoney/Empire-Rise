@@ -223,21 +223,44 @@ function connect() {
   socket.on('map:view', (data) => {
     console.log('Map view:', data);
     mapData = data;
-    // 使用新的战略地图系统
-    loadStrategyMap({
-      terrain: data.terrain || generateDefaultTerrain(),
-      castles: data.castles || [],
-      npcs: data.npcs || [],
-      myCastle: data.castle
-    });
+    // 使用新的战略地图系统 - 视野模式
+    if (data.castle && data.area) {
+      // 从21x21区域构建100x100地形
+      const terrain = [];
+      for (let y = 0; y < 100; y++) {
+        terrain[y] = [];
+        for (let x = 0; x < 100; x++) {
+          terrain[y][x] = 'plains'; // 默认平原
+        }
+      }
+      // 填充已知区域
+      data.area.forEach(tile => {
+        if (tile.x >= 0 && tile.x < 100 && tile.y >= 0 && tile.y < 100) {
+          terrain[tile.y][tile.x] = tile.terrain.id;
+        }
+      });
+      
+      loadStrategyMap({
+        terrain: terrain,
+        castles: data.area.filter(t => t.hasCastle).map(t => ({ x: t.x, y: t.y, isOwn: true })),
+        npcs: data.area.filter(t => t.npcs && t.npcs.length).map(t => ({
+          x: t.x, y: t.y, isNeutral: t.npcs[0].isNeutral
+        })),
+        myCastle: data.castle
+      });
+    }
   });
 
   socket.on('map:fullMap', (data) => {
     console.log('Full map received:', data);
     fullMapData = data;
-    if (currentMapMode === 'world') {
-      loadStrategyMap(data);
-    }
+    // 使用新的战略地图系统 - 世界模式
+    loadStrategyMap({
+      terrain: data.terrain,
+      castles: data.castles || [],
+      npcs: data.npcs || [],
+      myCastle: data.castles ? data.castles.find(c => c.isOwn) : null
+    });
   });
 
   socket.on('map:tile', (data) => {
