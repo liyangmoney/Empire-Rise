@@ -127,6 +127,12 @@ export class MenuScene extends Phaser.Scene {
     const bg = this.add.rectangle(0, 0, width, height, 0x000000, 0.6);
     bg.setStrokeStyle(1, 0x666666);
     
+    // 光标
+    const cursor = this.add.text(0, 0, '|', {
+      fontSize: '14px',
+      color: '#fff'
+    }).setOrigin(0, 0.5).setVisible(false);
+    
     // 文本
     const text = this.add.text(-width/2 + 10, 0, defaultValue, {
       fontSize: '14px',
@@ -134,30 +140,106 @@ export class MenuScene extends Phaser.Scene {
       fontFamily: 'Microsoft YaHei'
     }).setOrigin(0, 0.5);
     
-    container.add([bg, text]);
+    container.add([bg, text, cursor]);
+    
+    let value = defaultValue;
+    let isFocused = false;
+    let cursorIndex = value.length;
+    
+    // 更新光标位置
+    const updateCursor = () => {
+      const textBeforeCursor = value.substring(0, cursorIndex);
+      const textWidth = this.game.context.measureText(textBeforeCursor).width;
+      cursor.x = -width/2 + 10 + Math.min(textWidth, width - 20);
+      cursor.y = 0;
+    };
+    
+    // 光标闪烁动画
+    this.time.addEvent({
+      delay: 500,
+      loop: true,
+      callback: () => {
+        if (isFocused) {
+          cursor.setVisible(!cursor.visible);
+        }
+      }
+    });
     
     // 交互
     const hitArea = new Phaser.Geom.Rectangle(-width/2, -height/2, width, height);
     bg.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains);
-    bg.setCursor('pointer');
-    
-    bg.on('pointerover', () => {
-      bg.setStrokeStyle(1, 0x888888);
-    });
-    
-    bg.on('pointerout', () => {
-      bg.setStrokeStyle(1, 0x666666);
-    });
+    bg.setCursor('text');
     
     bg.on('pointerdown', () => {
-      const newValue = prompt('请输入:', text.text);
-      if (newValue !== null && newValue !== '') {
-        text.setText(newValue);
+      isFocused = true;
+      cursor.setVisible(true);
+      bg.setStrokeStyle(2, 0x4CAF50);
+      updateCursor();
+    });
+    
+    // 点击外部取消聚焦
+    this.input.on('pointerdown', (pointer, gameObjects) => {
+      if (!gameObjects.includes(bg)) {
+        isFocused = false;
+        cursor.setVisible(false);
+        bg.setStrokeStyle(1, 0x666666);
+      }
+    });
+    
+    // 键盘输入
+    this.input.keyboard.on('keydown', (event) => {
+      if (!isFocused) return;
+      
+      if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
+        // 普通字符
+        value = value.substring(0, cursorIndex) + event.key + value.substring(cursorIndex);
+        cursorIndex++;
+        text.setText(value);
+        updateCursor();
+      } else if (event.key === 'Backspace') {
+        // 退格
+        if (cursorIndex > 0) {
+          value = value.substring(0, cursorIndex - 1) + value.substring(cursorIndex);
+          cursorIndex--;
+          text.setText(value);
+          updateCursor();
+        }
+      } else if (event.key === 'Delete') {
+        // 删除
+        if (cursorIndex < value.length) {
+          value = value.substring(0, cursorIndex) + value.substring(cursorIndex + 1);
+          text.setText(value);
+          updateCursor();
+        }
+      } else if (event.key === 'ArrowLeft') {
+        // 左箭头
+        if (cursorIndex > 0) {
+          cursorIndex--;
+          updateCursor();
+        }
+      } else if (event.key === 'ArrowRight') {
+        // 右箭头
+        if (cursorIndex < value.length) {
+          cursorIndex++;
+          updateCursor();
+        }
+      } else if (event.key === 'Home') {
+        cursorIndex = 0;
+        updateCursor();
+      } else if (event.key === 'End') {
+        cursorIndex = value.length;
+        updateCursor();
       }
     });
     
     return {
-      getValue: () => text.text
+      getValue: () => value,
+      setValue: (val) => {
+        value = val;
+        cursorIndex = val.length;
+        text.setText(val);
+        updateCursor();
+      }
     };
   }
 
