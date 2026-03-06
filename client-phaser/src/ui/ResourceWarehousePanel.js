@@ -43,28 +43,30 @@ export class ResourceWarehousePanel extends Phaser.GameObjects.Container {
     this.cardsContainer = this.scene.add.container(0, 0);
     this.add(this.cardsContainer);
     
-    // 创建资源卡片
-    let col = 0;
-    let row = 0;
+    // 创建资源卡片 - 每行4个，共3行
+    const cardWidth = 210;
+    const cardHeight = 95;
+    const spacingX = 20;
+    const spacingY = 20;
+    const cardsPerRow = 4;
+    
+    // 计算总宽度和起始位置
+    const totalWidth = cardsPerRow * cardWidth + (cardsPerRow - 1) * spacingX;
+    const startX = -totalWidth / 2 + cardWidth / 2;
+    const startY = -180;
     
     this.resourceTypes.forEach((type, index) => {
-      const x = -350 + col * 230;
-      const y = -150 + row * 110;
+      const col = index % cardsPerRow;
+      const row = Math.floor(index / cardsPerRow);
       
-      this.createResourceCard(type, x, y);
+      const x = startX + col * (cardWidth + spacingX);
+      const y = startY + row * (cardHeight + spacingY);
       
-      col++;
-      if (col >= 4) {
-        col = 0;
-        row++;
-      }
+      this.createResourceCard(type, x, y, cardWidth, cardHeight);
     });
   }
   
-  createResourceCard(type, x, y) {
-    const cardW = 210;
-    const cardH = 95;
-    
+  createResourceCard(type, x, y, cardW, cardH) {
     const card = this.scene.add.container(x, y);
     
     // 卡片背景
