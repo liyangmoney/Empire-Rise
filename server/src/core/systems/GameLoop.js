@@ -172,10 +172,10 @@ export class GameLoop {
           const io = e._io;
           if (io) {
             const timeSnapshot = e.time.getSnapshot();
-            // 调试：每秒打印一次时间数据
-            if (this.gameWorld.tick % 5 === 0) {
-              console.log(`[TimeSync] Sending: ${timeSnapshot.gameDate} ${timeSnapshot.realTime}`);
-            }
+            // 调试：每秒打印一次时间数据（已禁用）
+            // if (this.gameWorld.tick % 5 === 0) {
+            //   console.log(`[TimeSync] Sending: ${timeSnapshot.gameDate} ${timeSnapshot.realTime}`);
+            // }
             io.to(e.socketId).emit('time:update', timeSnapshot);
 
             if (e.army) {
