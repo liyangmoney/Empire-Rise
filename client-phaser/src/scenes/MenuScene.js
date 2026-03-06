@@ -167,8 +167,7 @@ export class MenuScene extends Phaser.Scene {
     
     // 交互
     const hitArea = new Phaser.Geom.Rectangle(-width/2, -height/2, width, height);
-    bg.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains);
-    bg.setCursor('text');
+    bg.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains, { useHandCursor: true });
     
     bg.on('pointerdown', () => {
       isFocused = true;
