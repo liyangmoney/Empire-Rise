@@ -16,8 +16,8 @@ export class MenuScene extends Phaser.Scene {
     this.add.image(640, 360, 'bg-gradient');
     
     // 标题
-    this.add.text(640, 80, '🏰 帝国崛起', {
-      fontSize: '56px',
+    this.add.text(640, 60, '🏰 帝国崛起', {
+      fontSize: '64px',
       fontFamily: 'Arial',
       color: '#ffd700',
       stroke: '#000',
@@ -25,135 +25,163 @@ export class MenuScene extends Phaser.Scene {
     }).setOrigin(0.5);
     
     // 副标题
-    this.add.text(640, 150, '蛮荒争霸', {
+    this.add.text(640, 130, '蛮荒争霸', {
       fontSize: '28px',
       fontFamily: 'Arial',
-      color: '#aaaaaa'
+      color: '#ffffff'
     }).setOrigin(0.5);
     
     // 创建连接面板
     this.createPanel();
     
     // 版本
-    this.add.text(1260, 700, 'v1.0.0', { fontSize: '14px', color: '#555' }).setOrigin(1, 0.5);
+    this.add.text(1260, 700, 'v1.0.0', { 
+      fontSize: '14px', 
+      color: '#ffffff' 
+    }).setOrigin(1, 0.5);
     
-    // 监听事件
-    this.setupSocketListeners();
-    
-    // 设置键盘
+    // 设置监听
+    this.setupListeners();
     this.setupKeyboard();
   }
   
-  setupSocketListeners() {
-    // 清除旧监听器
+  setupListeners() {
+    // 移除旧监听器
     window.socketManager.off('empire:init');
     window.socketManager.off('connect_error');
+    window.socketManager.off('error');
     
     window.socketManager.on('empire:init', (data) => {
       console.log('empire:init received:', data);
-      if (data?.playerId) {
+      if (data && data.playerId) {
         this.showStatus('连接成功！进入游戏...', 'success');
-        this.time.delayedCall(500, () => {
+        this.time.delayedCall(600, () => {
           this.scene.start('GameScene', { empireData: data });
         });
+      } else {
+        this.showStatus('数据错误，请重试', 'error');
       }
     });
     
     window.socketManager.on('connect_error', (err) => {
       console.error('Connect error:', err);
-      this.showStatus('连接失败: ' + err.message, 'error');
+      this.showStatus('连接失败: ' + (err.message || '无法连接服务器'), 'error');
+    });
+    
+    window.socketManager.on('error', (err) => {
+      console.error('Socket error:', err);
+      this.showStatus('错误: ' + (err.message || '未知错误'), 'error');
     });
   }
 
   createPanel() {
     const cx = 640;
-    const top = 200;
+    const py = 360;
     
     // 面板背景
-    const g = this.add.graphics();
-    g.fillStyle(0x000000, 0.85);
-    g.fillRoundedRect(cx - 260, top, 520, 360, 10);
-    g.lineStyle(2, 0xffd700, 0.5);
-    g.strokeRoundedRect(cx - 260, top, 520, 360, 10);
+    const bg = this.add.graphics();
+    bg.fillStyle(0x000000, 0.9);
+    bg.fillRoundedRect(cx - 300, py - 180, 600, 360, 12);
+    bg.lineStyle(3, 0xffd700, 0.8);
+    bg.strokeRoundedRect(cx - 300, py - 180, 600, 360, 12);
     
-    // 标题
-    this.add.text(cx, top + 30, '连接服务器', {
-      fontSize: '26px', fontFamily: 'Arial', color: '#ffd700'
+    // 面板标题
+    this.add.text(cx, py - 140, '连接服务器', {
+      fontSize: '32px', 
+      fontFamily: 'Arial', 
+      color: '#ffd700'
     }).setOrigin(0.5);
     
-    // 服务器标签
-    this.add.text(cx - 110, top + 90, '服务器:', {
-      fontSize: '16px', fontFamily: 'Arial', color: '#ccc'
+    // 服务器
+    this.add.text(cx - 140, py - 60, '服务器:', {
+      fontSize: '18px', 
+      fontFamily: 'Arial', 
+      color: '#ffffff'
     }).setOrigin(1, 0.5);
     
-    // 服务器输入
-    this.serverInput = this.createInput(cx + 30, top + 90, 260, 36, 'http://localhost:3000');
+    this.serverInput = this.createInput(cx - 120, py - 60, 320, 40, 'http://localhost:3000');
     
-    // 玩家名标签
-    this.add.text(cx - 110, top + 150, '玩家名称:', {
-      fontSize: '16px', fontFamily: 'Arial', color: '#ccc'
+    // 玩家名称
+    this.add.text(cx - 140, py + 10, '玩家名称:', {
+      fontSize: '18px', 
+      fontFamily: 'Arial', 
+      color: '#ffffff'
     }).setOrigin(1, 0.5);
     
-    // 玩家名输入
-    this.nameInput = this.createInput(cx + 30, top + 150, 260, 36, `领主${Math.floor(Math.random() * 1000)}`);
+    this.nameInput = this.createInput(cx - 120, py + 10, 320, 40, `领主${Math.floor(Math.random() * 1000)}`);
     
     // 按钮
-    this.createButton(cx, top + 230, '连接并创建帝国', () => this.connect());
+    this.createButton(cx, py + 100, '连接并创建帝国', () => this.connect());
     
     // 状态
-    this.statusText = this.add.text(cx, top + 290, '', {
-      fontSize: '14px', fontFamily: 'Arial'
+    this.statusText = this.add.text(cx, py + 160, '', {
+      fontSize: '16px', 
+      fontFamily: 'Arial'
     }).setOrigin(0.5);
     
-    // 说明
-    this.add.text(cx, 600, '游戏指南: 收集资源 → 训练军队 → 攻打NPC → 扩张帝国', {
-      fontSize: '13px', color: '#666'
+    // 说明 - 白色
+    this.add.text(cx, 620, '游戏指南: 收集资源 → 训练军队 → 攻打NPC → 扩张帝国', {
+      fontSize: '14px', 
+      color: '#ffffff'
     }).setOrigin(0.5);
   }
   
   createInput(x, y, w, h, defaultVal) {
-    // 背景
-    const bg = this.add.rectangle(x, y, w, h, 0x1a1a2e).setStrokeStyle(1, 0x666);
+    // 背景框
+    const bg = this.add.rectangle(x, y, w, h, 0x2a2a3e);
+    bg.setStrokeStyle(2, 0x666666);
     bg.setOrigin(0, 0.5);
     
-    // 文字 - 使用 WebFont 加载确保清晰
-    const txt = this.add.text(x + 10, y, defaultVal, {
-      fontSize: '15px', fontFamily: 'monospace', color: '#fff'
+    // 文字 - 白色
+    const txt = this.add.text(x + 12, y, defaultVal, {
+      fontSize: '16px', 
+      fontFamily: 'Arial', 
+      color: '#ffffff'
     }).setOrigin(0, 0.5);
     
     // 光标
-    const cursor = this.add.text(x + 10, y, '|', {
-      fontSize: '15px', color: '#4CAF50'
+    const cursor = this.add.text(x + 12, y, '|', {
+      fontSize: '18px', 
+      color: '#4CAF50'
     }).setOrigin(0, 0.5).setVisible(false);
     
     let val = defaultVal;
     let idx = val.length;
-    let focused = false;
     let blink = null;
     
     const updateCursor = () => {
-      const w = val.substring(0, idx).length * 9;
-      cursor.x = x + 10 + w;
+      // 估算宽度 (Arial 16px 约 9px/字符)
+      const textWidth = val.substring(0, idx).length * 9;
+      cursor.x = x + 12 + textWidth;
     };
     
     const obj = {
       getValue: () => val,
       focus: () => {
-        if (this.activeInput && this.activeInput !== obj) this.activeInput.blur();
-        focused = true;
+        if (this.activeInput && this.activeInput !== obj) {
+          this.activeInput.blur();
+        }
         this.activeInput = obj;
         bg.setStrokeStyle(2, 0x4CAF50);
         cursor.setVisible(true);
         if (blink) blink.remove();
-        blink = this.time.addEvent({ delay: 500, loop: true, callback: () => cursor.setVisible(!cursor.visible) });
+        blink = this.time.addEvent({ 
+          delay: 500, 
+          loop: true, 
+          callback: () => cursor.setVisible(!cursor.visible) 
+        });
         updateCursor();
       },
       blur: () => {
-        focused = false;
-        if (this.activeInput === obj) this.activeInput = null;
-        bg.setStrokeStyle(1, 0x666);
+        if (this.activeInput === obj) {
+          this.activeInput = null;
+        }
+        bg.setStrokeStyle(2, 0x666666);
         cursor.setVisible(false);
-        if (blink) { blink.remove(); blink = null; }
+        if (blink) {
+          blink.remove();
+          blink = null;
+        }
       },
       type: (c) => {
         val = val.slice(0, idx) + c + val.slice(idx);
@@ -176,12 +204,11 @@ export class MenuScene extends Phaser.Scene {
     };
     
     bg.setInteractive({ useHandCursor: true });
-    bg.on('pointerdown', (p, lx, ly, e) => {
-      if (e) e.stopPropagation();
+    bg.on('pointerdown', (pointer, localX) => {
       obj.focus();
-      const clickW = lx + w/2 - 10;
-      idx = Math.round(clickW / 9);
-      idx = Math.max(0, Math.min(val.length, idx));
+      // 根据点击位置设置光标
+      const clickPos = localX + w/2 - 12;
+      idx = Math.max(0, Math.min(val.length, Math.round(clickPos / 9)));
       updateCursor();
     });
     
@@ -190,45 +217,63 @@ export class MenuScene extends Phaser.Scene {
   }
   
   createButton(x, y, label, cb) {
-    const g = this.add.graphics();
-    g.fillStyle(0x4a5568);
-    g.fillRoundedRect(x - 100, y - 20, 200, 40, 6);
+    // 按钮背景
+    const bg = this.add.graphics();
+    const drawBtn = (hover) => {
+      bg.clear();
+      bg.fillStyle(hover ? 0x5a7a5a : 0x4a6a4a);
+      bg.fillRoundedRect(x - 120, y - 22, 240, 44, 8);
+      bg.lineStyle(2, 0x4CAF50);
+      bg.strokeRoundedRect(x - 120, y - 22, 240, 44, 8);
+    };
+    drawBtn(false);
     
-    const txt = this.add.text(x, y, label, {
-      fontSize: '16px', fontFamily: 'Arial', color: '#fff'
+    // 按钮文字
+    this.add.text(x, y, label, {
+      fontSize: '18px', 
+      fontFamily: 'Arial', 
+      color: '#ffffff'
     }).setOrigin(0.5);
     
-    const zone = this.add.zone(x, y, 200, 40).setInteractive({ useHandCursor: true });
+    // 点击区域
+    const zone = this.add.zone(x, y, 240, 44).setInteractive({ useHandCursor: true });
     
-    zone.on('pointerover', () => {
-      g.clear();
-      g.fillStyle(0x5a6578);
-      g.fillRoundedRect(x - 100, y - 20, 200, 40, 6);
-    });
-    zone.on('pointerout', () => {
-      g.clear();
-      g.fillStyle(0x4a5568);
-      g.fillRoundedRect(x - 100, y - 20, 200, 40, 6);
-    });
+    zone.on('pointerover', () => drawBtn(true));
+    zone.on('pointerout', () => drawBtn(false));
     zone.on('pointerdown', () => zone.setScale(0.95));
-    zone.on('pointerup', () => { zone.setScale(1); cb(); });
+    zone.on('pointerup', () => { 
+      zone.setScale(1); 
+      cb(); 
+    });
   }
   
   setupKeyboard() {
     this.input.keyboard.on('keydown', (e) => {
       if (!this.activeInput) return;
-      e.preventDefault();
       
-      if (e.key === 'Backspace') this.activeInput.backspace();
-      else if (e.key === 'ArrowLeft') this.activeInput.move(-1);
-      else if (e.key === 'ArrowRight') this.activeInput.move(1);
-      else if (e.key === 'Home') this.activeInput.move(-999);
-      else if (e.key === 'End') this.activeInput.move(999);
-      else if (e.key === 'Tab') {
-        if (this.activeInput === this.serverInput) this.nameInput.focus();
-        else this.serverInput.focus();
-      }
-      else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+      if (e.key === 'Backspace') {
+        e.preventDefault();
+        this.activeInput.backspace();
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        this.activeInput.move(-1);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        this.activeInput.move(1);
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        this.activeInput.move(-999);
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        this.activeInput.move(999);
+      } else if (e.key === 'Tab') {
+        e.preventDefault();
+        if (this.activeInput === this.serverInput) {
+          this.nameInput.focus();
+        } else {
+          this.serverInput.focus();
+        }
+      } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
         this.activeInput.type(e.key);
       }
     });
@@ -243,18 +288,24 @@ export class MenuScene extends Phaser.Scene {
       return;
     }
     
-    this.showStatus('正在连接...', 'info');
+    this.showStatus('正在连接服务器...', 'info');
     
     try {
+      console.log('Connecting to:', url);
       await window.socketManager.connect(url, name);
-      this.showStatus('已连接，等待数据...', 'success');
+      // 连接成功后会收到 empire:init 事件
     } catch (err) {
-      this.showStatus('连接失败', 'error');
+      console.error('Connection error:', err);
+      this.showStatus('连接失败: ' + (err.message || '请检查服务器地址'), 'error');
     }
   }
   
   showStatus(msg, type) {
-    const colors = { info: '#409EFF', success: '#4CAF50', error: '#f44336' };
-    this.statusText.setText(msg).setColor(colors[type] || '#888');
+    const colors = { 
+      info: '#409EFF', 
+      success: '#4CAF50', 
+      error: '#f44336' 
+    };
+    this.statusText.setText(msg).setColor(colors[type] || '#ffffff');
   }
 }
