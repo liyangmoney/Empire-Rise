@@ -6,6 +6,8 @@ import Phaser from 'phaser';
 export class MenuScene extends Phaser.Scene {
   constructor() {
     super({ key: 'MenuScene' });
+    this.activeInput = null;
+    this.inputBuffer = [];
   }
 
   create() {
@@ -39,30 +41,58 @@ export class MenuScene extends Phaser.Scene {
       color: '#444'
     }).setOrigin(1, 0.5);
     
-    // 重要：提前监听所有可能的事件
+    // 监听事件
     this.setupSocketListeners();
+    
+    // 键盘输入监听
+    this.setupKeyboardInput();
+  }
+  
+  setupKeyboardInput() {
+    // 监听所有按键
+    this.input.keyboard.on('keydown', (event) => {
+      if (!this.activeInput) return;
+      
+      event.preventDefault();
+      
+      if (event.key === 'Backspace') {
+        this.activeInput.backspace();
+      } else if (event.key === 'Delete') {
+        this.activeInput.delete();
+      } else if (event.key === 'ArrowLeft') {
+        this.activeInput.moveCursor(-1);
+      } else if (event.key === 'ArrowRight') {
+        this.activeInput.moveCursor(1);
+      } else if (event.key === 'Home') {
+        this.activeInput.moveCursor(-9999);
+      } else if (event.key === 'End') {
+        this.activeInput.moveCursor(9999);
+      } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
+        // 普通字符
+        this.activeInput.insertChar(event.key);
+      }
+    });
   }
   
   setupSocketListeners() {
     console.log('Setting up socket listeners');
     
-    // 监听帝国初始化
     window.socketManager.on('empire:init', (data) => {
       console.log('Received empire:init', data);
       if (data && data.playerId) {
-        this.showStatus('帝国数据加载成功，进入游戏...', 'success');
-        setTimeout(() => {
+        this.showStatus('帝国数据加载成功！', 'success');
+        console.log('Starting GameScene...');
+        
+        this.time.delayedCall(300, () => {
           this.scene.start('GameScene', { empireData: data });
-        }, 500);
+        });
       }
     });
     
-    // 监听连接成功
     window.socketManager.on('connect', () => {
       console.log('Socket connected');
     });
     
-    // 监听错误
     window.socketManager.on('error', (err) => {
       console.error('Socket error:', err);
       this.showStatus('错误: ' + (err.message || '连接异常'), 'error');
@@ -84,7 +114,7 @@ export class MenuScene extends Phaser.Scene {
       color: '#ffd700'
     }).setOrigin(0.5);
     
-    // 服务器输入行
+    // 服务器输入
     const serverY = startY + 60;
     this.add.text(centerX - 120, serverY, '服务器:', {
       fontSize: '16px',
@@ -93,7 +123,7 @@ export class MenuScene extends Phaser.Scene {
     
     this.serverInput = this.createInputField(centerX + 20, serverY, 220, 35, 'http://localhost:3000');
     
-    // 玩家名称输入行
+    // 玩家名称输入
     const nameY = startY + 120;
     this.add.text(centerX - 120, nameY, '玩家名称:', {
       fontSize: '16px',
@@ -103,7 +133,7 @@ export class MenuScene extends Phaser.Scene {
     this.nameInput = this.createInputField(centerX + 20, nameY, 220, 35, `领主${Math.floor(Math.random() * 1000)}`);
     
     // 连接按钮
-    const connectBtn = this.createButton(centerX, startY + 200, '连接并创建帝国', () => {
+    this.createButton(centerX, startY + 200, '连接并创建帝国', () => {
       this.handleConnect();
     });
     
@@ -121,125 +151,122 @@ export class MenuScene extends Phaser.Scene {
   }
   
   createInputField(x, y, width, height, defaultValue) {
-    const container = this.add.container(x, y);
-    
-    // 背景
-    const bg = this.add.rectangle(0, 0, width, height, 0x000000, 0.6);
+    const bg = this.add.rectangle(x, y, width, height, 0x000000, 0.6);
     bg.setStrokeStyle(1, 0x666666);
+    bg.setOrigin(0, 0.5);
     
-    // 光标
-    const cursor = this.add.text(0, 0, '|', {
-      fontSize: '14px',
-      color: '#fff'
-    }).setOrigin(0, 0.5).setVisible(false);
-    
-    // 文本
-    const text = this.add.text(-width/2 + 10, 0, defaultValue, {
+    const text = this.add.text(x + 10, y, defaultValue, {
       fontSize: '14px',
       color: '#fff',
       fontFamily: 'Microsoft YaHei'
     }).setOrigin(0, 0.5);
     
-    container.add([bg, text, cursor]);
+    const cursor = this.add.text(x + 10, y, '|', {
+      fontSize: '14px',
+      color: '#4CAF50'
+    }).setOrigin(0, 0.5).setVisible(false);
     
     let value = defaultValue;
-    let isFocused = false;
     let cursorIndex = value.length;
+    let blinkEvent = null;
     
-    // 更新光标位置
-    const updateCursor = () => {
-      const textBeforeCursor = value.substring(0, cursorIndex);
-      const textWidth = this.game.context.measureText(textBeforeCursor).width;
-      cursor.x = -width/2 + 10 + Math.min(textWidth, width - 20);
-      cursor.y = 0;
-    };
+    const self = this;
     
-    // 光标闪烁动画
-    this.time.addEvent({
-      delay: 500,
-      loop: true,
-      callback: () => {
-        if (isFocused) {
-          cursor.setVisible(!cursor.visible);
-        }
-      }
-    });
-    
-    // 交互
-    const hitArea = new Phaser.Geom.Rectangle(-width/2, -height/2, width, height);
-    bg.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains, { useHandCursor: true });
-    
-    bg.on('pointerdown', () => {
-      isFocused = true;
-      cursor.setVisible(true);
-      bg.setStrokeStyle(2, 0x4CAF50);
-      updateCursor();
-    });
-    
-    // 点击外部取消聚焦
-    this.input.on('pointerdown', (pointer, gameObjects) => {
-      if (!gameObjects.includes(bg)) {
-        isFocused = false;
-        cursor.setVisible(false);
-        bg.setStrokeStyle(1, 0x666666);
-      }
-    });
-    
-    // 键盘输入
-    this.input.keyboard.on('keydown', (event) => {
-      if (!isFocused) return;
+    const inputObj = {
+      getValue: () => value,
       
-      if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
-        // 普通字符
-        value = value.substring(0, cursorIndex) + event.key + value.substring(cursorIndex);
+      focus: () => {
+        // 先取消其他输入框的聚焦
+        if (self.activeInput && self.activeInput !== inputObj) {
+          self.activeInput.blur();
+        }
+        
+        self.activeInput = inputObj;
+        bg.setStrokeStyle(2, 0x4CAF50);
+        cursor.setVisible(true);
+        
+        // 光标闪烁
+        if (blinkEvent) blinkEvent.remove();
+        blinkEvent = self.time.addEvent({
+          delay: 500,
+          loop: true,
+          callback: () => {
+            cursor.setVisible(!cursor.visible);
+          }
+        });
+        
+        updateCursor();
+      },
+      
+      blur: () => {
+        bg.setStrokeStyle(1, 0x666666);
+        cursor.setVisible(false);
+        if (blinkEvent) {
+          blinkEvent.remove();
+          blinkEvent = null;
+        }
+        if (self.activeInput === inputObj) {
+          self.activeInput = null;
+        }
+      },
+      
+      insertChar: (char) => {
+        value = value.substring(0, cursorIndex) + char + value.substring(cursorIndex);
         cursorIndex++;
         text.setText(value);
         updateCursor();
-      } else if (event.key === 'Backspace') {
-        // 退格
+      },
+      
+      backspace: () => {
         if (cursorIndex > 0) {
           value = value.substring(0, cursorIndex - 1) + value.substring(cursorIndex);
           cursorIndex--;
           text.setText(value);
           updateCursor();
         }
-      } else if (event.key === 'Delete') {
-        // 删除
+      },
+      
+      delete: () => {
         if (cursorIndex < value.length) {
           value = value.substring(0, cursorIndex) + value.substring(cursorIndex + 1);
           text.setText(value);
           updateCursor();
         }
-      } else if (event.key === 'ArrowLeft') {
-        // 左箭头
-        if (cursorIndex > 0) {
-          cursorIndex--;
-          updateCursor();
-        }
-      } else if (event.key === 'ArrowRight') {
-        // 右箭头
-        if (cursorIndex < value.length) {
-          cursorIndex++;
-          updateCursor();
-        }
-      } else if (event.key === 'Home') {
-        cursorIndex = 0;
-        updateCursor();
-      } else if (event.key === 'End') {
-        cursorIndex = value.length;
-        updateCursor();
-      }
-    });
-    
-    return {
-      getValue: () => value,
-      setValue: (val) => {
-        value = val;
-        cursorIndex = val.length;
-        text.setText(val);
+      },
+      
+      moveCursor: (delta) => {
+        cursorIndex = Math.max(0, Math.min(value.length, cursorIndex + delta));
         updateCursor();
       }
     };
+    
+    const updateCursor = () => {
+      // 计算光标位置
+      const tempText = value.substring(0, cursorIndex);
+      // 使用简单估算，每个字符约8-10px
+      const charWidth = 9;
+      const textWidth = tempText.length * charWidth;
+      cursor.x = x + 10 + textWidth;
+    };
+    
+    // 点击聚焦
+    bg.setInteractive({ useHandCursor: true });
+    bg.on('pointerdown', (pointer, localX, localY, event) => {
+      if (event) event.stopPropagation();
+      inputObj.focus();
+    });
+    
+    // 点击外部取消聚焦
+    this.input.on('pointerdown', (pointer, gameObjects) => {
+      if (!gameObjects.includes(bg)) {
+        inputObj.blur();
+      }
+    });
+    
+    // 初始化
+    updateCursor();
+    
+    return inputObj;
   }
 
   createButton(x, y, label, callback) {
@@ -254,21 +281,10 @@ export class MenuScene extends Phaser.Scene {
     
     container.add([bg, text]);
     
-    // 交互
     bg.setInteractive({ useHandCursor: true });
-    
-    bg.on('pointerover', () => {
-      bg.setTexture('btn-hover');
-    });
-    
-    bg.on('pointerout', () => {
-      bg.setTexture('btn-normal');
-    });
-    
-    bg.on('pointerdown', () => {
-      bg.setScale(0.95);
-    });
-    
+    bg.on('pointerover', () => bg.setTexture('btn-hover'));
+    bg.on('pointerout', () => bg.setTexture('btn-normal'));
+    bg.on('pointerdown', () => bg.setScale(0.95));
     bg.on('pointerup', () => {
       bg.setScale(1);
       callback();
@@ -303,7 +319,6 @@ export class MenuScene extends Phaser.Scene {
       success: '#4CAF50',
       error: '#f44336'
     };
-    
     this.statusText.setText(message);
     this.statusText.setColor(colors[type] || '#888');
   }
