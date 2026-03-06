@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { BUILDING_TYPES } from '../shared/constants.js';
 
 /**
- * 建筑面板 - 修正版
+ * 建筑面板 - 完全重写版
  */
 export class BuildingPanel extends Phaser.GameObjects.Container {
   constructor(scene, x, y) {
@@ -29,24 +29,17 @@ export class BuildingPanel extends Phaser.GameObjects.Container {
   }
   
   createUI() {
-    // 内容容器 - 相对于面板中心
-    this.content = this.scene.add.container(0, -200);
+    // 标题
+    this.scene.add.text(0, -260, '🏗️ 建筑管理', {
+      fontSize: '26px',
+      fontFamily: 'Microsoft YaHei, Arial',
+      color: '#ffd700',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+    
+    // 内容容器
+    this.content = this.scene.add.container(0, 0);
     this.add(this.content);
-    
-    // 遮罩（限制显示区域）
-    const maskGraphics = this.scene.make.graphics();
-    maskGraphics.fillRect(-580, -250, 1160, 500);
-    const mask = maskGraphics.createGeometryMask();
-    this.content.setMask(mask);
-    
-    // 滚动
-    this.scrollY = 0;
-    this.scene.input.on('wheel', (pointer, gameObjects, deltaX, deltaY) => {
-      if (this.visible && pointer.y > 120 && pointer.y < 680) {
-        this.scrollY = Math.max(-this.maxScroll, Math.min(0, this.scrollY - deltaY * 0.5));
-        this.content.y = -200 + this.scrollY;
-      }
-    });
   }
   
   updateData(buildings, upgradeQueue = []) {
@@ -57,8 +50,6 @@ export class BuildingPanel extends Phaser.GameObjects.Container {
     this.content.removeAll(true);
     this.buildingCards = {};
     
-    let currentY = 0;
-    
     // 按分类组织建筑
     const buildingsByCategory = {};
     for (const [id, data] of Object.entries(buildings)) {
@@ -67,20 +58,16 @@ export class BuildingPanel extends Phaser.GameObjects.Container {
       buildingsByCategory[cat].push({ id, ...data });
     }
     
+    let currentY = -220;
+    
     // 按分类渲染
     for (const [catKey, catName] of Object.entries(this.categoryNames)) {
       const catBuildings = buildingsByCategory[catKey];
       if (!catBuildings || catBuildings.length === 0) continue;
       
-      // 分类标题背景
-      const titleBg = this.scene.add.graphics();
-      titleBg.fillStyle(0xffd700, 0.1);
-      titleBg.fillRect(-560, currentY, 1120, 36);
-      this.content.add(titleBg);
-      
       // 分类标题
-      const title = this.scene.add.text(-550, currentY + 8, catName, {
-        fontSize: '18px',
+      const title = this.scene.add.text(-550, currentY, catName, {
+        fontSize: '16px',
         fontFamily: 'Microsoft YaHei, Arial',
         color: '#ffd700',
         fontStyle: 'bold'
@@ -90,53 +77,48 @@ export class BuildingPanel extends Phaser.GameObjects.Container {
       // 下划线
       const line = this.scene.add.graphics();
       line.lineStyle(1, 0xffd700, 0.3);
-      line.lineBetween(-550, currentY + 32, 550, currentY + 32);
+      line.lineBetween(-550, currentY + 22, 550, currentY + 22);
       this.content.add(line);
       
-      currentY += 45;
+      currentY += 35;
       
       // 建筑网格 - 每行3个
-      let col = 0;
-      const startY = currentY;
+      const cardW = 340;
+      const cardH = 120;
+      const gapX = 25;
+      const gapY = 20;
+      
       catBuildings.forEach((building, index) => {
-        const x = -370 + col * 370;
-        const y = startY + Math.floor(index / 3) * 150;
-        this.createBuildingCard(building, x, y);
+        const col = index % 3;
+        const row = Math.floor(index / 3);
         
-        col++;
-        if (col >= 3) {
-          col = 0;
-        }
+        const x = -360 + col * (cardW + gapX);
+        const y = currentY + row * (cardH + gapY);
         
-        if (col === 0 || index === catBuildings.length - 1) {
-          currentY = y + 150;
-        }
+        this.createBuildingCard(building, x, y, cardW, cardH);
       });
       
-      currentY += 20;
+      // 计算这个分类占了多少行
+      const rows = Math.ceil(catBuildings.length / 3);
+      currentY += rows * (cardH + gapY) + 30;
     }
-    
-    this.maxScroll = Math.max(0, currentY - 450);
   }
   
-  createBuildingCard(building, x, y) {
-    const cardW = 340;
-    const cardH = 130;
-    
+  createBuildingCard(building, x, y, cardW, cardH) {
     const card = this.scene.add.container(x, y);
     
     // 卡片背景
     const bg = this.scene.add.graphics();
-    bg.fillStyle(0x1a1a2e, 0.8);
-    bg.fillRoundedRect(-cardW/2, -cardH/2, cardW, cardH, 8);
+    bg.fillStyle(0x1a1a2e, 0.9);
+    bg.fillRoundedRect(0, 0, cardW, cardH, 10);
     bg.lineStyle(1, 0x444444, 0.5);
-    bg.strokeRoundedRect(-cardW/2, -cardH/2, cardW, cardH, 8);
+    bg.strokeRoundedRect(0, 0, cardW, cardH, 10);
     card.add(bg);
     
     // 图标背景
     const iconBg = this.scene.add.graphics();
-    iconBg.fillStyle(0x000000, 0.4);
-    iconBg.fillRoundedRect(-cardW/2 + 12, -cardH/2 + 12, 50, 50, 6);
+    iconBg.fillStyle(0x000000, 0.5);
+    iconBg.fillRoundedRect(12, 12, 50, 50, 8);
     card.add(iconBg);
     
     // 图标
@@ -149,14 +131,14 @@ export class BuildingPanel extends Phaser.GameObjects.Container {
       general_camp: '🎖️', warehouse_basic: '📦', warehouse_special: '📦'
     };
     
-    const icon = this.scene.add.text(-cardW/2 + 37, -cardH/2 + 37, iconMap[building.id] || '🏛️', {
-      fontSize: '28px'
+    const icon = this.scene.add.text(37, 37, iconMap[building.id] || '🏛️', {
+      fontSize: '26px'
     }).setOrigin(0.5);
     card.add(icon);
     
     // 建筑名称
-    const nameText = this.scene.add.text(-cardW/2 + 75, -cardH/2 + 20, this.getBuildingName(building.id), {
-      fontSize: '16px',
+    const nameText = this.scene.add.text(75, 18, this.getBuildingName(building.id), {
+      fontSize: '15px',
       fontFamily: 'Microsoft YaHei, Arial',
       color: '#ffffff',
       fontStyle: 'bold'
@@ -164,17 +146,17 @@ export class BuildingPanel extends Phaser.GameObjects.Container {
     card.add(nameText);
     
     // 等级
-    const levelText = this.scene.add.text(cardW/2 - 15, -cardH/2 + 20, `Lv.${building.level}`, {
-      fontSize: '14px',
+    const levelText = this.scene.add.text(cardW - 15, 18, `Lv.${building.level}`, {
+      fontSize: '13px',
       color: '#ffd700'
     }).setOrigin(1, 0);
     card.add(levelText);
     
     // 描述
-    const descText = this.scene.add.text(-cardW/2 + 75, -cardH/2 + 42, building.description || '暂无介绍', {
-      fontSize: '12px',
+    const descText = this.scene.add.text(75, 42, building.description || '暂无介绍', {
+      fontSize: '11px',
       color: '#888888',
-      wordWrap: { width: cardW - 100 }
+      wordWrap: { width: cardW - 90 }
     });
     card.add(descText);
     
@@ -185,20 +167,20 @@ export class BuildingPanel extends Phaser.GameObjects.Container {
       // 进度条背景
       const progressBg = this.scene.add.graphics();
       progressBg.fillStyle(0x333333, 1);
-      progressBg.fillRoundedRect(-cardW/2 + 15, cardH/2 - 30, cardW - 30, 18, 9);
+      progressBg.fillRoundedRect(15, cardH - 32, cardW - 30, 16, 8);
       card.add(progressBg);
       
       // 进度条
       const progress = Math.min(100, (upgradingTask._progress / upgradingTask.duration) * 100);
       const progressBar = this.scene.add.graphics();
-      progressBar.fillGradientStyle(0x4CAF50, 0x4CAF50, 0x8BC34A, 0x8BC34A, 1);
-      progressBar.fillRoundedRect(-cardW/2 + 15, cardH/2 - 30, (cardW - 30) * progress / 100, 18, 9);
+      progressBar.fillStyle(0x4CAF50, 1);
+      progressBar.fillRoundedRect(15, cardH - 32, (cardW - 30) * progress / 100, 16, 8);
       card.add(progressBar);
       
       // 时间文字
       const remaining = Math.ceil((upgradingTask.duration - upgradingTask._progress) / 1000);
-      const timeText = this.scene.add.text(0, cardH/2 - 21, `升级中... ${remaining}秒`, {
-        fontSize: '11px',
+      const timeText = this.scene.add.text(cardW / 2, cardH - 24, `升级中... ${remaining}秒`, {
+        fontSize: '10px',
         color: '#ffffff'
       }).setOrigin(0.5);
       card.add(timeText);
@@ -208,30 +190,30 @@ export class BuildingPanel extends Phaser.GameObjects.Container {
       // 升级按钮
       const btnBg = this.scene.add.graphics();
       btnBg.fillStyle(0x4CAF50, 1);
-      btnBg.fillRoundedRect(-45, cardH/2 - 35, 90, 28, 6);
+      btnBg.fillRoundedRect(cardW / 2 - 40, cardH - 36, 80, 26, 6);
       card.add(btnBg);
       
-      const btnText = this.scene.add.text(0, cardH/2 - 21, '升级', {
-        fontSize: '13px',
+      const btnText = this.scene.add.text(cardW / 2, cardH - 23, '升级', {
+        fontSize: '12px',
         color: '#ffffff',
         fontStyle: 'bold'
       }).setOrigin(0.5);
       card.add(btnText);
       
       // 按钮交互
-      const btnZone = this.scene.add.zone(0, cardH/2 - 21, 90, 28).setInteractive({ useHandCursor: true });
+      const btnZone = this.scene.add.zone(cardW / 2, cardH - 23, 80, 26).setInteractive({ useHandCursor: true });
       card.add(btnZone);
       
       btnZone.on('pointerover', () => {
         btnBg.clear();
         btnBg.fillStyle(0x5CBF60, 1);
-        btnBg.fillRoundedRect(-45, cardH/2 - 35, 90, 28, 6);
+        btnBg.fillRoundedRect(cardW / 2 - 40, cardH - 36, 80, 26, 6);
       });
       
       btnZone.on('pointerout', () => {
         btnBg.clear();
         btnBg.fillStyle(0x4CAF50, 1);
-        btnBg.fillRoundedRect(-45, cardH/2 - 35, 90, 28, 6);
+        btnBg.fillRoundedRect(cardW / 2 - 40, cardH - 36, 80, 26, 6);
       });
       
       btnZone.on('pointerup', () => {
@@ -241,8 +223,8 @@ export class BuildingPanel extends Phaser.GameObjects.Container {
       this.buildingCards[building.id] = { btnBg, btnText, btnZone, bg };
     } else {
       // 已满级
-      const maxText = this.scene.add.text(0, cardH/2 - 21, '已满级', {
-        fontSize: '13px',
+      const maxText = this.scene.add.text(cardW / 2, cardH - 23, '已满级', {
+        fontSize: '12px',
         color: '#666666'
       }).setOrigin(0.5);
       card.add(maxText);
