@@ -1889,24 +1889,25 @@ function setMapMode(mode) {
   }
 }
 
-function zoomMap(factor) {
-  mapZoom *= factor;
-  mapZoom = Math.max(0.25, Math.min(2, mapZoom));
+// 旧的zoomMap函数已被map-canvas.js替代
+// function zoomMap(factor) {
+//   mapZoom *= factor;
+//   mapZoom = Math.max(0.25, Math.min(2, mapZoom));
   const zoomLevel = document.getElementById('zoomLevel');
-  if (zoomLevel) zoomLevel.textContent = Math.round(mapZoom * 100) + '%';
+//   if (zoomLevel) zoomLevel.textContent = Math.round(mapZoom * 100) + '%';
   const mapContainer = document.getElementById('worldMap');
-  if (mapContainer) mapContainer.style.transform = 'scale(' + mapZoom + ')';
+//   if (mapContainer) mapContainer.style.transform = 'scale(' + mapZoom + ')';
 }
 
-function resetMapView() {
-  mapZoom = 1;
+function _old_resetMapView() {
+//   mapZoom = 1;
   const zoomLevel = document.getElementById('zoomLevel');
-  if (zoomLevel) zoomLevel.textContent = '100%';
+//   if (zoomLevel) zoomLevel.textContent = '100%';
   const mapContainer = document.getElementById('worldMap');
   if (mapContainer) mapContainer.style.transform = 'scale(1)';
 }
 
-function renderMap(map) {
+function _old_renderMap(map) {
   if (currentMapMode === 'world' && fullMapData) {
     renderFullMap(fullMapData);
   } else {
@@ -1914,7 +1915,7 @@ function renderMap(map) {
   }
 }
 
-function renderViewMap(map) {
+function _old_renderViewMap(map) {
   const container = document.getElementById('worldMap');
   if (!container || !map) return;
   container.style.gridTemplateColumns = 'repeat(21, 24px)';
@@ -1973,7 +1974,7 @@ function renderViewMap(map) {
   }
 }
 
-function renderFullMap(fullMap) {
+function _old_renderFullMap(fullMap) {
   const container = document.getElementById('worldMap');
   if (!container || !fullMap) return;
   fullMapData = fullMap;
@@ -2048,7 +2049,7 @@ function getTerrainName(terrainId) {
   return names[terrainId] || terrainId;
 }
 
-function renderMiniMap(fullMap) {
+function _old_renderMiniMap(fullMap) {
   const canvas = document.getElementById('miniMap');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
