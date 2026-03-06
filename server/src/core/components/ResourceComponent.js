@@ -12,7 +12,7 @@ export class ResourceComponent {
     Object.values(RESOURCE_TYPES).forEach(type => {
       this.storage[type.id] = {
         amount: 0,
-        maxCapacity: type.category === 'basic' ? 1000 : type.category === 'currency' ? 999999 : 500
+        maxCapacity: type.category === 'basic' ? 10000 : type.category === 'currency' ? 999999 : 5000
       };
     });
     
