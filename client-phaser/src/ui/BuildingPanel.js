@@ -86,85 +86,86 @@ export class BuildingPanel extends Phaser.GameObjects.Container {
   createCategoryBuildings(category, container) {
     const buildingTypes = Object.values(BUILDING_TYPES).filter(b => b.category === category);
     
-    let offsetX = -540;
+    let offsetX = -520;
     buildingTypes.forEach((type, index) => {
-      if (index > 0 && index % 4 === 0) {
-        // 每行4个
-      }
-      
       this.createBuildingCard(type, offsetX, 0, container);
-      offsetX += 275;
+      offsetX += 290;
     });
   }
   
   createBuildingCard(type, x, y, container) {
     const card = this.scene.add.container(x, y);
     
+    const cardW = 270;
+    const cardH = 80;
+    
     // 卡片背景
     const bg = this.scene.add.graphics();
-    bg.fillStyle(0x1a1a2e, 0.9);
-    bg.fillRoundedRect(-130, -40, 260, 80, 10);
+    bg.fillStyle(0x1a1a2e, 0.95);
+    bg.fillRoundedRect(-cardW/2, -cardH/2, cardW, cardH, 10);
     bg.lineStyle(1, 0xffd700, 0.2);
-    bg.strokeRoundedRect(-130, -40, 260, 80, 10);
+    bg.strokeRoundedRect(-cardW/2, -cardH/2, cardW, cardH, 10);
     card.add(bg);
     
     // 左侧彩色条
     const colorBar = this.scene.add.graphics();
     colorBar.fillStyle(this.categoryColors[type.category] || 0x666666, 1);
-    colorBar.fillRoundedRect(-128, -38, 6, 76, 3);
+    colorBar.fillRoundedRect(-cardW/2 + 2, -cardH/2 + 2, 6, cardH - 4, 3);
     card.add(colorBar);
     
-    // 建筑名称
-    const name = this.scene.add.text(-115, -25, type.name, {
-      fontSize: '16px',
-      fontFamily: 'Arial',
+    // 建筑名称 - 使用更大区域
+    const name = this.scene.add.text(-cardW/2 + 20, -cardH/2 + 18, type.name, {
+      fontSize: '15px',
+      fontFamily: 'Microsoft YaHei, Arial',
       color: '#ffffff',
       fontStyle: 'bold'
     });
     card.add(name);
     
-    // 等级
-    const level = this.scene.add.text(115, -25, 'Lv.1', {
-      fontSize: '14px',
+    // 等级 - 放在右侧
+    const level = this.scene.add.text(cardW/2 - 10, -cardH/2 + 18, 'Lv.1', {
+      fontSize: '13px',
       fontFamily: 'Arial',
       color: '#4CAF50'
     }).setOrigin(1, 0);
     card.add(level);
     
     // 人口消耗
-    const pop = this.scene.add.text(-115, -5, `👥 ${type.populationCost || 0}`, {
-      fontSize: '13px',
+    const pop = this.scene.add.text(-cardW/2 + 20, 5, `👥 ${type.populationCost || 0}`, {
+      fontSize: '12px',
       color: '#aaaaaa'
     });
     card.add(pop);
     
     // 升级按钮
+    const btnW = 90;
+    const btnH = 26;
     const btnBg = this.scene.add.graphics();
     btnBg.fillStyle(0x2d5a3d, 1);
-    btnBg.fillRoundedRect(-50, 15, 100, 28, 6);
+    btnBg.fillRoundedRect(-btnW/2, 20, btnW, btnH, 6);
     card.add(btnBg);
     
-    const btnText = this.scene.add.text(0, 29, '🔨 升级', {
-      fontSize: '13px',
+    const btnText = this.scene.add.text(0, 33, '🔨 升级', {
+      fontSize: '12px',
       fontFamily: 'Arial',
       color: '#ffffff'
     }).setOrigin(0.5);
     card.add(btnText);
     
     // 按钮交互
-    const btnZone = this.scene.add.zone(0, 29, 100, 28).setInteractive({ useHandCursor: true });
+    const btnZone = this.scene.add.zone(0, 33, btnW, btnH).setInteractive({ useHandCursor: true });
     card.add(btnZone);
     
     btnZone.on('pointerover', () => {
       btnBg.clear();
       btnBg.fillStyle(0x3d7a4d, 1);
-      btnBg.fillRoundedRect(-50, 15, 100, 28, 6);
+      btnBg.fillRoundedRect(-btnW/2, 20, btnW, btnH, 6);
     });
     
     btnZone.on('pointerout', () => {
       btnBg.clear();
       btnBg.fillStyle(0x2d5a3d, 1);
-      btnBg.fillRoundedRect(-50, 15, 100, 28, 6);
+      btnBg.fillRoundedRect(-btnW/2, 20, btnW, btnH, 6);
     });
     
     btnZone.on('pointerup', () => {
@@ -174,18 +175,18 @@ export class BuildingPanel extends Phaser.GameObjects.Container {
     // 进度条（初始隐藏）
     const progressBg = this.scene.add.graphics();
     progressBg.fillStyle(0x333333, 1);
-    progressBg.fillRoundedRect(-120, 10, 240, 8, 4);
+    progressBg.fillRoundedRect(-cardW/2 + 15, 22, cardW - 30, 6, 3);
     progressBg.setVisible(false);
     card.add(progressBg);
     
     const progressBar = this.scene.add.graphics();
     progressBar.fillStyle(0x4CAF50, 1);
-    progressBar.fillRoundedRect(-120, 10, 0, 8, 4);
+    progressBar.fillRoundedRect(-cardW/2 + 15, 22, 0, 6, 3);
     progressBar.setVisible(false);
     card.add(progressBar);
     
-    const progressText = this.scene.add.text(0, 28, '', {
-      fontSize: '11px',
+    const progressText = this.scene.add.text(0, 36, '', {
+      fontSize: '10px',
       color: '#4CAF50'
     }).setOrigin(0.5);
     progressText.setVisible(false);
