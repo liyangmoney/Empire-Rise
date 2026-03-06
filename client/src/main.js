@@ -223,14 +223,20 @@ function connect() {
   socket.on('map:view', (data) => {
     console.log('Map view:', data);
     mapData = data;
-    renderMap(data);
+    // 使用新的战略地图系统
+    loadStrategyMap({
+      terrain: data.terrain || generateDefaultTerrain(),
+      castles: data.castles || [],
+      npcs: data.npcs || [],
+      myCastle: data.castle
+    });
   });
 
   socket.on('map:fullMap', (data) => {
     console.log('Full map received:', data);
     fullMapData = data;
     if (currentMapMode === 'world') {
-      renderFullMap(data);
+      loadStrategyMap(data);
     }
   });
 
