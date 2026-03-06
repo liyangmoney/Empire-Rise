@@ -15,10 +15,20 @@ export class SocketManager {
 
   connect(serverUrl, playerName) {
     return new Promise((resolve, reject) => {
+      // 如果已经连接，先断开
+      if (this.socket) {
+        console.log('Already connected, disconnecting first...');
+        this.socket.disconnect();
+        this.socket = null;
+      }
+      
       this.playerName = playerName;
       this.playerId = 'player_' + Math.random().toString(36).substr(2, 9);
       
-      this.socket = io(serverUrl || 'http://localhost:3000');
+      console.log('Connecting to:', serverUrl || 'http://localhost:3000');
+      this.socket = io(serverUrl || 'http://localhost:3000', {
+        transports: ['websocket', 'polling']
+      });
       
       this.socket.on('connect', () => {
         console.log('✅ 已连接到服务器');
@@ -166,14 +176,25 @@ export class SocketManager {
     
     // 返回取消订阅函数
     return () => {
-      const callbacks = this.callbacks.get(event);
-      if (callbacks) {
-        const index = callbacks.indexOf(callback);
-        if (index > -1) {
-          callbacks.splice(index, 1);
-        }
-      }
+      this.off(event, callback);
     };
+  }
+
+  // 移除回调
+  off(event, callback) {
+    if (!callback) {
+      // 如果没有提供回调，移除该事件的所有回调
+      this.callbacks.delete(event);
+      return;
+    }
+    
+    const callbacks = this.callbacks.get(event);
+    if (callbacks) {
+      const index = callbacks.indexOf(callback);
+      if (index > -1) {
+        callbacks.splice(index, 1);
+      }
+    }
   }
 
   // 触发回调
