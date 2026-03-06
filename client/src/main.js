@@ -568,7 +568,7 @@ function renderBuildings(buildings, upgradeQueue = []) {
       }
       
       const iconPath = getBuildingIcon(building.id);
-      const iconHtml = iconPath ? `<img src="${iconPath}" alt="" style="width:48px;height:48px;margin-right:10px;vertical-align:middle;background:rgba(0,0,0,0.3);border-radius:8px;padding:4px;">` : '';
+      const iconHtml = iconPath ? `<img src="${iconPath}" alt="" style="width:48px;height:48px;margin-right:10px;vertical-align:middle;background:rgba(0,0,0,0.3);border-radius:8px;padding:4px;" onerror="this.style.display='none'">` : '';
       
       item.innerHTML = `
         <div style="display:flex;align-items:center;margin-bottom:10px;">
@@ -648,7 +648,7 @@ function getBuildingIcon(buildingId) {
     stables: 'stables.png'
   };
   const iconFile = iconMap[buildingId];
-  return iconFile ? `assets/icons/buildings/${iconFile}` : null;
+  return iconFile ? `./assets/icons/buildings/${iconFile}` : null;
 }
 
 // 显示建筑详细信息
