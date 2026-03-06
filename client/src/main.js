@@ -1877,7 +1877,8 @@ function setMapMode(mode) {
   if (mode === 'view') {
     if (viewBtn) viewBtn.className = 'btn-primary';
     if (worldBtn) worldBtn.className = 'btn-secondary';
-    if (zoomControls) zoomControls.style.display = 'none';
+    // 视野模式下也显示缩放按钮，隐藏小地图
+    if (zoomControls) zoomControls.style.display = 'flex';
     if (miniMapContainer) miniMapContainer.style.display = 'none';
     if (socket && playerId) socket.emit('map:getView', { playerId });
   } else {
@@ -1887,6 +1888,9 @@ function setMapMode(mode) {
     if (miniMapContainer) miniMapContainer.style.display = 'flex';
     if (socket && playerId) socket.emit('map:getFullMap', { playerId });
   }
+  
+  // 重置缩放
+  resetMapView();
 }
 
 // 旧的地图函数已被map-canvas.js替代，以下保留为参考

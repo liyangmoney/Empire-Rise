@@ -236,6 +236,11 @@ function resetMapZoom() {
   applyMapZoom();
 }
 
+// 兼容HTML中的函数名
+function resetMapView() {
+  resetMapZoom();
+}
+
 function initMiniMapClick() {
   var miniMap = document.getElementById('miniMap');
   if (!miniMap) return;
