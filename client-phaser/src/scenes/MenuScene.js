@@ -149,9 +149,16 @@ export class MenuScene extends Phaser.Scene {
     let idx = val.length;
     let blink = null;
     
+    // 创建一个隐藏的文本对象用于测量宽度
+    const measureText = this.add.text(0, 0, '', {
+      fontSize: '16px',
+      fontFamily: 'Arial'
+    }).setVisible(false);
+    
     const updateCursor = () => {
-      // 估算宽度 (Arial 16px 约 9px/字符)
-      const textWidth = val.substring(0, idx).length * 9;
+      // 使用隐藏的文本对象测量实际宽度
+      measureText.setText(val.substring(0, idx));
+      const textWidth = measureText.width;
       cursor.x = x + 12 + textWidth;
     };
     
@@ -206,9 +213,22 @@ export class MenuScene extends Phaser.Scene {
     bg.setInteractive({ useHandCursor: true });
     bg.on('pointerdown', (pointer, localX) => {
       obj.focus();
-      // 根据点击位置设置光标
-      const clickPos = localX + w/2 - 12;
-      idx = Math.max(0, Math.min(val.length, Math.round(clickPos / 9)));
+      // 根据点击位置计算光标索引
+      const clickX = localX + w/2 - 12;
+      let bestIdx = 0;
+      let bestDiff = Math.abs(clickX);
+      
+      // 逐个字符测试找到最接近的位置
+      for (let i = 0; i <= val.length; i++) {
+        measureText.setText(val.substring(0, i));
+        const charX = measureText.width;
+        const diff = Math.abs(charX - clickX);
+        if (diff < bestDiff) {
+          bestDiff = diff;
+          bestIdx = i;
+        }
+      }
+      idx = bestIdx;
       updateCursor();
     });
     
