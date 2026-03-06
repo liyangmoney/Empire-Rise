@@ -27,6 +27,9 @@ const config = {
       debug: false
     }
   },
+  dom: {
+    createContainer: true
+  },
   scene: [BootScene, MenuScene, GameScene, BattleScene],
   pixelArt: false,
   antialias: true
