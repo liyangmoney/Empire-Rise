@@ -1878,51 +1878,46 @@ function renderViewMap(map) {
   container.innerHTML = '';
   map.area.sort((a, b) => { if (a.y !== b.y) return a.y - b.y; return a.x - b.x; });
   
-  // 更美观的地形颜色
-  const terrainColors = { 
-    plains: '#7CFC00',
-    forest: '#228B22',
-    hills: '#DAA520',
-    mountains: '#696969',
-    river: '#1E90FF',
-    lake: '#00BFFF',
-    desert: '#F4A460',
-    swamp: '#556B2F'
-  };
+  const terrainColors = { plains: '#7CFC00', forest: '#228B22', hills: '#DAA520', mountains: '#696969', river: '#1E90FF', lake: '#00BFFF', desert: '#F4A460', swamp: '#556B2F' };
+  const terrainIcons = { plains: '', forest: '🌲', hills: '⛰️', mountains: '🏔️', river: '💧', lake: '🌊', desert: '🏜️', swamp: '🌿' };
   
-  const terrainIcons = {
-    plains: '',
-    forest: '🌲',
-    hills: '⛰️',
-    mountains: '🏔️',
-    river: '💧',
-    lake: '🌊',
-    desert: '🏜️',
-    swamp: '🌿'
-  };
-
+  const castleTile = map.area.find(t => t.hasCastle);
+  
   map.area.forEach(tile => {
     const cell = document.createElement('div');
-    cell.style.cssText = 'width: 24px; height: 24px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; border: 1px solid rgba(255,255,255,0.1); box-shadow: inset 0 0 4px rgba(0,0,0,0.3);';
+    cell.style.cssText = 'width: 24px; height: 24px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; border: 1px solid rgba(255,255,255,0.1); box-shadow: inset 0 0 4px rgba(0,0,0,0.3); transition: transform 0.1s;';
     cell.style.background = terrainColors[tile.terrain.id] || '#ccc';
     
     if (tile.hasCastle) {
       cell.style.background = '#8B4513';
       cell.innerHTML = '🏰';
       cell.style.fontSize = '16px';
-      cell.style.boxShadow = '0 0 8px #FFD700';
+      cell.style.boxShadow = '0 0 8px #FFD700, inset 0 0 4px rgba(0,0,0,0.3)';
+      cell.style.zIndex = '10';
+      cell.style.transform = 'scale(1.1)';
     } else if (tile.npcs && tile.npcs.length > 0) {
       const npc = tile.npcs[0];
       cell.innerHTML = npc.isNeutral ? '🏪' : '⚔️';
       cell.style.boxShadow = npc.isNeutral ? '0 0 6px #9370DB' : '0 0 6px #FF4500';
+      cell.style.zIndex = '5';
     } else {
       cell.innerHTML = terrainIcons[tile.terrain.id] || '';
       cell.style.opacity = '0.9';
     }
     
-    cell.onclick = () => showTileInfo(tile);
+    cell.onmouseenter = () => { cell.style.transform = 'scale(1.2)'; cell.style.zIndex = '20'; cell.style.boxShadow = '0 0 10px rgba(255,255,255,0.5)'; };
+    cell.onmouseleave = () => { if (tile.hasCastle) { cell.style.transform = 'scale(1.1)'; cell.style.boxShadow = '0 0 8px #FFD700, inset 0 0 4px rgba(0,0,0,0.3)'; } else { cell.style.transform = 'scale(1)'; cell.style.zIndex = tile.npcs?.length ? '5' : '1'; cell.style.boxShadow = tile.npcs?.length ? (tile.npcs[0].isNeutral ? '0 0 6px #9370DB' : '0 0 6px #FF4500') : 'inset 0 0 4px rgba(0,0,0,0.3)'; } };
+    
+    cell.onclick = () => { showTileInfo(tile); document.querySelectorAll('#worldMap > div').forEach(el => { el.style.border = '1px solid rgba(255,255,255,0.1)'; }); cell.style.border = '2px solid #FFD700'; };
     container.appendChild(cell);
   });
+  
+  if (castleTile) {
+    const mapContainer = document.getElementById('mapContainer');
+    if (mapContainer) {
+      setTimeout(() => { const cellIndex = map.area.indexOf(castleTile); const row = Math.floor(cellIndex / 21); const col = cellIndex % 21; const scrollX = col * 25 - mapContainer.clientWidth / 2 + 12; const scrollY = row * 25 - mapContainer.clientHeight / 2 + 12; mapContainer.scrollTo({ left: Math.max(0, scrollX), top: Math.max(0, scrollY), behavior: 'smooth' }); }, 100);
+    }
+  }
 }
 
 function renderFullMap(fullMap) {
