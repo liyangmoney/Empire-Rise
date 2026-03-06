@@ -8,7 +8,7 @@ import { TaskPanel } from '../ui/TaskPanel.js';
 import { TimeDisplay } from '../ui/TimeDisplay.js';
 
 /**
- * 游戏主场景
+ * 游戏主场景 - 美化版
  */
 export class GameScene extends Phaser.Scene {
   constructor() {
@@ -17,19 +17,16 @@ export class GameScene extends Phaser.Scene {
 
   init(data) {
     this.empireData = data.empireData || {};
-    this.currentTab = 'resources';
+    this.currentTab = 'buildings';
     this.panels = {};
-    this.allResources = null;
-    this.population = null;
-    this.stamina = null;
   }
 
   create() {
     // 背景
     this.add.image(640, 360, 'bg-gradient');
     
-    // 创建全局资源栏（顶部）
-    this.createTopBar();
+    // 创建顶部栏
+    this.createHeader();
     
     // 创建标签栏
     this.createTabBar();
@@ -37,48 +34,65 @@ export class GameScene extends Phaser.Scene {
     // 创建内容区域
     this.createContentArea();
     
-    // 初始化各个面板
+    // 初始化面板
     this.initPanels();
     
     // 显示默认面板
     this.switchTab('buildings');
     
-    // 注册 Socket 事件
-    this.registerSocketEvents();
+    // 注册事件
+    this.registerEvents();
     
-    // 启动定时更新
-    this.startAutoUpdate();
-    
-    // 立即更新数据
+    // 更新数据
     this.updateAllData();
   }
 
-  createTopBar() {
-    // 顶部资源栏背景
-    const topBar = this.add.graphics();
-    topBar.fillStyle(0x000000, 0.8);
-    topBar.fillRect(0, 0, 1280, 60);
+  createHeader() {
+    // 顶部背景 - 深色带边框
+    const headerBg = this.add.graphics();
+    headerBg.fillStyle(0x0a0a14, 0.95);
+    headerBg.fillRect(0, 0, 1280, 70);
+    headerBg.lineStyle(2, 0xffd700, 0.3);
+    headerBg.lineBetween(0, 70, 1280, 70);
     
-    // 时间显示
-    this.timeDisplay = new TimeDisplay(this, 150, 30);
+    // 时间显示（左侧）
+    this.timeDisplay = new TimeDisplay(this, 120, 35);
     
-    // 资源显示（包含体力和人口）
-    this.resourcePanel = new ResourcePanel(this, 600, 30);
+    // 资源面板（中间）
+    this.resourcePanel = new ResourcePanel(this, 680, 35);
     
-    // 玩家信息
-    this.add.text(1050, 20, this.empireData.playerName || '未知玩家', {
+    // 玩家信息（右侧）
+    const playerBg = this.add.graphics();
+    playerBg.fillStyle(0x1a1a2e, 0.8);
+    playerBg.fillRoundedRect(1050, 10, 140, 50, 8);
+    playerBg.lineStyle(1, 0xffd700, 0.3);
+    playerBg.strokeRoundedRect(1050, 10, 140, 50, 8);
+    
+    this.add.text(1120, 25, this.empireData.playerName || '领主', {
       fontSize: '16px',
+      fontFamily: 'Arial',
       color: '#ffd700'
-    });
+    }).setOrigin(0.5);
     
-    // 断开连接按钮
-    const disconnectBtn = this.add.text(1200, 20, '断开', {
+    this.add.text(1120, 45, '在线', {
+      fontSize: '12px',
+      color: '#4CAF50'
+    }).setOrigin(0.5);
+    
+    // 断开按钮
+    const disconnectBtn = this.add.text(1220, 35, '退出', {
       fontSize: '14px',
-      color: '#f44336',
-      backgroundColor: 'rgba(244,67,54,0.2)',
-      padding: { x: 10, y: 5 }
-    }).setInteractive({ useHandCursor: true });
+      color: '#ff6666',
+      backgroundColor: 'rgba(255,100,100,0.15)',
+      padding: { x: 15, y: 8 }
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     
+    disconnectBtn.on('pointerover', () => {
+      disconnectBtn.setBackgroundColor('rgba(255,100,100,0.3)');
+    });
+    disconnectBtn.on('pointerout', () => {
+      disconnectBtn.setBackgroundColor('rgba(255,100,100,0.15)');
+    });
     disconnectBtn.on('pointerup', () => {
       window.socketManager.disconnect();
       this.scene.start('MenuScene');
@@ -87,66 +101,80 @@ export class GameScene extends Phaser.Scene {
 
   createTabBar() {
     const tabs = [
-      { key: 'buildings', label: '🏗️ 建筑', x: 200 },
-      { key: 'army', label: '⚔️ 军队', x: 350 },
-      { key: 'generals', label: '🎖️ 将领', x: 500 },
-      { key: 'battle', label: '🎯 战斗', x: 650 },
-      { key: 'tasks', label: '📋 任务', x: 800 }
+      { key: 'buildings', label: '🏗️ 建筑', icon: '🏗️' },
+      { key: 'army', label: '⚔️ 军队', icon: '⚔️' },
+      { key: 'generals', label: '🎖️ 将领', icon: '🎖️' },
+      { key: 'battle', label: '🎯 战斗', icon: '🎯' },
+      { key: 'tasks', label: '📋 任务', icon: '📋' }
     ];
     
     this.tabButtons = {};
+    const startX = 200;
+    const spacing = 200;
     
-    tabs.forEach(tab => {
-      const btn = this.add.text(tab.x, 90, tab.label, {
+    tabs.forEach((tab, index) => {
+      const x = startX + index * spacing;
+      const y = 95;
+      
+      // 按钮背景
+      const btnBg = this.add.graphics();
+      
+      // 按钮容器
+      const container = this.add.container(x, y);
+      
+      // 文字
+      const text = this.add.text(0, 0, tab.label, {
         fontSize: '18px',
-        fontFamily: 'Microsoft YaHei',
-        color: '#aaa',
-        padding: { x: 20, y: 10 }
-      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        fontFamily: 'Arial',
+        color: '#aaaaaa'
+      }).setOrigin(0.5);
+      container.add(text);
       
-      btn.on('pointerover', () => {
+      // 交互区域
+      const zone = this.add.zone(0, 0, 120, 40).setInteractive({ useHandCursor: true });
+      container.add(zone);
+      
+      zone.on('pointerover', () => {
         if (this.currentTab !== tab.key) {
-          btn.setColor('#ccc');
+          text.setColor('#cccccc');
         }
       });
       
-      btn.on('pointerout', () => {
+      zone.on('pointerout', () => {
         if (this.currentTab !== tab.key) {
-          btn.setColor('#aaa');
+          text.setColor('#aaaaaa');
         }
       });
       
-      btn.on('pointerup', () => {
+      zone.on('pointerup', () => {
         this.switchTab(tab.key);
       });
       
-      this.tabButtons[tab.key] = btn;
+      this.tabButtons[tab.key] = { container, text, bg: btnBg };
     });
-    
-    // 选中指示器
-    this.tabIndicator = this.add.graphics();
   }
 
   createContentArea() {
     // 内容区域背景
     const bg = this.add.graphics();
-    bg.fillStyle(0x000000, 0.5);
-    bg.fillRoundedRect(40, 120, 1200, 560, 10);
-    bg.lineStyle(2, 0xffd700, 0.3);
-    bg.strokeRoundedRect(40, 120, 1200, 560, 10);
+    bg.fillStyle(0x0a0a14, 0.7);
+    bg.fillRoundedRect(30, 125, 1220, 570, 12);
+    bg.lineStyle(2, 0xffd700, 0.4);
+    bg.strokeRoundedRect(30, 125, 1220, 570, 12);
     
-    // 内容容器
-    this.contentContainer = this.add.container(0, 0);
+    // 内发光效果
+    const glow = this.add.graphics();
+    glow.fillStyle(0xffd700, 0.03);
+    glow.fillRoundedRect(35, 130, 1210, 560, 10);
   }
 
   initPanels() {
-    this.panels.buildings = new BuildingPanel(this, 640, 400);
-    this.panels.army = new ArmyPanel(this, 640, 400);
-    this.panels.generals = new GeneralPanel(this, 640, 400);
-    this.panels.battle = new BattlePanel(this, 640, 400);
-    this.panels.tasks = new TaskPanel(this, 640, 400);
+    this.panels.buildings = new BuildingPanel(this, 640, 410);
+    this.panels.army = new ArmyPanel(this, 640, 410);
+    this.panels.generals = new GeneralPanel(this, 640, 410);
+    this.panels.battle = new BattlePanel(this, 640, 410);
+    this.panels.tasks = new TaskPanel(this, 640, 410);
     
-    // 初始都隐藏
     Object.values(this.panels).forEach(panel => {
       panel.setVisible(false);
     });
@@ -155,63 +183,49 @@ export class GameScene extends Phaser.Scene {
   switchTab(tabKey) {
     // 更新按钮样式
     Object.keys(this.tabButtons).forEach(key => {
-      const btn = this.tabButtons[key];
+      const { text, bg } = this.tabButtons[key];
+      bg.clear();
+      
       if (key === tabKey) {
-        btn.setColor('#4CAF50');
-        btn.setBackgroundColor('rgba(76,175,80,0.2)');
+        text.setColor('#4CAF50');
+        // 选中背景
+        bg.fillStyle(0x4CAF50, 0.15);
+        bg.fillRoundedRect(-60, -20, 120, 40, 8);
+        bg.lineStyle(2, 0x4CAF50, 0.5);
+        bg.strokeRoundedRect(-60, -20, 120, 40, 8);
       } else {
-        btn.setColor('#aaa');
-        btn.setBackgroundColor(null);
+        text.setColor('#aaaaaa');
       }
     });
     
-    // 隐藏当前面板
+    // 切换面板
     if (this.panels[this.currentTab]) {
       this.panels[this.currentTab].setVisible(false);
     }
     
-    // 显示新面板
     this.currentTab = tabKey;
     if (this.panels[tabKey]) {
       this.panels[tabKey].setVisible(true);
-      this.panels[tabKey].onShow();
+      this.panels[tabKey].onShow?.();
     }
-    
-    // 更新指示器
-    const btn = this.tabButtons[tabKey];
-    this.tabIndicator.clear();
-    this.tabIndicator.fillStyle(0x4CAF50);
-    this.tabIndicator.fillRect(btn.x - 40, 115, 80, 4);
   }
-  
+
   updateAllData() {
-    // 更新资源显示
     if (this.empireData.resources) {
-      this.allResources = this.empireData.resources;
-      this.resourcePanel.updateData(this.allResources);
+      this.resourcePanel.updateData(this.empireData.resources);
     }
-    
-    // 更新体力
     if (this.empireData.stamina) {
-      this.stamina = this.empireData.stamina;
-      this.resourcePanel.updateStamina(this.stamina);
+      this.resourcePanel.updateStamina(this.empireData.stamina);
     }
-    
-    // 更新人口
     if (this.empireData.population) {
-      this.population = this.empireData.population;
-      this.resourcePanel.updatePopulation(this.population);
+      this.resourcePanel.updatePopulation(this.empireData.population);
     }
-    
-    // 更新建筑
     if (this.empireData.buildings) {
       this.panels.buildings.updateData(
         this.empireData.buildings,
         this.empireData.upgradeQueue || []
       );
     }
-    
-    // 更新军队
     if (this.empireData.army) {
       this.panels.army.updateData({
         units: this.empireData.army,
@@ -220,153 +234,62 @@ export class GameScene extends Phaser.Scene {
         trainingQueue: this.empireData.trainingQueue
       });
     }
-    
-    // 更新将领
-    if (this.empireData.generals) {
-      this.panels.generals.updateData(this.empireData.generals);
-    }
-    
-    // 更新时间
     if (this.empireData.time) {
       this.timeDisplay.updateTime(this.empireData.time);
     }
   }
 
-  registerSocketEvents() {
-    // 资源更新
+  registerEvents() {
     window.socketManager.on('resource:update', (data) => {
       if (data.allResources) {
-        this.allResources = data.allResources;
-        this.resourcePanel.updateData(this.allResources);
+        this.resourcePanel.updateData(data.allResources);
       }
     });
     
-    // 建筑更新
     window.socketManager.on('building:update', (data) => {
       if (data.buildings) {
         this.panels.buildings.updateData(data.buildings, data.upgradeQueue || []);
       }
     });
     
-    // 建筑升级开始
-    window.socketManager.on('building:upgradeStarted', (data) => {
-      if (data.buildings) {
-        this.panels.buildings.updateData(data.buildings, data.upgradeQueue || []);
-      }
-      if (data.population) {
-        this.population = data.population;
-        this.resourcePanel.updatePopulation(this.population);
-      }
-      if (data.resources) {
-        this.allResources = data.resources;
-        this.resourcePanel.updateData(this.allResources);
-      }
-    });
-    
-    // 建筑升级完成
     window.socketManager.on('building:upgradeCompleted', (data) => {
       if (data.buildings) {
         this.panels.buildings.updateData(data.buildings, data.upgradeQueue || []);
       }
-      if (data.population) {
-        this.population = data.population;
-        this.resourcePanel.updatePopulation(this.population);
-      }
-      if (data.resources) {
-        this.allResources = data.resources;
-        this.resourcePanel.updateData(this.allResources);
-      }
-      this.showToast(`建筑升级完成！`);
+      this.showToast('建筑升级完成！');
     });
     
-    // 军队更新
-    window.socketManager.on('army:update', (data) => {
-      this.panels.army.updateData(data);
-    });
-    
-    // 训练更新
-    window.socketManager.on('training:update', (data) => {
-      this.panels.army.updateData({
-        ...data,
-        trainingQueue: data.queue
-      });
-    });
-    
-    // 时间更新
     window.socketManager.on('time:update', (data) => {
       this.timeDisplay.updateTime(data);
     });
     
-    // 战斗结果
-    window.socketManager.on('battle:finished', (data) => {
-      this.panels.battle.showBattleResult(data);
-    });
-    
-    // 将领更新
-    window.socketManager.on('general:update', (data) => {
-      this.panels.generals.updateData(data);
-    });
-    
-    // 人口更新
-    window.socketManager.on('population:update', (data) => {
-      this.population = data;
-      this.resourcePanel.updatePopulation(this.population);
-    });
-    
-    // 体力更新
-    window.socketManager.on('stamina:update', (data) => {
-      this.stamina = data;
-      this.resourcePanel.updateStamina(this.stamina);
-    });
-    
-    // 成功提示
-    window.socketManager.on('success', (data) => {
-      this.showToast(data.message);
-    });
-    
-    // 错误提示
     window.socketManager.on('error', (data) => {
       this.showToast(data.message || '操作失败', '#f44336');
     });
   }
-  
+
   showToast(message, color = '#4CAF50') {
-    // 创建提示
     const toast = this.add.container(640, 600);
     
     const bg = this.add.graphics();
-    bg.fillStyle(color === '#4CAF50' ? 0x4CAF50 : 0xf44336, 0.9);
-    bg.fillRoundedRect(-150, -20, 300, 40, 20);
-    toast.add(bg);
+    bg.fillStyle(color === '#4CAF50' ? 0x4CAF50 : 0xf44336, 0.95);
+    bg.fillRoundedRect(-150, -22, 300, 44, 22);
     
     const text = this.add.text(0, 0, message, {
       fontSize: '16px',
-      color: '#fff',
-      fontStyle: 'bold'
+      fontFamily: 'Arial',
+      color: '#ffffff'
     }).setOrigin(0.5);
-    toast.add(text);
     
-    // 动画
+    toast.add([bg, text]);
+    
     this.tweens.add({
       targets: toast,
-      y: 580,
+      y: 560,
       alpha: 0,
       duration: 2000,
       ease: 'Power2',
-      onComplete: () => {
-        toast.destroy();
-      }
-    });
-  }
-
-  startAutoUpdate() {
-    // 每秒更新一次资源显示
-    this.time.addEvent({
-      delay: 1000,
-      callback: () => {
-        // 可以在这里更新资源产量显示
-      },
-      loop: true
+      onComplete: () => toast.destroy()
     });
   }
 }
