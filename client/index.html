@@ -477,8 +477,8 @@
           <!-- 地图容器 -->
           <div style="display: flex; gap: 15px; position: relative;">
             <!-- 主地图 -->
-            <div id="mapContainer" style="flex: 1; overflow: auto; max-height: 500px; background: rgba(0,0,0,0.3); border-radius: 8px; padding: 10px; cursor: grab;" onmousedown="this.style.cursor='grabbing'" onmouseup="this.style.cursor='grab'" onmouseleave="this.style.cursor='grab'">
-              <div id="worldMap" style="display: grid; gap: 1px; justify-content: center; transition: transform 0.3s; min-width: min-content;">
+            <div id="mapContainer" style="flex: 1; height: 500px; overflow: hidden; background: rgba(0,0,0,0.3); border-radius: 8px; position: relative;">
+              <div id="worldMap" style="width: 100%; height: 100%;">
                 <p style="text-align: center; color: #888; padding: 50px;">点击"世界地图"加载完整地图</p>
               </div>
             </div>
