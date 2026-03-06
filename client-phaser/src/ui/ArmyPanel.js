@@ -111,7 +111,7 @@ export class ArmyPanel extends Phaser.GameObjects.Container {
     this.add(bg);
     
     // 训练标题
-    this.add.text(-480, 70, '🎖️ 快速训练', {
+    this.scene.add.text(-480, 70, '🎖️ 快速训练', {
       fontSize: '16px',
       color: '#ffd700'
     });
@@ -119,7 +119,7 @@ export class ArmyPanel extends Phaser.GameObjects.Container {
   
   createTrainingQueue() {
     // 训练队列标题
-    this.add.text(-480, 220, '⏱️ 训练队列', {
+    this.scene.add.text(-480, 220, '⏱️ 训练队列', {
       fontSize: '16px',
       color: '#ffd700'
     });
