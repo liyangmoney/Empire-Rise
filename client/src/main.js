@@ -1889,23 +1889,28 @@ function setMapMode(mode) {
   }
 }
 
-// 旧的zoomMap函数已被map-canvas.js替代
-// function zoomMap(factor) {
-//   mapZoom *= factor;
-//   mapZoom = Math.max(0.25, Math.min(2, mapZoom));
+// 旧的地图函数已被map-canvas.js替代，以下保留为参考
+/*
+function _old_zoomMap(factor) {
+  mapZoom *= factor;
+  mapZoom = Math.max(0.25, Math.min(2, mapZoom));
   const zoomLevel = document.getElementById('zoomLevel');
-//   if (zoomLevel) zoomLevel.textContent = Math.round(mapZoom * 100) + '%';
+  if (zoomLevel) zoomLevel.textContent = Math.round(mapZoom * 100) + '%';
   const mapContainer = document.getElementById('worldMap');
-//   if (mapContainer) mapContainer.style.transform = 'scale(' + mapZoom + ')';
+  if (mapContainer) mapContainer.style.transform = 'scale(' + mapZoom + ')';
 }
 
 function _old_resetMapView() {
-//   mapZoom = 1;
+  mapZoom = 1;
   const zoomLevel = document.getElementById('zoomLevel');
-//   if (zoomLevel) zoomLevel.textContent = '100%';
+  if (zoomLevel) zoomLevel.textContent = '100%';
   const mapContainer = document.getElementById('worldMap');
   if (mapContainer) mapContainer.style.transform = 'scale(1)';
 }
+*/
+
+// 占位函数，防止调用报错
+function _old_resetMapView() {}
 
 function _old_renderMap(map) {
   if (currentMapMode === 'world' && fullMapData) {
