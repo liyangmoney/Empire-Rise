@@ -44,14 +44,23 @@ function initMapCanvases() {
   container.style.justifyContent = 'center';
   container.style.alignItems = 'center';
   container.style.overflow = 'auto';
+  container.style.position = 'relative';
+  container.style.width = '100%';
+  container.style.height = '100%';
   
-  // 创建视野地图 Canvas
+  // 创建视野地图 Canvas - 居中
   viewMapCanvas = document.createElement('canvas');
   viewMapCanvas.id = 'viewMapCanvas';
   viewMapCanvas.width = 21 * 28; // 21格 x 28像素
   viewMapCanvas.height = 21 * 28;
   viewMapCanvas.style.display = 'none';
   viewMapCanvas.style.cursor = 'pointer';
+  viewMapCanvas.style.margin = 'auto';
+  viewMapCanvas.style.position = 'absolute';
+  viewMapCanvas.style.left = '50%';
+  viewMapCanvas.style.top = '50%';
+  viewMapCanvas.style.transform = 'translate(-50%, -50%)';
+  viewMapCanvas.style.transformOrigin = 'center center';
   container.appendChild(viewMapCanvas);
   viewMapCtx = viewMapCanvas.getContext('2d');
   
@@ -80,13 +89,19 @@ function initMapCanvases() {
     }
   };
   
-  // 创建世界地图 Canvas
+  // 创建世界地图 Canvas - 居中
   worldMapCanvas = document.createElement('canvas');
   worldMapCanvas.id = 'worldMapCanvas';
   worldMapCanvas.width = 100 * 8; // 100格 x 8像素
   worldMapCanvas.height = 100 * 8;
   worldMapCanvas.style.display = 'none';
   worldMapCanvas.style.cursor = 'pointer';
+  worldMapCanvas.style.margin = 'auto';
+  worldMapCanvas.style.position = 'absolute';
+  worldMapCanvas.style.left = '50%';
+  worldMapCanvas.style.top = '50%';
+  worldMapCanvas.style.transform = 'translate(-50%, -50%)';
+  worldMapCanvas.style.transformOrigin = 'center center';
   container.appendChild(worldMapCanvas);
   worldMapCtx = worldMapCanvas.getContext('2d');
   
@@ -299,7 +314,8 @@ function applyMapZoom() {
   const activeCanvas = currentMapMode === 'world' ? worldMapCanvas : viewMapCanvas;
   if (!activeCanvas) return;
   
-  activeCanvas.style.transform = 'scale(' + mapZoom + ')';
+  // 保留居中的transform，只添加缩放
+  activeCanvas.style.transform = 'translate(-50%, -50%) scale(' + mapZoom + ')';
   activeCanvas.style.transformOrigin = 'center center';
 }
 
@@ -320,6 +336,55 @@ function resetMapZoom() {
   if (zoomLevel) zoomLevel.textContent = '100%';
   
   applyMapZoom();
+}
+
+// 小地图渲染函数
+function renderMiniMap(fullMap) {
+  const canvas = document.getElementById('miniMap');
+  if (!canvas) return;
+  
+  const ctx = canvas.getContext('2d');
+  const size = 100;
+  const scale = size / fullMap.size;
+  
+  // 清空
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fillRect(0, 0, canvas.width || size, canvas.height || size);
+  
+  // 绘制地形
+  for (let y = 0; y < fullMap.size; y++) {
+    for (let x = 0; x < fullMap.size; x++) {
+      const terrainId = fullMap.terrain[y][x];
+      ctx.fillStyle = TERRAIN_COLORS[terrainId] || '#ccc';
+      ctx.fillRect(x * scale, y * scale, scale + 0.5, scale + 0.5);
+    }
+  }
+  
+  // 绘制NPC
+  ctx.fillStyle = '#FF4500';
+  fullMap.npcs.forEach(npc => {
+    ctx.fillRect(npc.x * scale, npc.y * scale, scale * 2, scale * 2);
+  });
+  
+  // 绘制城堡
+  fullMap.castles.forEach(castle => {
+    ctx.fillStyle = castle.isOwn ? '#8B4513' : '#4a4a4a';
+    ctx.fillRect(castle.x * scale - 1, castle.y * scale - 1, scale * 3, scale * 3);
+  });
+  
+  // 视野范围框
+  const myCastle = fullMap.castles.find(c => c.isOwn);
+  if (myCastle) {
+    ctx.strokeStyle = '#FF0000';
+    ctx.lineWidth = 1;
+    const viewRadius = 10;
+    ctx.strokeRect(
+      (myCastle.x - viewRadius) * scale,
+      (myCastle.y - viewRadius) * scale,
+      viewRadius * 2 * scale,
+      viewRadius * 2 * scale
+    );
+  }
 }
 
 // 小地图点击跳转
