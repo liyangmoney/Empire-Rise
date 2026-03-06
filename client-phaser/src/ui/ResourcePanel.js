@@ -100,6 +100,10 @@ export class ResourcePanel extends Phaser.GameObjects.Container {
     this.staminaText.setColor(color);
   }
 
+  updatePopulation(population) {
+    // 人口显示已移除，此方法保留兼容性
+  }
+
   startLocalUpdate() {
     this.scene.time.addEvent({
       delay: 1000,
