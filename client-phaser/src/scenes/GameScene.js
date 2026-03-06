@@ -5,6 +5,7 @@ import { ArmyPanel } from '../ui/ArmyPanel.js';
 import { BattlePanel } from '../ui/BattlePanel.js';
 import { GeneralPanel } from '../ui/GeneralPanel.js';
 import { TaskPanel } from '../ui/TaskPanel.js';
+import { MapPanel } from '../ui/MapPanel.js';
 import { TimeDisplay } from '../ui/TimeDisplay.js';
 
 /**
@@ -104,13 +105,14 @@ export class GameScene extends Phaser.Scene {
       { key: 'buildings', label: '🏗️ 建筑', icon: '🏗️' },
       { key: 'army', label: '⚔️ 军队', icon: '⚔️' },
       { key: 'generals', label: '🎖️ 将领', icon: '🎖️' },
+      { key: 'map', label: '🗺️ 地图', icon: '🗺️' },
       { key: 'battle', label: '🎯 战斗', icon: '🎯' },
       { key: 'tasks', label: '📋 任务', icon: '📋' }
     ];
     
     this.tabButtons = {};
-    const startX = 200;
-    const spacing = 200;
+    const startX = 140;
+    const spacing = 170;
     
     tabs.forEach((tab, index) => {
       const x = startX + index * spacing;
@@ -172,6 +174,7 @@ export class GameScene extends Phaser.Scene {
     this.panels.buildings = new BuildingPanel(this, 640, 410);
     this.panels.army = new ArmyPanel(this, 640, 410);
     this.panels.generals = new GeneralPanel(this, 640, 410);
+    this.panels.map = new MapPanel(this, 640, 410);
     this.panels.battle = new BattlePanel(this, 640, 410);
     this.panels.tasks = new TaskPanel(this, 640, 410);
     
@@ -234,6 +237,9 @@ export class GameScene extends Phaser.Scene {
         trainingQueue: this.empireData.trainingQueue
       });
     }
+    if (this.empireData.map) {
+      this.panels.map.updateData({ map: this.empireData.map });
+    }
     if (this.empireData.time) {
       this.timeDisplay.updateTime(this.empireData.time);
     }
@@ -261,6 +267,14 @@ export class GameScene extends Phaser.Scene {
     
     window.socketManager.on('time:update', (data) => {
       this.timeDisplay.updateTime(data);
+    });
+    
+    window.socketManager.on('map:view', (data) => {
+      this.panels.map.updateData({ map: data });
+    });
+    
+    window.socketManager.on('map:fullMap', (data) => {
+      this.panels.map.updateData({ fullMap: data });
     });
     
     window.socketManager.on('error', (data) => {
