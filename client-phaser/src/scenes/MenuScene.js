@@ -2,12 +2,11 @@ import Phaser from 'phaser';
 
 /**
  * 菜单场景 - 连接服务器
+ * 使用 HTML 输入框确保文字清晰
  */
 export class MenuScene extends Phaser.Scene {
   constructor() {
     super({ key: 'MenuScene' });
-    this.activeInput = null;
-    this.inputBuffer = [];
   }
 
   create() {
@@ -19,7 +18,7 @@ export class MenuScene extends Phaser.Scene {
     // 标题
     this.add.text(640, 100, '🏰 帝国崛起', {
       fontSize: '56px',
-      fontFamily: 'Microsoft YaHei',
+      fontFamily: 'Microsoft YaHei, sans-serif',
       color: '#ffd700',
       stroke: '#000',
       strokeThickness: 4
@@ -28,50 +27,21 @@ export class MenuScene extends Phaser.Scene {
     // 副标题
     this.add.text(640, 170, '蛮荒争霸', {
       fontSize: '28px',
-      fontFamily: 'Microsoft YaHei',
-      color: '#aaa'
+      fontFamily: 'Microsoft YaHei, sans-serif',
+      color: '#aaaaaa'
     }).setOrigin(0.5);
     
     // 创建连接面板
     this.createConnectPanel();
     
     // 版本号
-    this.add.text(1260, 700, 'v1.0.0', {
+    this.add.text(1240, 700, 'v1.0.0', {
       fontSize: '12px',
-      color: '#444'
+      color: '#444444'
     }).setOrigin(1, 0.5);
     
     // 监听事件
     this.setupSocketListeners();
-    
-    // 键盘输入监听
-    this.setupKeyboardInput();
-  }
-  
-  setupKeyboardInput() {
-    // 监听所有按键
-    this.input.keyboard.on('keydown', (event) => {
-      if (!this.activeInput) return;
-      
-      event.preventDefault();
-      
-      if (event.key === 'Backspace') {
-        this.activeInput.backspace();
-      } else if (event.key === 'Delete') {
-        this.activeInput.delete();
-      } else if (event.key === 'ArrowLeft') {
-        this.activeInput.moveCursor(-1);
-      } else if (event.key === 'ArrowRight') {
-        this.activeInput.moveCursor(1);
-      } else if (event.key === 'Home') {
-        this.activeInput.moveCursor(-9999);
-      } else if (event.key === 'End') {
-        this.activeInput.moveCursor(9999);
-      } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
-        // 普通字符
-        this.activeInput.insertChar(event.key);
-      }
-    });
   }
   
   setupSocketListeners() {
@@ -81,9 +51,11 @@ export class MenuScene extends Phaser.Scene {
       console.log('Received empire:init', data);
       if (data && data.playerId) {
         this.showStatus('帝国数据加载成功！', 'success');
-        console.log('Starting GameScene...');
         
-        this.time.delayedCall(300, () => {
+        // 移除 HTML 元素
+        this.removeHtmlElements();
+        
+        this.time.delayedCall(500, () => {
           this.scene.start('GameScene', { empireData: data });
         });
       }
@@ -101,182 +73,95 @@ export class MenuScene extends Phaser.Scene {
 
   createConnectPanel() {
     const centerX = 640;
-    const startY = 250;
+    const panelY = 380;
     
     // 面板背景
-    const panel = this.add.image(centerX, 400, 'panel');
-    panel.setDisplaySize(500, 350);
+    const panel = this.add.rectangle(centerX, panelY, 520, 320, 0x000000, 0.7);
+    panel.setStrokeStyle(2, 0xffd700, 0.5);
     
     // 面板标题
-    this.add.text(centerX, startY, '连接服务器', {
+    this.add.text(centerX, panelY - 120, '连接服务器', {
       fontSize: '24px',
-      fontFamily: 'Microsoft YaHei',
+      fontFamily: 'Microsoft YaHei, sans-serif',
       color: '#ffd700'
     }).setOrigin(0.5);
     
-    // 服务器输入
-    const serverY = startY + 60;
-    this.add.text(centerX - 120, serverY, '服务器:', {
+    // 使用 Phaser DOM 元素创建输入框
+    this.createDomInput(centerX - 60, panelY - 40, 'serverUrl', 'http://localhost:3000', '服务器地址');
+    this.createDomInput(centerX - 60, panelY + 30, 'playerName', `领主${Math.floor(Math.random() * 1000)}`, '玩家名称');
+    
+    // 标签
+    this.add.text(centerX - 170, panelY - 40, '服务器:', {
       fontSize: '16px',
-      color: '#aaa'
+      color: '#aaaaaa'
     }).setOrigin(1, 0.5);
     
-    this.serverInput = this.createInputField(centerX + 20, serverY, 220, 35, 'http://localhost:3000');
-    
-    // 玩家名称输入
-    const nameY = startY + 120;
-    this.add.text(centerX - 120, nameY, '玩家名称:', {
+    this.add.text(centerX - 170, panelY + 30, '玩家名称:', {
       fontSize: '16px',
-      color: '#aaa'
+      color: '#aaaaaa'
     }).setOrigin(1, 0.5);
-    
-    this.nameInput = this.createInputField(centerX + 20, nameY, 220, 35, `领主${Math.floor(Math.random() * 1000)}`);
     
     // 连接按钮
-    this.createButton(centerX, startY + 200, '连接并创建帝国', () => {
+    this.createButton(centerX, panelY + 100, '连接并创建帝国', () => {
       this.handleConnect();
     });
     
     // 状态文本
-    this.statusText = this.add.text(centerX, startY + 260, '', {
+    this.statusText = this.add.text(centerX, panelY + 150, '', {
       fontSize: '14px',
-      color: '#888'
+      fontFamily: 'Microsoft YaHei, sans-serif'
     }).setOrigin(0.5);
     
     // 操作说明
     this.add.text(centerX, 620, '游戏指南: 收集资源 → 训练军队 → 攻打NPC → 扩张帝国', {
       fontSize: '13px',
-      color: '#555'
+      color: '#555555'
     }).setOrigin(0.5);
   }
   
-  createInputField(x, y, width, height, defaultValue) {
-    const bg = this.add.rectangle(x, y, width, height, 0x000000, 0.6);
-    bg.setStrokeStyle(1, 0x666666);
-    bg.setOrigin(0, 0.5);
+  createDomInput(x, y, id, defaultValue, placeholder) {
+    const input = this.add.dom(x, y).createFromHTML(`
+      <input type="text" id="${id}" 
+        style="
+          width: 220px;
+          height: 36px;
+          padding: 0 12px;
+          border: 1px solid #666666;
+          border-radius: 4px;
+          background: rgba(0,0,0,0.6);
+          color: #ffffff;
+          font-size: 14px;
+          font-family: Microsoft YaHei, sans-serif;
+          outline: none;
+          box-sizing: border-box;
+        "
+        value="${defaultValue}"
+        placeholder="${placeholder}"
+      >
+    `);
     
-    const text = this.add.text(x + 10, y, defaultValue, {
-      fontSize: '14px',
-      color: '#fff',
-      fontFamily: 'Microsoft YaHei'
-    }).setOrigin(0, 0.5);
+    // 添加聚焦效果
+    const element = input.getChildByID(id);
+    if (element) {
+      element.addEventListener('focus', () => {
+        element.style.borderColor = '#4CAF50';
+      });
+      element.addEventListener('blur', () => {
+        element.style.borderColor = '#666666';
+      });
+    }
     
-    const cursor = this.add.text(x + 10, y, '|', {
-      fontSize: '14px',
-      color: '#4CAF50'
-    }).setOrigin(0, 0.5).setVisible(false);
-    
-    let value = defaultValue;
-    let cursorIndex = value.length;
-    let blinkEvent = null;
-    
-    const self = this;
-    
-    const inputObj = {
-      getValue: () => value,
-      
-      focus: () => {
-        // 先取消其他输入框的聚焦
-        if (self.activeInput && self.activeInput !== inputObj) {
-          self.activeInput.blur();
-        }
-        
-        self.activeInput = inputObj;
-        bg.setStrokeStyle(2, 0x4CAF50);
-        cursor.setVisible(true);
-        
-        // 光标闪烁
-        if (blinkEvent) blinkEvent.remove();
-        blinkEvent = self.time.addEvent({
-          delay: 500,
-          loop: true,
-          callback: () => {
-            cursor.setVisible(!cursor.visible);
-          }
-        });
-        
-        updateCursor();
-      },
-      
-      blur: () => {
-        bg.setStrokeStyle(1, 0x666666);
-        cursor.setVisible(false);
-        if (blinkEvent) {
-          blinkEvent.remove();
-          blinkEvent = null;
-        }
-        if (self.activeInput === inputObj) {
-          self.activeInput = null;
-        }
-      },
-      
-      insertChar: (char) => {
-        value = value.substring(0, cursorIndex) + char + value.substring(cursorIndex);
-        cursorIndex++;
-        text.setText(value);
-        updateCursor();
-      },
-      
-      backspace: () => {
-        if (cursorIndex > 0) {
-          value = value.substring(0, cursorIndex - 1) + value.substring(cursorIndex);
-          cursorIndex--;
-          text.setText(value);
-          updateCursor();
-        }
-      },
-      
-      delete: () => {
-        if (cursorIndex < value.length) {
-          value = value.substring(0, cursorIndex) + value.substring(cursorIndex + 1);
-          text.setText(value);
-          updateCursor();
-        }
-      },
-      
-      moveCursor: (delta) => {
-        cursorIndex = Math.max(0, Math.min(value.length, cursorIndex + delta));
-        updateCursor();
-      }
-    };
-    
-    const updateCursor = () => {
-      // 计算光标位置
-      const tempText = value.substring(0, cursorIndex);
-      // 使用简单估算，每个字符约8-10px
-      const charWidth = 9;
-      const textWidth = tempText.length * charWidth;
-      cursor.x = x + 10 + textWidth;
-    };
-    
-    // 点击聚焦
-    bg.setInteractive({ useHandCursor: true });
-    bg.on('pointerdown', (pointer, localX, localY, event) => {
-      if (event) event.stopPropagation();
-      inputObj.focus();
-    });
-    
-    // 点击外部取消聚焦
-    this.input.on('pointerdown', (pointer, gameObjects) => {
-      if (!gameObjects.includes(bg)) {
-        inputObj.blur();
-      }
-    });
-    
-    // 初始化
-    updateCursor();
-    
-    return inputObj;
+    return input;
   }
 
   createButton(x, y, label, callback) {
     const container = this.add.container(x, y);
     
-    const bg = this.add.image(0, 0, 'btn-normal');
+    const bg = this.add.image(0, 0, 'btn-normal').setDisplaySize(180, 45);
     const text = this.add.text(0, 0, label, {
       fontSize: '16px',
-      fontFamily: 'Microsoft YaHei',
-      color: '#fff'
+      fontFamily: 'Microsoft YaHei, sans-serif',
+      color: '#ffffff'
     }).setOrigin(0.5);
     
     container.add([bg, text]);
@@ -294,8 +179,11 @@ export class MenuScene extends Phaser.Scene {
   }
 
   async handleConnect() {
-    const serverUrl = this.serverInput.getValue() || 'http://localhost:3000';
-    const playerName = this.nameInput.getValue() || '无名玩家';
+    const serverEl = document.getElementById('serverUrl');
+    const nameEl = document.getElementById('playerName');
+    
+    const serverUrl = serverEl ? serverEl.value : 'http://localhost:3000';
+    const playerName = nameEl ? nameEl.value : '无名玩家';
     
     if (!playerName.trim()) {
       this.showStatus('请输入玩家名称', 'error');
@@ -320,6 +208,17 @@ export class MenuScene extends Phaser.Scene {
       error: '#f44336'
     };
     this.statusText.setText(message);
-    this.statusText.setColor(colors[type] || '#888');
+    this.statusText.setColor(colors[type] || '#888888');
+  }
+  
+  removeHtmlElements() {
+    // 移除 DOM 输入框
+    const ids = ['serverUrl', 'playerName'];
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.parentElement?.remove();
+      }
+    });
   }
 }

@@ -13,7 +13,7 @@ const config = {
   parent: 'game-container',
   backgroundColor: '#1a1a2e',
   scale: {
-    mode: Phaser.Scale.NONE,
+    mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH
   },
   physics: {
@@ -23,10 +23,12 @@ const config = {
       debug: false
     }
   },
+  dom: {
+    createContainer: true
+  },
   scene: [BootScene, MenuScene, GameScene, BattleScene],
   pixelArt: false,
-  antialias: false,
-  roundPixels: true
+  antialias: true
 };
 
 // 初始化 Socket 管理器

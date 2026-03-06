@@ -23,10 +23,19 @@
       display: flex;
       justify-content: center;
       align-items: center;
+      background: #1a1a2e;
     }
     
     #game-container canvas {
-      box-shadow: 0 0 30px rgba(255, 215, 0, 0.2);
+      display: block;
+      max-width: 100%;
+      max-height: 100%;
+    }
+    
+    /* DOM 输入框样式 */
+    input[type="text"] {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
     
     /* 加载画面 */
