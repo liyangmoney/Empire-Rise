@@ -336,7 +336,7 @@ function connect() {
     console.log('Building upgrade started:', data);
     renderResources(data.resources);
     updateBuildingQueue(data.upgradeQueue || []);
-    showSuccess(`开始升级建筑！预计${data.task.durationFormatted}完成`);
+    // 不在这里显示提示，由服务器发送的 success 事件统一处理
   });
 
   // 监听升级完成
