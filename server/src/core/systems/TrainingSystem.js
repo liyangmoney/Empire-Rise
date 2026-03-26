@@ -59,12 +59,25 @@ export class TrainingSystem {
     const unlock = unitType.unlock;
     if (!unlock) return { success: true };
 
+    // 建筑名称映射
+    const buildingNames = {
+      barracks: '兵营',
+      stables: '马厩',
+      tech_institute: '研究院',
+      imperial_palace: '皇宫',
+      arsenal: '军械库',
+      fishery: '鱼塘',
+      orchard: '果园',
+      tavern: '酒馆',
+    };
+
     // 检查主建筑等级
     const mainBuildingLevel = empire.buildings?.getLevel(unlock.building) || 0;
     if (mainBuildingLevel < unlock.level) {
+      const buildingName = buildingNames[unlock.building] || unlock.building;
       return { 
         success: false, 
-        error: `需要${unlock.building}等级${unlock.level}（当前${mainBuildingLevel}）` 
+        error: `需要${buildingName}等级${unlock.level}（当前${mainBuildingLevel}）` 
       };
     }
 
@@ -87,6 +100,13 @@ export class TrainingSystem {
       const palaceLevel = empire.buildings?.getLevel('imperial_palace') || 0;
       if (palaceLevel < unlock.imperial_palace) {
         return { success: false, error: `需要皇宫等级${unlock.imperial_palace}` };
+      }
+    }
+
+    if (unlock.arsenal) {
+      const arsenalLevel = empire.buildings?.getLevel('arsenal') || 0;
+      if (arsenalLevel < unlock.arsenal) {
+        return { success: false, error: `需要军械库等级${unlock.arsenal}` };
       }
     }
 

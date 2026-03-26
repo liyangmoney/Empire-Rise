@@ -105,7 +105,7 @@ export class RecruitSystem {
    */
   getAllRecruitOptions() {
     return Object.entries(RECRUIT_OPTIONS).map(([id, config]) => ({
-      id,
+      id, // 使用大写键作为 id
       ...config,
     }));
   }
@@ -114,8 +114,22 @@ export class RecruitSystem {
    * 获取招募配置（兼容旧接口）
    */
   getRecruitConfig() {
+    // 转换为大写键的对象
+    const options = {};
+    for (const [key, config] of Object.entries(RECRUIT_OPTIONS)) {
+      options[key] = {
+        ...config,
+        cost: config.cost,
+        probabilities: {
+          common: 0.60,
+          rare: 0.25,
+          epic: 0.12,
+          legendary: 0.03,
+        },
+      };
+    }
     return {
-      options: this.getAllRecruitOptions(),
+      options,
       probabilities: {
         common: 60,
         rare: 25,

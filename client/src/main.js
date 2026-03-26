@@ -1,7 +1,7 @@
 // client/src/main.js
 /**
  * 《帝国崛起》H5 客户端 v0.3
- * 支持：资源、建筑、军队、战斗系统
+ * 支持:资源、建筑、军队、战斗系统
  */
 
 let socket = null;
@@ -15,7 +15,7 @@ let generalTemplates = null; // 将领模板
 let selectedGeneralId = null; // 当前选择的将领
 let currentTimeData = null; // 时间数据
 let timeUpdateInterval = null; // 时间更新定时器
-let currentResources = null; // 当前资源数据（用于本地刷新）
+let currentResources = null; // 当前资源数据(用于本地刷新)
 let resourceUpdateInterval = null; // 资源本地刷新定时器
 let currentBuildingQueue = []; // 当前建筑升级队列
 let buildingUpdateInterval = null; // 建筑升级刷新定时器
@@ -185,7 +185,7 @@ function connect() {
 
   socket.on('general:assigned', (data) => {
     console.log('General assigned:', data);
-    showSuccess('将领分配成功！');
+    showSuccess('将领分配成功!');
     generalsData = data.generals;
     renderGenerals(data.generals);
     updateGeneralSelect(data.generals);
@@ -200,7 +200,7 @@ function connect() {
     console.log('Recruited:', data);
     showRecruitResult(data);
     if (data.isPity) {
-      showSuccess('🎉 触发保底！');
+      showSuccess('🎉 触发保底!');
     }
   });
 
@@ -216,7 +216,7 @@ function connect() {
 
   socket.on('battle:started', (data) => {
     console.log('Battle started:', data);
-    showInfo(`战斗开始！对阵 ${data.npc.name} (战力:${data.npc.power})`);
+    showInfo(`战斗开始!对阵 ${data.npc.name} (战力:${data.npc.power})`);
   });
 
   socket.on('battle:finished', (data) => {
@@ -250,7 +250,7 @@ function connect() {
   });
 
   socket.on('task:rewardClaimed', (data) => {
-    showSuccess('任务奖励领取成功！');
+    showSuccess('任务奖励领取成功!');
     renderResources(data.resources);
     renderTasks(data.tasks);
   });
@@ -312,7 +312,7 @@ function connect() {
   // 监听升级开始
   socket.on('building:upgradeStarted', (data) => {
     console.log('Building upgrade started:', data);
-    // 更新建筑数据，避免等级显示错误
+    // 更新建筑数据,避免等级显示错误
     if (data.buildings && empireData) {
       empireData.buildings = data.buildings;
     }
@@ -333,7 +333,7 @@ function connect() {
     if (data.population) {
       updatePopulationDisplay(data.population);
     }
-    showSuccess(`建筑升级完成！升级至Lv.${data.task.toLevel}`);
+    showSuccess(`建筑升级完成!升级至Lv.${data.task.toLevel}`);
   });
 }
 
@@ -381,10 +381,10 @@ function switchTab(tabName) {
 function renderResources(resources) {
   console.log('渲染资源:', resources); // 调试用
 
-  // 保存资源数据用于本地刷新（深拷贝）
+  // 保存资源数据用于本地刷新(深拷贝)
   currentResources = JSON.parse(JSON.stringify(resources));
 
-  // 启动本地资源刷新（如果还没启动）
+  // 启动本地资源刷新(如果还没启动)
   if (!resourceUpdateInterval) {
     startResourceLocalUpdate();
   }
@@ -404,7 +404,7 @@ function renderResources(resources) {
     const max = typeof data === 'object' ? (data.max || 1000) : 1000;
     const rate = typeof data === 'object' ? (data.rate || 0) : 0; // 每小时产出
 
-    // 计算每秒产出（保留1位小数）
+    // 计算每秒产出(保留1位小数)
     const ratePerSecond = (rate / 3600).toFixed(1);
 
     const card = document.createElement('div');
@@ -422,20 +422,20 @@ function renderResources(resources) {
   updateGlobalResources(resources);
 }
 
-// 启动资源本地刷新（每秒更新显示）
+// 启动资源本地刷新(每秒更新显示)
 function startResourceLocalUpdate() {
   if (resourceUpdateInterval) return; // 已经启动了
 
   resourceUpdateInterval = setInterval(() => {
     if (!currentResources) return;
 
-    // 每秒根据产出速率增加资源（本地显示）
+    // 每秒根据产出速率增加资源(本地显示)
     for (const [id, data] of Object.entries(currentResources)) {
-      const rate = data.rate || 0; // 每小时产出（固定值，服务器决定）
+      const rate = data.rate || 0; // 每小时产出(固定值,服务器决定)
       const perSecond = rate / 3600; // 每秒产出
       const max = data.max || 1000;
 
-      // 增加资源（不超过上限）
+      // 增加资源(不超过上限)
       data.amount = Math.min(max, (data.amount || 0) + perSecond);
 
       // 更新显示
@@ -645,31 +645,31 @@ function showBuildingDetail(building) {
   const BUILDING_DETAILS = {
     lumber_mill: {
       title: '🌲 伐木场',
-      detail: '伐木场是帝国木材的主要来源。升级伐木场可以提高木材产量，每升一级产量增加20%。',
+      detail: '伐木场是帝国木材的主要来源。升级伐木场可以提高木材产量,每升一级产量增加20%。',
       effect: '每小时产出木材',
       levelBonus: '每级 +20% 产量'
     },
     farm: {
       title: '🌾 农场',
-      detail: '农场生产粮食，用于训练军队和维持士兵士气。粮食不足会导致军队士气下降。',
+      detail: '农场生产粮食,用于训练军队和维持士兵士气。粮食不足会导致军队士气下降。',
       effect: '每小时产出粮食',
       levelBonus: '每级 +20% 产量'
     },
     quarry: {
       title: '⛰️ 采石场',
-      detail: '采石场开采石材，用于建造防御建筑和加固城墙。',
+      detail: '采石场开采石材,用于建造防御建筑和加固城墙。',
       effect: '每小时产出石材',
       levelBonus: '每级 +20% 产量'
     },
     iron_mine: {
       title: '⚙️ 铁矿场',
-      detail: '铁矿场开采铁矿，用于打造高级装备和训练进阶兵种。',
+      detail: '铁矿场开采铁矿,用于打造高级装备和训练进阶兵种。',
       effect: '每小时产出铁矿',
       levelBonus: '每级 +20% 产量'
     },
     crystal_mine: {
       title: '💎 水晶矿',
-      detail: '水晶矿开采稀有水晶，用于研究高级科技和召唤稀有兵种。',
+      detail: '水晶矿开采稀有水晶,用于研究高级科技和召唤稀有兵种。',
       effect: '每小时产出水晶',
       levelBonus: '每级 +20% 产量'
     },
@@ -687,7 +687,7 @@ function showBuildingDetail(building) {
     },
     barracks: {
       title: '⚔️ 兵营',
-      detail: '兵营是训练士兵的地方。升级兵营可以解锁更高级的兵种，并加快训练速度。',
+      detail: '兵营是训练士兵的地方。升级兵营可以解锁更高级的兵种,并加快训练速度。',
       effect: '训练士兵、解锁新兵种',
       levelBonus: '每级提升训练速度10%'
     },
@@ -699,13 +699,13 @@ function showBuildingDetail(building) {
     },
     wall: {
       title: '🛡️ 城墙',
-      detail: '城墙是城市的防御工事，可以抵御敌人的进攻。升级城墙提升城防耐久。',
+      detail: '城墙是城市的防御工事,可以抵御敌人的进攻。升级城墙提升城防耐久。',
       effect: '增加城防耐久',
       levelBonus: '每级 +5% 耐久'
     },
     tower: {
       title: '🏹 箭塔',
-      detail: '箭塔是防御建筑，可以在守城战中攻击敌人。',
+      detail: '箭塔是防御建筑,可以在守城战中攻击敌人。',
       effect: '守城战增加攻击力',
       levelBonus: '每级 +10% 攻击力'
     },
@@ -729,13 +729,13 @@ function showBuildingDetail(building) {
     },
     tech_institute: {
       title: '🔬 研究院',
-      detail: '研究院研究各种科技，提升帝国的整体实力。',
+      detail: '研究院研究各种科技,提升帝国的整体实力。',
       effect: '研究科技',
       levelBonus: '解锁新科技、提升加成效果'
     },
     imperial_palace: {
       title: '👑 皇宫',
-      detail: '皇宫是帝国的核心建筑，象征着帝国的荣耀。升级皇宫可以提升所有资源产量和军队上限。',
+      detail: '皇宫是帝国的核心建筑,象征着帝国的荣耀。升级皇宫可以提升所有资源产量和军队上限。',
       effect: '提升全局产量和军队上限',
       levelBonus: '每级 +5% 全局加成'
     },
@@ -810,7 +810,7 @@ function startBuildingUpdateInterval() {
         }
       }
 
-      // 本地模拟进度增长（实际由服务器同步）
+      // 本地模拟进度增长(实际由服务器同步)
       task._progress += 1000; // 每秒增加1000ms
     }
   }, 1000);
@@ -907,14 +907,14 @@ function updateTrainingQueue(queue) {
   for (const task of queue) {
     const unitName = unitTypesData?.[task.unitTypeId.toUpperCase()]?.name || task.unitTypeId;
 
-    // 使用服务器提供的进度计算（考虑时间加速）
+    // 使用服务器提供的进度计算(考虑时间加速)
     let remaining = 0;
     if (task._progress !== undefined) {
-      // 服务器使用 _progress 追踪进度（毫秒）
+      // 服务器使用 _progress 追踪进度(毫秒)
       const remainingMs = Math.max(0, task.duration - task._progress);
       remaining = Math.ceil(remainingMs / 1000);
     } else {
-      // 回退：使用真实时间计算
+      // 回退:使用真实时间计算
       remaining = Math.max(0, Math.ceil((task.startTime + task.duration - Date.now()) / 1000));
     }
 
@@ -1074,7 +1074,7 @@ function showBattleResult(data) {
 
   resultDiv.innerHTML = `
     <div class="${isVictory ? 'victory' : 'defeat'}">
-      ${isVictory ? '🎉 胜利！' : '💀 战败...'}
+      ${isVictory ? '🎉 胜利!' : '💀 战败...'}
     </div>
     <p>战斗回合: ${result.totalRounds}</p>
     <p>剩余HP: ${result.attackerHp.current}/${result.attackerHp.total}</p>
@@ -1145,7 +1145,7 @@ function updateBuildingQueue(queue) {
   currentBuildingQueue = queue || [];
   console.log('Building upgrade queue:', queue);
 
-  // 触发重新渲染建筑（显示进度）
+  // 触发重新渲染建筑(显示进度)
   if (empireData && empireData.buildings) {
     renderBuildings(empireData.buildings, currentBuildingQueue);
   }
@@ -1213,7 +1213,7 @@ function startTraining() {
 function renderGenerals(data) {
   const container = document.getElementById('myGenerals');
   if (!data || !data.generals || data.generals.length === 0) {
-    container.innerHTML = '<p style="text-align:center;color:#888;">暂无将领，请前往招募</p>';
+    container.innerHTML = '<p style="text-align:center;color:#888;">暂无将领,请前往招募</p>';
     return;
   }
 
@@ -1296,10 +1296,10 @@ function renderGeneralTemplates(templates) {
 function renderRecruitOptions(data) {
   const container = document.getElementById('recruitOptions');
   if (!data || !data.options) return;
-
+  
   container.innerHTML = '';
   const typeNames = { BASIC: '普通招募', ADVANCED: '高级招募', PREMIUM: '至尊招募' };
-
+  
   const resourceNames = {
     wood: '木材',
     stone: '石材',
@@ -1311,17 +1311,17 @@ function renderRecruitOptions(data) {
     fruit: '水果',
     premium_food: '精品食材'
   };
-
-  for (const cfg of data.options) {
+  
+  for (const [type, cfg] of Object.entries(data.options)) {
     const div = document.createElement('div');
     div.className = 'recruit-option';
-
+    
     // 消耗显示
     let costHtml = '';
     for (const [res, amount] of Object.entries(cfg.cost)) {
       costHtml += `${resourceNames[res] || res}: ${amount} `;
     }
-
+    
     // 保底显示
     let pityHtml = '';
     if (cfg.guaranteedEpic) {
@@ -1330,19 +1330,19 @@ function renderRecruitOptions(data) {
     if (cfg.guaranteedLegendary) {
       pityHtml += `<p>保底: ${cfg.guaranteedLegendary}抽必出传说</p>`;
     }
-
+    
     div.innerHTML = `
-      <h4>${typeNames[cfg.id] || cfg.name}</h4>
+      <h4>${typeNames[type] || cfg.name}</h4>
       <p>${cfg.description}</p>
       <div class="recruit-cost">消耗: ${costHtml}</div>
-      <button class="btn-secondary" onclick="recruitGeneral('${cfg.id}')">招募</button>
-      <button onclick="recruitBatch('${cfg.id}')">10连抽(9折)</button>
+      <button class="btn-secondary" onclick="recruitGeneral('${type}')">招募</button>
+      <button onclick="recruitBatch('${type}')">10连抽(9折)</button>
       <div class="recruit-probability">
         概率: 普通60% 稀有25% 史诗12% 传说3%
       </div>
       ${pityHtml}
     `;
-
+    
     container.appendChild(div);
   }
 }
@@ -1368,21 +1368,21 @@ function recruitBatch(type) {
 function showRecruitResult(data) {
   const panel = document.getElementById('recruitResultPanel');
   const resultDiv = document.getElementById('recruitResult');
-  
+
   panel.style.display = 'block';
-  
+
   const rarityNames = { common: '普通', rare: '稀有', epic: '史诗', legendary: '传说' };
-  const rarityColors = { 
-    common: '#9e9e9e', 
-    rare: '#2196F3', 
-    epic: '#9c27b0', 
-    legendary: '#ffd700' 
+  const rarityColors = {
+    common: '#9e9e9e',
+    rare: '#2196F3',
+    epic: '#9c27b0',
+    legendary: '#ffd700'
   };
   const general = data.general;
-  
+
   resultDiv.innerHTML = `
     <div class="general-card ${general.rarity}" style="text-align:center;">
-      <h2 style="color:${rarityColors[general.rarity]};">🎉 招募成功！</h2>
+      <h2 style="color:${rarityColors[general.rarity]};">🎉 招募成功!</h2>
       ${data.isPity ? '<p style="color:#ff9800;">✨ 保底触发</p>' : ''}
       <div class="general-name" style="font-size:24px; margin:20px 0;">
         ${general.name}
@@ -1396,24 +1396,24 @@ function showRecruitResult(data) {
       ${general.skills?.length > 0 ? `<p style="margin-top:15px;"><strong>技能: </strong>${general.skills.map(s => s.name).join(', ')}</p>` : ''}
     </div>
   `;
-  
+
   panel.scrollIntoView({ behavior: 'smooth' });
 }
 
 function showBatchRecruitResult(data) {
   const panel = document.getElementById('recruitResultPanel');
   const resultDiv = document.getElementById('recruitResult');
-  
+
   panel.style.display = 'block';
-  
+
   const rarityNames = { common: '普通', rare: '稀有', epic: '史诗', legendary: '传说' };
-  const rarityColors = { 
-    common: '#9e9e9e', 
-    rare: '#2196F3', 
-    epic: '#9c27b0', 
-    legendary: '#ffd700' 
+  const rarityColors = {
+    common: '#9e9e9e',
+    rare: '#2196F3',
+    epic: '#9c27b0',
+    legendary: '#ffd700'
   };
-  
+
   let resultsHtml = '';
   for (const item of data.results) {
     const general = item.general;
@@ -1426,19 +1426,19 @@ function showBatchRecruitResult(data) {
       </div>
     `;
   }
-  
+
   // 统计
   const rarityCount = {};
   for (const item of data.results) {
     rarityCount[item.general.rarity] = (rarityCount[item.general.rarity] || 0) + 1;
   }
-  
+
   let statsHtml = '<p><strong>统计: </strong>';
   for (const [rarity, count] of Object.entries(rarityCount)) {
     statsHtml += `${rarityNames[rarity]}×${count} `;
   }
   statsHtml += '</p>';
-  
+
   resultDiv.innerHTML = `
     <div style="text-align:center;">
       <h2>🎉 10连招募结果</h2>
@@ -1448,7 +1448,7 @@ function showBatchRecruitResult(data) {
       </div>
     </div>
   `;
-  
+
   panel.scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -1508,7 +1508,7 @@ function showCostConfirm(title, cost, onConfirm, extraInfo = null, currentResour
   // 构建资源消耗详情
   let costHtml = '<div style="margin: 15px 0; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 8px;">';
 
-  // 如果有额外信息，先显示
+  // 如果有额外信息,先显示
   if (extraInfo) {
     costHtml += `<p style="margin-bottom: 10px; color: #4CAF50; font-weight: bold;">${extraInfo}</p>`;
   }
@@ -1551,9 +1551,9 @@ function showCostConfirm(title, cost, onConfirm, extraInfo = null, currentResour
 
   costHtml += '</ul></div>';
 
-  // 如果有资源不足，显示警告
+  // 如果有资源不足,显示警告
   if (!hasEnoughResources) {
-    costHtml += '<p style="color: #f44336; font-weight: bold; margin-top: 10px;">⚠️ 资源不足！</p>';
+    costHtml += '<p style="color: #f44336; font-weight: bold; margin-top: 10px;">⚠️ 资源不足!</p>';
   }
 
   // 创建弹窗
@@ -1584,7 +1584,7 @@ function showCostConfirm(title, cost, onConfirm, extraInfo = null, currentResour
       <h3 style="color: #ffd700; margin-bottom: 15px;">${title}</h3>
       ${costHtml}
 
-      <p style="color: #888; font-size: 14px; margin: 15px 0;">${hasEnoughResources ? '确定要执行此操作吗？' : '资源不足，无法执行此操作'}</p>
+      <p style="color: #888; font-size: 14px; margin: 15px 0;">${hasEnoughResources ? '确定要执行此操作吗?' : '资源不足,无法执行此操作'}</p>
 
       <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: center;">
         <button onclick="this.closest('.cost-confirm-modal').remove()"
@@ -1599,7 +1599,7 @@ function showCostConfirm(title, cost, onConfirm, extraInfo = null, currentResour
   modal.className = 'cost-confirm-modal';
   document.body.appendChild(modal);
 
-  // 绑定确认按钮（只在资源足够时绑定）
+  // 绑定确认按钮(只在资源足够时绑定)
   if (hasEnoughResources) {
     document.getElementById('costConfirmBtn').addEventListener('click', () => {
       modal.remove();
@@ -1608,7 +1608,7 @@ function showCostConfirm(title, cost, onConfirm, extraInfo = null, currentResour
   }
 }
 
-// 修改开始战斗函数，加入将领选择
+// 修改开始战斗函数,加入将领选择
 function startBattle(npcTypeId, isRecommended = true) {
   if (!socket || !playerId) {
     showError('请先连接服务器');
@@ -1619,7 +1619,7 @@ function startBattle(npcTypeId, isRecommended = true) {
   if (!isRecommended) {
     showConfirmModal(
       '⚠️ 高风险警告',
-      '此敌人战力远高于你的军队，强行攻击可能导致严重伤亡！\n\n建议提升军队实力后再来挑战。',
+      '此敌人战力远高于你的军队,强行攻击可能导致严重伤亡!\n\n建议提升军队实力后再来挑战。',
       () => {
         // 确认后继续执行攻击
         proceedBattle(npcTypeId);
@@ -1650,8 +1650,8 @@ function proceedBattle(npcTypeId) {
 
   // 显示攻击确认
   const confirmMsg = generalInfo
-    ? `确定要让 ${generalInfo.name} 率军攻打吗？战斗中可能有士兵伤亡！`
-    : '确定要发起攻击吗？战斗中可能有士兵伤亡！';
+    ? `确定要让 ${generalInfo.name} 率军攻打吗?战斗中可能有士兵伤亡!`
+    : '确定要发起攻击吗?战斗中可能有士兵伤亡!';
 
   showConfirmModal(
     '确认出征',
@@ -1732,7 +1732,7 @@ function createTaskCard(task) {
 
   const statusText = {
     pending: '进行中',
-    completed: '已完成（可领取）',
+    completed: '已完成(可领取)',
     claimed: '已领取'
   };
 
@@ -1881,7 +1881,7 @@ function startTimeUpdateInterval() {
   timeUpdateInterval = setInterval(() => {
     if (!currentTimeData) return;
 
-    // 使用现实时间的时分秒，但保持游戏日期
+    // 使用现实时间的时分秒,但保持游戏日期
     const now = new Date();
     const realTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
 
