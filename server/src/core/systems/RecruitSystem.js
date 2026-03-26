@@ -109,4 +109,19 @@ export class RecruitSystem {
       ...config,
     }));
   }
+
+  /**
+   * 获取招募配置（兼容旧接口）
+   */
+  getRecruitConfig() {
+    return {
+      options: this.getAllRecruitOptions(),
+      probabilities: {
+        common: 60,
+        rare: 25,
+        epic: 12,
+        legendary: 3,
+      },
+    };
+  }
 }
