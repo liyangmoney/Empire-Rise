@@ -212,10 +212,11 @@ export function registerSocketHandlers(io, gameWorld) {
       const { playerId, unitTypeId, count } = data;
       const empire = gameWorld.empires.get(playerId);
       if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '帝国不存在' });
-      const barracksLevel = empire.buildings?.getLevel('barracks') || 1;
-      const preview = trainingSystem.getTrainingPreview(unitTypeId, count, barracksLevel);
+      
+      const preview = trainingSystem.getTrainingPreview(empire, unitTypeId, count);
       const maxSize = trainingSystem.calculateMaxArmySize(empire);
       const currentSize = empire.army.getTotalCount();
+      
       socket.emit('army:trainingPreview', {
         preview,
         currentArmySize: currentSize,

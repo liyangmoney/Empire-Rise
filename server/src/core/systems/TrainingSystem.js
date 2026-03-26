@@ -1,9 +1,9 @@
 // server/src/core/systems/TrainingSystem.js
-import { UNIT_TYPES } from '../../../../shared/unitTypes.js';
+import { UNIT_TYPES, getUnitType } from '../../../../shared/unitTypes.js';
 
 /**
- * 训练系统 - 处理军队训练相关的业务逻辑
- * 独立于 ArmyComponent，负责验证、消耗、调度
+ * 训练系统 v2.0 - 适配9种资源，20+建筑
+ * 支持多建筑训练、建筑加成、资源多样化
  */
 export class TrainingSystem {
   constructor(gameWorld) {
@@ -12,27 +12,17 @@ export class TrainingSystem {
 
   /**
    * 验证是否可以训练
-   * @param {Object} empire 帝国实体
-   * @param {string} unitTypeId 兵种类型
-   * @param {number} count 数量
-   * @returns {Object} { success, error, maxPossible }
    */
   canTrain(empire, unitTypeId, count) {
-    // 通过 id 查找兵种（UNIT_TYPES 键是大写，但传入的是小写 id）
-    const unitType = Object.values(UNIT_TYPES).find(u => u.id === unitTypeId);
+    const unitType = getUnitType(unitTypeId);
     if (!unitType) {
       return { success: false, error: '未知的兵种类型' };
     }
 
-    // 检查解锁条件（进阶兵种需要建筑等级）
-    if (unitType.unlock) {
-      const requiredBuilding = empire.buildings?.getLevel(unitType.unlock.building) || 0;
-      if (requiredBuilding < unitType.unlock.level) {
-        return { 
-          success: false, 
-          error: `需要${unitType.unlock.building}等级${unitType.unlock.level}` 
-        };
-      }
+    // 检查解锁条件
+    const unlockCheck = this.checkUnlockRequirements(empire, unitType);
+    if (!unlockCheck.success) {
+      return unlockCheck;
     }
 
     // 检查军队上限
@@ -47,27 +37,108 @@ export class TrainingSystem {
     }
 
     // 检查资源是否足够
-    const totalCost = {};
-    for (const [resourceId, amount] of Object.entries(unitType.training.cost)) {
-      totalCost[resourceId] = amount * count;
-    }
-
+    const totalCost = this.calculateTrainingCost(empire, unitType, count);
     if (!empire.resources.hasAll(totalCost)) {
-      return { success: false, error: '资源不足' };
+      const missing = [];
+      for (const [res, amount] of Object.entries(totalCost)) {
+        const current = empire.resources.get(res)?.current || 0;
+        if (current < amount) {
+          missing.push(`${res}: 需要${amount}, 现有${Math.floor(current)}`);
+        }
+      }
+      return { success: false, error: '资源不足', missing };
     }
 
-    return { success: true, cost: totalCost };
+    return { success: true, cost: totalCost, unitType };
+  }
+
+  /**
+   * 检查解锁条件
+   */
+  checkUnlockRequirements(empire, unitType) {
+    const unlock = unitType.unlock;
+    if (!unlock) return { success: true };
+
+    // 检查主建筑等级
+    const mainBuildingLevel = empire.buildings?.getLevel(unlock.building) || 0;
+    if (mainBuildingLevel < unlock.level) {
+      return { 
+        success: false, 
+        error: `需要${unlock.building}等级${unlock.level}（当前${mainBuildingLevel}）` 
+      };
+    }
+
+    // 检查额外建筑要求
+    if (unlock.stables) {
+      const stablesLevel = empire.buildings?.getLevel('stables') || 0;
+      if (stablesLevel < unlock.stables) {
+        return { success: false, error: `需要马厩等级${unlock.stables}` };
+      }
+    }
+
+    if (unlock.tech_institute) {
+      const techLevel = empire.buildings?.getLevel('tech_institute') || 0;
+      if (techLevel < unlock.tech_institute) {
+        return { success: false, error: `需要研究院等级${unlock.tech_institute}` };
+      }
+    }
+
+    if (unlock.imperial_palace) {
+      const palaceLevel = empire.buildings?.getLevel('imperial_palace') || 0;
+      if (palaceLevel < unlock.imperial_palace) {
+        return { success: false, error: `需要皇宫等级${unlock.imperial_palace}` };
+      }
+    }
+
+    return { success: true };
+  }
+
+  /**
+   * 计算训练消耗（考虑建筑加成）
+   */
+  calculateTrainingCost(empire, unitType, count) {
+    const baseCost = { ...unitType.training.cost };
+    const totalCost = {};
+
+    // 应用资源消耗减免
+    const reduction = this.getCostReduction(empire, unitType);
+
+    for (const [resourceId, amount] of Object.entries(baseCost)) {
+      totalCost[resourceId] = Math.ceil(amount * count * (1 - reduction));
+    }
+
+    return totalCost;
+  }
+
+  /**
+   * 获取资源消耗减免
+   */
+  getCostReduction(empire, unitType) {
+    let reduction = 0;
+
+    // 兵营等级减免（最高20%）
+    const barracksLevel = empire.buildings?.getLevel('barracks') || 1;
+    reduction += Math.min(0.2, (barracksLevel - 1) * 0.02);
+
+    // 铁匠铺对需要铁矿的兵种减免
+    if (unitType.training.cost.iron) {
+      const blacksmithLevel = empire.buildings?.getLevel('blacksmith') || 0;
+      reduction += Math.min(0.1, blacksmithLevel * 0.01);
+    }
+
+    // 研究院对精英兵种减免
+    if (unitType.category === 'elite') {
+      const techLevel = empire.buildings?.getLevel('tech_institute') || 0;
+      reduction += Math.min(0.15, techLevel * 0.015);
+    }
+
+    return Math.min(0.5, reduction); // 最高50%减免
   }
 
   /**
    * 执行训练
-   * @param {Object} empire 帝国实体
-   * @param {string} unitTypeId 兵种类型
-   * @param {number} count 数量
-   * @returns {Object} { success, task, error }
    */
   train(empire, unitTypeId, count) {
-    // 验证
     const validation = this.canTrain(empire, unitTypeId, count);
     if (!validation.success) {
       return validation;
@@ -78,77 +149,139 @@ export class TrainingSystem {
       empire.resources.consume(resourceId, amount);
     }
 
-    // 获取军营等级（影响训练速度）
+    // 计算训练时间（考虑建筑加速）
+    const timeMultiplier = this.getTrainingSpeedMultiplier(empire, validation.unitType);
     const barracksLevel = empire.buildings?.getLevel('barracks') || 1;
 
     // 添加到训练队列
-    const task = empire.army.enqueueTraining(unitTypeId, count, barracksLevel);
+    const task = empire.army.enqueueTraining(unitTypeId, count, barracksLevel, timeMultiplier);
     
     // 更新任务进度
-    empire.tasks.updateProgress('train', { [unitTypeId]: count });
+    empire.tasks?.updateProgress('train', { [unitTypeId]: count });
 
-    return { success: true, task, cost: validation.cost };
+    return { 
+      success: true, 
+      task, 
+      cost: validation.cost,
+      timeMultiplier 
+    };
   }
 
   /**
-   * 计算最大军队数量
-   * GDD: 军队总数量根据帝国等级、军营等级、民居数量决定
+   * 获取训练速度加成
+   */
+  getTrainingSpeedMultiplier(empire, unitType) {
+    let speedBonus = 0;
+
+    // 兵营等级加速（每级+10%，最高50%）
+    const barracksLevel = empire.buildings?.getLevel('barracks') || 1;
+    speedBonus += Math.min(0.5, (barracksLevel - 1) * 0.1);
+
+    // 马厩对骑兵加速
+    if (['cavalry', 'heavy_cavalry'].includes(unitType.id)) {
+      const stablesLevel = empire.buildings?.getLevel('stables') || 0;
+      speedBonus += Math.min(0.3, stablesLevel * 0.06);
+    }
+
+    // 军械库对攻城器械加速
+    if (unitType.id === 'siege') {
+      const arsenalLevel = empire.buildings?.getLevel('arsenal') || 0;
+      speedBonus += Math.min(0.4, arsenalLevel * 0.08);
+    }
+
+    // 酒馆士气加成
+    const tavernLevel = empire.buildings?.getLevel('tavern') || 0;
+    if (tavernLevel > 0) {
+      speedBonus += Math.min(0.1, tavernLevel * 0.02);
+    }
+
+    return Math.max(0.3, 1 - speedBonus); // 最少30%时间
+  }
+
+  /**
+   * 计算最大军队数量（增强版）
    */
   calculateMaxArmySize(empire) {
-    // 基础上限
-    let max = 50;
+    let max = 50; // 基础上限
 
-    // 帝国宫殿等级加成（假设 empire.level 存在）
+    // 皇宫等级加成
     const palaceLevel = empire.buildings?.getLevel('imperial_palace') || 1;
-    max += (palaceLevel - 1) * 20;
+    max += (palaceLevel - 1) * 30;
 
-    // 军营等级加成
+    // 兵营等级加成
     const barracksLevel = empire.buildings?.getLevel('barracks') || 0;
-    max += barracksLevel * 30;
+    max += barracksLevel * 40;
 
-    // 民居数量加成（假设民居建筑存在）
-    const houseCount = empire.buildings?.getLevel('house') || 0;
-    max += houseCount * 10;
+    // 民居数量加成
+    const houseLevel = empire.buildings?.getLevel('house') || 0;
+    max += houseLevel * 15;
+
+    // 军营加成
+    const militaryCamps = ['barracks', 'stables', 'arsenal'];
+    for (const camp of militaryCamps) {
+      const level = empire.buildings?.getLevel(camp) || 0;
+      max += level * 10;
+    }
+
+    // 城墙加成
+    const wallLevel = empire.buildings?.getLevel('wall') || 0;
+    max += wallLevel * 20;
 
     return max;
   }
 
   /**
-   * 获取训练预览（前端显示用）
+   * 获取训练预览
    */
-  getTrainingPreview(unitTypeId, count, barracksLevel = 1) {
-    const unitType = Object.values(UNIT_TYPES).find(u => u.id === unitTypeId);
+  getTrainingPreview(empire, unitTypeId, count) {
+    const unitType = getUnitType(unitTypeId);
     if (!unitType) return null;
 
-    const cost = {};
-    for (const [resourceId, amount] of Object.entries(unitType.training.cost)) {
-      cost[resourceId] = amount * count;
-    }
+    const cost = this.calculateTrainingCost(empire, unitType, count);
+    const timeMultiplier = this.getTrainingSpeedMultiplier(empire, unitType);
+    const baseDuration = unitType.training.time * count;
+    const finalDuration = baseDuration * timeMultiplier;
 
-    const timeReduction = (barracksLevel - 1) * 0.1;
-    const duration = unitType.training.time * count * (1 - timeReduction);
+    // 检查解锁状态
+    const unlockCheck = this.checkUnlockRequirements(empire, unitType);
 
     return {
       unitTypeId,
       unitName: unitType.name,
+      category: unitType.category,
       count,
       cost,
-      duration, // 秒
-      durationFormatted: this.formatDuration(duration),
+      baseDuration,
+      finalDuration,
+      durationFormatted: this.formatDuration(finalDuration),
+      timeMultiplier: Math.round((1 - timeMultiplier) * 100), // 显示为加速百分比
+      unlocked: unlockCheck.success,
+      unlockRequirement: unlockCheck.success ? null : unlockCheck.error,
     };
   }
 
   /**
-   * 格式化时间显示
+   * 获取所有可训练兵种
    */
-  formatDuration(seconds) {
-    if (seconds < 60) return `${Math.ceil(seconds)}秒`;
-    if (seconds < 3600) return `${Math.ceil(seconds / 60)}分钟`;
-    return `${Math.floor(seconds / 3600)}小时${Math.ceil((seconds % 3600) / 60)}分钟`;
+  getTrainableUnits(empire) {
+    const result = [];
+    for (const unitType of Object.values(UNIT_TYPES)) {
+      const preview = this.getTrainingPreview(empire, unitType.id, 1);
+      if (preview) {
+        result.push(preview);
+      }
+    }
+    return result.sort((a, b) => {
+      // 已解锁的排在前面
+      if (a.unlocked !== b.unlocked) return b.unlocked ? 1 : -1;
+      // 按类别排序
+      const categoryOrder = { basic: 0, advanced: 1, elite: 2, special: 3 };
+      return categoryOrder[a.category] - categoryOrder[b.category];
+    });
   }
 
   /**
-   * 取消训练（返还部分资源）
+   * 取消训练
    */
   cancelTraining(empire, taskId) {
     const task = empire.army.trainingQueue.find(t => t.id === taskId);
@@ -156,24 +289,42 @@ export class TrainingSystem {
       return { success: false, error: '训练任务不存在或已完成' };
     }
 
+    const unitType = getUnitType(task.unitTypeId);
+    if (!unitType) {
+      return { success: false, error: '兵种类型无效' };
+    }
+
     // 计算已进行的时间比例
     const elapsed = Date.now() - task.startTime;
-    const progress = elapsed / task.duration;
+    const progress = Math.min(1, elapsed / task.duration);
 
-    // 返还资源（已开始的不返还，最多返还80%）
-    const refundRatio = Math.max(0, 0.8 - progress * 0.8);
-    const unitType = Object.values(UNIT_TYPES).find(u => u.id === task.unitTypeId);
+    // 返还资源（已开始的不返还，最多返还70%）
+    const refundRatio = Math.max(0, 0.7 - progress * 0.7);
+    const refund = {};
     
     for (const [resourceId, amount] of Object.entries(unitType.training.cost)) {
-      const refund = Math.floor(amount * task.count * refundRatio);
-      if (refund > 0) {
-        empire.resources.add(resourceId, refund);
+      const totalAmount = amount * task.count;
+      const refundAmount = Math.floor(totalAmount * refundRatio);
+      if (refundAmount > 0) {
+        empire.resources.add(resourceId, refundAmount);
+        refund[resourceId] = refundAmount;
       }
     }
 
     // 从队列移除
     empire.army.trainingQueue = empire.army.trainingQueue.filter(t => t.id !== taskId);
 
-    return { success: true, refundRatio };
+    return { success: true, refund, refundRatio: Math.round(refundRatio * 100) };
+  }
+
+  /**
+   * 格式化时间
+   */
+  formatDuration(seconds) {
+    if (seconds < 60) return `${Math.ceil(seconds)}秒`;
+    if (seconds < 3600) return `${Math.ceil(seconds / 60)}分钟`;
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.ceil((seconds % 3600) / 60);
+    return mins > 0 ? `${hours}小时${mins}分钟` : `${hours}小时`;
   }
 }

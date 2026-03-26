@@ -1,19 +1,15 @@
 // server/src/core/components/ArmyComponent.js
-import { UNIT_TYPES, getCounterMultiplier } from '../../../../shared/unitTypes.js';
+import { UNIT_TYPES, getUnitType, COUNTER_RELATIONS } from '../../../../shared/unitTypes.js';
 
 /**
- * 军队组件 - 管理实体的所有军队
- * 可附加到：玩家帝国、NPC势力
+ * 军队组件 v2.0 - 支持12兵种，特殊能力，多样化维护
  */
 export class ArmyComponent {
   constructor() {
-    // 军队编队：key = formationId, value = { name, units: { unitId: count }, generalId? }
+    // 军队编队
     this.formations = new Map();
     
-    // 士兵总数统计（用于快速计算上限）
-    this.totalUnits = 0;
-    
-    // 士兵等级经验（全局平均或按兵种）
+    // 士兵等级经验
     this.unitLevels = {};
     for (const unitType of Object.values(UNIT_TYPES)) {
       this.unitLevels[unitType.id] = { level: 1, exp: 0 };
@@ -22,17 +18,26 @@ export class ArmyComponent {
     // 士气 (0-100)
     this.morale = 100;
     
-    // 当前状态：idle(空闲), training(训练中), marching(行军), fighting(战斗中), recovering(恢复中)
-    this.status = 'idle';
+    // 军队状态
+    this.status = 'idle'; // idle, training, marching, fighting, recovering
     
     // 训练队列
     this.trainingQueue = [];
     
-    // 伤病士兵（在医院中恢复）
+    // 伤病士兵
     this.woundedUnits = {};
     for (const unitType of Object.values(UNIT_TYPES)) {
       this.woundedUnits[unitType.id] = 0;
     }
+    
+    // 战斗统计
+    this.battleStats = {
+      totalBattles: 0,
+      victories: 0,
+      defeats: 0,
+      totalKills: 0,
+      totalLosses: 0,
+    };
   }
 
   /**
@@ -60,13 +65,23 @@ export class ArmyComponent {
   }
 
   /**
-   * 添加士兵（训练完成或招募）
-   * @param {string} unitTypeId 兵种类型
-   * @param {number} count 数量
-   * @param {string} formationId 编队ID（默认'default'）
+   * 按类别获取士兵数量
+   */
+  getUnitsByCategory(category) {
+    let count = 0;
+    for (const unitType of Object.values(UNIT_TYPES)) {
+      if (unitType.category === category) {
+        count += this.getUnitCount(unitType.id);
+      }
+    }
+    return count;
+  }
+
+  /**
+   * 添加士兵
    */
   addUnits(unitTypeId, count, formationId = 'default') {
-    const unitType = Object.values(UNIT_TYPES).find(u => u.id === unitTypeId);
+    const unitType = getUnitType(unitTypeId);
     if (!unitType) {
       throw new Error(`Unknown unit type: ${unitTypeId}`);
     }
@@ -88,7 +103,7 @@ export class ArmyComponent {
   }
 
   /**
-   * 移除士兵（战斗死亡或遣散）
+   * 移除士兵
    */
   removeUnits(unitTypeId, count, formationId = 'default') {
     const formation = this.formations.get(formationId);
@@ -108,15 +123,14 @@ export class ArmyComponent {
   }
 
   /**
-   * 添加伤病（战斗后）
+   * 添加伤病
    */
   addWounded(unitTypeId, count) {
     this.woundedUnits[unitTypeId] = (this.woundedUnits[unitTypeId] || 0) + count;
   }
 
   /**
-   * 救治伤病（医院功能）
-   * @returns {number} 成功救治数量
+   * 救治伤病
    */
   healWounded(unitTypeId, maxHealCount) {
     const wounded = this.woundedUnits[unitTypeId] || 0;
@@ -131,31 +145,55 @@ export class ArmyComponent {
   }
 
   /**
-   * 计算粮食消耗（每小时）
+   * 计算资源消耗（适配9种资源）
    */
-  calculateFoodConsumption() {
-    let consumption = 0;
+  calculateResourceConsumption() {
+    const consumption = {
+      food: 0,
+      wood: 0,
+      iron: 0,
+      gold: 0,
+      crystal: 0,
+      fish_product: 0,
+      fruit: 0,
+      premium_food: 0,
+    };
+
     for (const unitType of Object.values(UNIT_TYPES)) {
       const count = this.getUnitCount(unitType.id);
-      const upkeep = unitType.upkeep?.food || 0;
-      consumption += count * upkeep;
+      if (count > 0 && unitType.upkeep) {
+        for (const [resourceId, amount] of Object.entries(unitType.upkeep)) {
+          consumption[resourceId] = (consumption[resourceId] || 0) + count * amount;
+        }
+      }
     }
+
     return consumption;
   }
 
   /**
+   * 计算每小时粮食消耗（兼容旧代码）
+   */
+  calculateFoodConsumption() {
+    return this.calculateResourceConsumption().food;
+  }
+
+  /**
    * 更新士气
-   * @param {number} delta 变化量（可正可负）
    */
   updateMorale(delta) {
     this.morale = Math.max(0, Math.min(100, this.morale + delta));
   }
 
   /**
-   * 获取士气对战斗力的影响系数
+   * 获取士气对战斗力的影响
    */
   getMoraleMultiplier() {
-    // GDD: 士气满值时+20%，低于50时开始惩罚
+    // 美食骑士特性：士气不低于80
+    if (this.getUnitCount('gourmet_knight') > 0 && this.morale < 80) {
+      return 1.1; // 美食骑士保底+10%
+    }
+    
     if (this.morale >= 100) return 1.2;
     if (this.morale >= 80) return 1.1;
     if (this.morale >= 50) return 1.0;
@@ -164,23 +202,24 @@ export class ArmyComponent {
   }
 
   /**
-   * 添加训练任务到队列
+   * 添加训练任务
    */
-  enqueueTraining(unitTypeId, count, barracksLevel = 1) {
-    const unitType = Object.values(UNIT_TYPES).find(u => u.id === unitTypeId);
+  enqueueTraining(unitTypeId, count, barracksLevel = 1, timeMultiplier = 1) {
+    const unitType = getUnitType(unitTypeId);
     if (!unitType) return null;
 
-    // 计算训练时间（军营等级可加速）
-    const timeReduction = (barracksLevel - 1) * 0.1; // 每级-10%
-    const finalTime = unitType.training.time * count * (1 - timeReduction);
+    const baseTime = unitType.training.time * count;
+    const finalTime = baseTime * timeMultiplier;
 
     const task = {
       id: `train_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
       unitTypeId,
+      unitName: unitType.name,
       count,
       startTime: Date.now(),
-      duration: finalTime * 1000, // 转毫秒
+      duration: finalTime * 1000,
       completed: false,
+      category: unitType.category,
     };
 
     this.trainingQueue.push(task);
@@ -188,8 +227,7 @@ export class ArmyComponent {
   }
 
   /**
-   * 检查训练队列（由GameLoop调用）
-   * @returns {Array} 已完成的任务
+   * 处理训练队列
    */
   processTrainingQueue() {
     const completed = [];
@@ -199,18 +237,69 @@ export class ArmyComponent {
       if (!task.completed && now >= task.startTime + task.duration) {
         task.completed = true;
         this.addUnits(task.unitTypeId, task.count);
+        
+        // 增加经验
+        this.addUnitExp(task.unitTypeId, task.count * 10);
+        
         completed.push(task);
       }
     }
 
-    // 清理已完成的任务
     this.trainingQueue = this.trainingQueue.filter(t => !t.completed);
-    
     return completed;
   }
 
   /**
-   * 获取军队快照（用于发送给客户端）
+   * 增加兵种经验
+   */
+  addUnitExp(unitTypeId, exp) {
+    if (!this.unitLevels[unitTypeId]) return;
+    
+    this.unitLevels[unitTypeId].exp += exp;
+    
+    // 升级检查（每1000经验升1级，最高10级）
+    const levelUpExp = 1000 * this.unitLevels[unitTypeId].level;
+    if (this.unitLevels[unitTypeId].exp >= levelUpExp && this.unitLevels[unitTypeId].level < 10) {
+      this.unitLevels[unitTypeId].level++;
+      this.unitLevels[unitTypeId].exp -= levelUpExp;
+    }
+  }
+
+  /**
+   * 计算编队战斗力
+   */
+  calculateFormationPower(formationId = 'default', empire = null) {
+    const formation = this.formations.get(formationId);
+    if (!formation) return 0;
+
+    let power = 0;
+    for (const [unitTypeId, count] of Object.entries(formation.units)) {
+      const unitType = getUnitType(unitTypeId);
+      if (unitType) {
+        let unitPower = unitType.stats.attack + unitType.stats.defense + unitType.stats.hp / 10;
+        
+        // 等级加成
+        const level = this.unitLevels[unitTypeId]?.level || 1;
+        unitPower *= (1 + (level - 1) * 0.05); // 每级+5%
+        
+        // 将领加成
+        if (empire?.generals && formation.generalId) {
+          const general = empire.generals.get(formation.generalId);
+          if (general) {
+            unitPower *= (1 + general.stats.attack / 100);
+          }
+        }
+        
+        power += unitPower * count;
+      }
+    }
+
+    // 应用士气加成
+    return Math.floor(power * this.getMoraleMultiplier());
+  }
+
+  /**
+   * 获取军队快照
    */
   getSnapshot() {
     const formations = {};
@@ -219,47 +308,53 @@ export class ArmyComponent {
         name: formation.name,
         units: formation.units,
         total: Object.values(formation.units).reduce((a, b) => a + b, 0),
+        generalId: formation.generalId,
       };
     }
+
+    // 按类别统计
+    const categoryCount = {
+      basic: this.getUnitsByCategory('basic'),
+      advanced: this.getUnitsByCategory('advanced'),
+      elite: this.getUnitsByCategory('elite'),
+      special: this.getUnitsByCategory('special'),
+    };
 
     return {
       formations,
       totalUnits: this.getTotalCount(),
+      categoryCount,
       morale: this.morale,
       moraleMultiplier: this.getMoraleMultiplier(),
-      foodConsumption: this.calculateFoodConsumption(),
+      resourceConsumption: this.calculateResourceConsumption(),
+      foodConsumption: this.calculateFoodConsumption(), // 兼容旧代码
       trainingQueue: this.trainingQueue.map(t => ({
         id: t.id,
         unitTypeId: t.unitTypeId,
+        unitName: t.unitName,
         count: t.count,
-        duration: t.duration,
-        _progress: t._progress || 0,
-        startTime: t.startTime,
+        category: t.category,
+        progress: Math.min(100, Math.round(((Date.now() - t.startTime) / t.duration) * 100)),
         completed: t.completed
       })),
       woundedUnits: this.woundedUnits,
+      unitLevels: this.unitLevels,
       status: this.status,
+      battleStats: this.battleStats,
     };
   }
 
   /**
-   * 计算编队战斗力（用于战力评估）
+   * 记录战斗结果
    */
-  calculateFormationPower(formationId = 'default') {
-    const formation = this.formations.get(formationId);
-    if (!formation) return 0;
-
-    let power = 0;
-    for (const [unitTypeId, count] of Object.entries(formation.units)) {
-      const unitType = Object.values(UNIT_TYPES).find(u => u.id === unitTypeId);
-      if (unitType) {
-        // 简单战力公式：攻击+防御+HP/10
-        const unitPower = unitType.stats.attack + unitType.stats.defense + unitType.stats.hp / 10;
-        power += unitPower * count;
-      }
+  recordBattleResult(victory, kills, losses) {
+    this.battleStats.totalBattles++;
+    if (victory) {
+      this.battleStats.victories++;
+    } else {
+      this.battleStats.defeats++;
     }
-
-    // 应用士气加成
-    return Math.floor(power * this.getMoraleMultiplier());
+    this.battleStats.totalKills += kills;
+    this.battleStats.totalLosses += losses;
   }
 }

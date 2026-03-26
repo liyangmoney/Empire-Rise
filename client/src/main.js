@@ -128,6 +128,7 @@ function connect() {
   socket.on('army:unitTypes', (data) => {
     unitTypesData = data;
     console.log('Unit types loaded:', data);
+    updateUnitTypeSelect(data);
   });
 
   socket.on('army:trainingPreview', (data) => {
@@ -907,6 +908,43 @@ function updateTrainingQueue(queue) {
     const item = document.createElement('div');
     item.innerHTML = `${unitName} × ${task.count} - 剩余${remaining}秒`;
     list.appendChild(item);
+  }
+}
+
+// 更新兵种选择下拉框
+function updateUnitTypeSelect(unitTypes) {
+  const select = document.getElementById('trainUnitType');
+  if (!select) return;
+  
+  select.innerHTML = '';
+  
+  // 按类别分组
+  const categories = { basic: '基础', advanced: '进阶', elite: '精英', special: '特殊' };
+  
+  for (const [catKey, catName] of Object.entries(categories)) {
+    const group = document.createElement('optgroup');
+    group.label = catName + '兵种';
+    
+    const units = Object.values(unitTypes).filter(u => u.category === catKey);
+    
+    for (const unit of units) {
+      const option = document.createElement('option');
+      option.value = unit.id;
+      
+      // 构建消耗描述
+      const costParts = [];
+      for (const [res, amount] of Object.entries(unit.training.cost)) {
+        const resNames = { wood: '木', stone: '石', food: '粮', iron: '铁', crystal: '晶', gold: '金', fish_product: '鱼', fruit: '果', premium_food: '精' };
+        costParts.push(`${resNames[res] || res}×${amount}`);
+      }
+      
+      option.textContent = `${unit.name} (${costParts.join('+')})`;
+      group.appendChild(option);
+    }
+    
+    if (units.length > 0) {
+      select.appendChild(group);
+    }
   }
 }
 
