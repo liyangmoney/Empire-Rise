@@ -39,7 +39,7 @@ function connect() {
     console.log('✅ Connected to server');
     updateStatus('connected', '已连接');
     updateConnectionStatus(true);
-    
+
     socket.emit('empire:connect', { playerId, playerName });
     socket.emit('army:getUnitTypes');
   });
@@ -49,7 +49,7 @@ function connect() {
     showSuccess(data.message);
   });
 
-  // 通用错误提示  
+  // 通用错误提示
   socket.on('error', (data) => {
     showError(data.message);
   });
@@ -76,26 +76,26 @@ function connect() {
     renderBuildings(data.buildings, data.upgradeQueue || []);
     renderArmy(data.army, data.maxArmySize);
     updateMyBattleInfo(data.army);
-    
+
     // 将领数据
     if (data.generals) {
       generalsData = data.generals;
       renderGenerals(data.generals);
       updateGeneralSelect(data.generals);
     }
-    
+
     // 时间数据
     if (data.time) {
       updateTimeDisplay(data.time);
       // 启动时间自动更新定时器
       startTimeUpdateInterval();
     }
-    
+
     // 体力数据
     if (data.stamina) {
       updateStaminaDisplay(data.stamina);
     }
-    
+
     // 人口数据
     if (data.population) {
       updatePopulationDisplay(data.population);
@@ -124,7 +124,7 @@ function connect() {
   });
 
   // ==================== 军队系统事件 ====================
-  
+
   socket.on('army:unitTypes', (data) => {
     unitTypesData = data;
     console.log('Unit types loaded:', data);
@@ -165,7 +165,7 @@ function connect() {
   });
 
   // ==================== 将领系统事件 ====================
-  
+
   socket.on('general:list', (data) => {
     console.log('Generals list:', data);
     generalsData = data.generals;
@@ -195,7 +195,20 @@ function connect() {
     console.log('Recruit config:', data);
     renderRecruitOptions(data);
   });
-  
+
+  socket.on('general:recruited', (data) => {
+    console.log('Recruited:', data);
+    showRecruitResult(data);
+    if (data.isPity) {
+      showSuccess('🎉 触发保底！');
+    }
+  });
+
+  socket.on('general:recruitBatchResult', (data) => {
+    console.log('Batch recruit:', data);
+    showBatchRecruitResult(data);
+  });
+
   socket.on('battle:availableNpcs', (data) => {
     console.log('Available NPCs:', data);
     renderNpcList(data);
@@ -341,14 +354,14 @@ function showGameUI() {
 function switchTab(tabName) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-  
+
   event.target.classList.add('active');
   document.getElementById(tabName + 'Tab').classList.add('active');
-  
+
   if (tabName === 'army' && socket && playerId) {
     socket.emit('army:getStatus', { playerId });
   }
-  
+
   if (tabName === 'battle' && socket && playerId) {
     loadNpcList();
     socket.emit('army:getStatus', { playerId });
@@ -357,7 +370,7 @@ function switchTab(tabName) {
       updateGeneralSelect(generalsData);
     }
   }
-  
+
   if (tabName === 'generals' && socket && playerId) {
     socket.emit('general:getList', { playerId });
     socket.emit('general:getRecruitConfig');
@@ -367,15 +380,15 @@ function switchTab(tabName) {
 // 渲染资源
 function renderResources(resources) {
   console.log('渲染资源:', resources); // 调试用
-  
+
   // 保存资源数据用于本地刷新（深拷贝）
   currentResources = JSON.parse(JSON.stringify(resources));
-  
+
   // 启动本地资源刷新（如果还没启动）
   if (!resourceUpdateInterval) {
     startResourceLocalUpdate();
   }
-  
+
   const container = document.getElementById('resources');
   container.innerHTML = '';
 
@@ -390,10 +403,10 @@ function renderResources(resources) {
     const amount = typeof data === 'object' ? (data.amount || 0) : (data || 0);
     const max = typeof data === 'object' ? (data.max || 1000) : 1000;
     const rate = typeof data === 'object' ? (data.rate || 0) : 0; // 每小时产出
-    
+
     // 计算每秒产出（保留1位小数）
     const ratePerSecond = (rate / 3600).toFixed(1);
-    
+
     const card = document.createElement('div');
     card.className = 'resource-card';
     card.innerHTML = `
@@ -404,7 +417,7 @@ function renderResources(resources) {
     `;
     container.appendChild(card);
   }
-  
+
   // 同时更新全局资源栏
   updateGlobalResources(resources);
 }
@@ -412,25 +425,25 @@ function renderResources(resources) {
 // 启动资源本地刷新（每秒更新显示）
 function startResourceLocalUpdate() {
   if (resourceUpdateInterval) return; // 已经启动了
-  
+
   resourceUpdateInterval = setInterval(() => {
     if (!currentResources) return;
-    
+
     // 每秒根据产出速率增加资源（本地显示）
     for (const [id, data] of Object.entries(currentResources)) {
       const rate = data.rate || 0; // 每小时产出（固定值，服务器决定）
       const perSecond = rate / 3600; // 每秒产出
       const max = data.max || 1000;
-      
+
       // 增加资源（不超过上限）
       data.amount = Math.min(max, (data.amount || 0) + perSecond);
-      
+
       // 更新显示
       const el = document.getElementById(`res-${id}`);
       if (el) {
         el.textContent = Math.floor(data.amount);
       }
-      
+
       // 更新全局资源栏
       const globalEl = document.getElementById(`global${id.charAt(0).toUpperCase() + id.slice(1)}`);
       if (globalEl) {
@@ -443,16 +456,16 @@ function startResourceLocalUpdate() {
 // 更新全局资源栏
 function updateGlobalResources(resources) {
   console.log('更新全局资源栏:', resources); // 调试用
-  
+
   const resourceMap = {
     'wood': 'globalWood',
-    'stone': 'globalStone', 
+    'stone': 'globalStone',
     'food': 'globalFood',
     'iron': 'globalIron',
     'crystal': 'globalCrystal',
     'gold': 'globalGold'
   };
-  
+
   for (const [resId, elementId] of Object.entries(resourceMap)) {
     const element = document.getElementById(elementId);
     if (element && resources[resId]) {
@@ -476,7 +489,7 @@ function renderBuildings(buildings, upgradeQueue = []) {
   }
 
   container.innerHTML = '';
-  
+
   // 建筑分类
   const categories = {
     production: '🌾 资源生产',
@@ -514,17 +527,17 @@ function renderBuildings(buildings, upgradeQueue = []) {
     // 建筑列表
     const listDiv = document.createElement('div');
     listDiv.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px;';
-    
+
     for (const building of catBuildings) {
       const item = document.createElement('div');
       item.className = 'unit-card';
       item.id = `building-${building.id}`;
-      
+
       const canUpgrade = building.level < building.maxLevel;
-      
+
       // 检查是否正在升级
       const upgradingTask = upgradeQueue.find(t => t.buildingTypeId === building.id && !t.completed);
-      
+
       let upgradeHtml = '';
       if (upgradingTask) {
         const progress = Math.min(100, (upgradingTask._progress / upgradingTask.duration) * 100);
@@ -542,10 +555,10 @@ function renderBuildings(buildings, upgradeQueue = []) {
       } else {
         upgradeHtml = '<p style="color:#666;margin-top:10px;">已满级</p>';
       }
-      
+
       const iconPath = getBuildingIcon(building.id);
       const iconHtml = iconPath ? `<img src="${iconPath}" alt="" style="width:48px;height:48px;margin-right:10px;vertical-align:middle;background:rgba(0,0,0,0.3);border-radius:8px;padding:4px;" onerror="this.style.display='none'">` : '';
-      
+
       item.innerHTML = `
         <div style="display:flex;align-items:center;margin-bottom:10px;">
           ${iconHtml}
@@ -557,17 +570,17 @@ function renderBuildings(buildings, upgradeQueue = []) {
         <p style="color:#aaa;font-size:13px;margin-top:8px;line-height:1.4;">${building.description || '暂无介绍'}</p>
         ${upgradeHtml}
       `;
-      
+
       // 点击显示详细信息
       item.style.cursor = 'pointer';
       item.onclick = (e) => {
         if (e.target.tagName === 'BUTTON') return; // 点击按钮时不弹出
         showBuildingDetail(building);
       };
-      
+
       listDiv.appendChild(item);
     }
-    
+
     container.appendChild(listDiv);
   }
 }
@@ -742,7 +755,7 @@ function showBuildingDetail(building) {
   };
 
   const nextLevel = building.level + 1;
-  
+
   showModal({
     title: info.title,
     content: `
@@ -768,27 +781,27 @@ function startBuildingUpdateInterval() {
   if (buildingUpdateInterval) {
     clearInterval(buildingUpdateInterval);
   }
-  
+
   buildingUpdateInterval = setInterval(() => {
     if (!currentBuildingQueue || currentBuildingQueue.length === 0) return;
-    
+
     const now = Date.now();
-    
+
     for (const task of currentBuildingQueue) {
       if (task.completed) continue;
-      
+
       // 计算进度
       const progress = Math.min(100, (task._progress / task.duration) * 100);
       const remaining = Math.max(0, Math.ceil((task.duration - task._progress) / 1000));
-      
+
       // 更新进度条
       const progressEl = document.getElementById(`building-progress-${task.buildingTypeId}`);
       const timeEl = document.getElementById(`building-time-${task.buildingTypeId}`);
-      
+
       if (progressEl) {
         progressEl.style.width = `${progress}%`;
       }
-      
+
       if (timeEl) {
         if (remaining > 0) {
           timeEl.textContent = `升级中... ${remaining}秒`;
@@ -796,7 +809,7 @@ function startBuildingUpdateInterval() {
           timeEl.textContent = '即将完成...';
         }
       }
-      
+
       // 本地模拟进度增长（实际由服务器同步）
       task._progress += 1000; // 每秒增加1000ms
     }
@@ -807,21 +820,21 @@ function startBuildingUpdateInterval() {
 
 function renderArmy(army, maxSize) {
   if (!army) return;
-  
+
   document.getElementById('totalUnits').textContent = army.totalUnits || 0;
   document.getElementById('maxUnits').textContent = maxSize || 50;
   document.getElementById('foodConsumption').textContent = army.foodConsumption || 0;
-  
+
   const morale = army.morale || 100;
   document.getElementById('moraleValue').textContent = morale;
-  
+
   const moraleBar = document.getElementById('moraleBar');
   moraleBar.style.width = morale + '%';
   moraleBar.className = 'morale-fill ' + (morale >= 80 ? 'morale-high' : morale >= 50 ? 'morale-medium' : 'morale-low');
-  
+
   const effect = army.moraleMultiplier >= 1.2 ? '+20%' : army.moraleMultiplier >= 1.1 ? '+10%' : army.moraleMultiplier >= 1.0 ? '正常' : army.moraleMultiplier >= 0.8 ? '-20%' : '-40%';
   document.getElementById('moraleEffect').textContent = effect;
-  
+
   if (army.trainingQueue && army.trainingQueue.length > 0) {
     document.getElementById('trainingQueue').style.display = 'block';
     updateTrainingQueue(army.trainingQueue);
@@ -836,18 +849,18 @@ function renderFormations(formations) {
     container.innerHTML = '<p style="text-align:center;color:#888;">暂无编队信息</p>';
     return;
   }
-  
+
   container.innerHTML = '';
   for (const f of formations) {
     const div = document.createElement('div');
     div.className = 'formation-card';
-    
+
     let unitsText = '';
     for (const [unitId, count] of Object.entries(f.units)) {
       const unitName = unitTypesData?.[unitId.toUpperCase()]?.name || unitId;
       unitsText += `${unitName}: ${count} `;
     }
-    
+
     div.innerHTML = `
       <h4>${f.name} (战力: ${f.power})</h4>
       <p>${unitsText || '无士兵'}</p>
@@ -859,15 +872,15 @@ function renderFormations(formations) {
 function renderTrainingPreview(data) {
   const preview = data.preview;
   if (!preview) return;
-  
+
   const div = document.getElementById('trainingPreview');
-  
+
   const resourceNames = { wood: '木材', stone: '石材', food: '粮食', iron: '铁矿', crystal: '水晶', gold: '金币', fish_product: '鱼产品', fruit: '水果', premium_food: '精品食材' };
   let costText = '';
   for (const [res, amount] of Object.entries(preview.cost)) {
     costText += `${resourceNames[res] || res}: ${amount} `;
   }
-  
+
   div.innerHTML = `
     <div class="unit-card">
       <h4>训练预览: ${preview.unitName} × ${preview.count}</h4>
@@ -882,18 +895,18 @@ function renderTrainingPreview(data) {
 function updateTrainingQueue(queue) {
   const div = document.getElementById('trainingQueue');
   const list = document.getElementById('queueList');
-  
+
   if (!queue || queue.length === 0) {
     div.style.display = 'none';
     return;
   }
-  
+
   div.style.display = 'block';
   list.innerHTML = '';
-  
+
   for (const task of queue) {
     const unitName = unitTypesData?.[task.unitTypeId.toUpperCase()]?.name || task.unitTypeId;
-    
+
     // 使用服务器提供的进度计算（考虑时间加速）
     let remaining = 0;
     if (task._progress !== undefined) {
@@ -904,7 +917,7 @@ function updateTrainingQueue(queue) {
       // 回退：使用真实时间计算
       remaining = Math.max(0, Math.ceil((task.startTime + task.duration - Date.now()) / 1000));
     }
-    
+
     const item = document.createElement('div');
     item.innerHTML = `${unitName} × ${task.count} - 剩余${remaining}秒`;
     list.appendChild(item);
@@ -915,33 +928,33 @@ function updateTrainingQueue(queue) {
 function updateUnitTypeSelect(unitTypes) {
   const select = document.getElementById('trainUnitType');
   if (!select) return;
-  
+
   select.innerHTML = '';
-  
+
   // 按类别分组
   const categories = { basic: '基础', advanced: '进阶', elite: '精英', special: '特殊' };
-  
+
   for (const [catKey, catName] of Object.entries(categories)) {
     const group = document.createElement('optgroup');
     group.label = catName + '兵种';
-    
+
     const units = Object.values(unitTypes).filter(u => u.category === catKey);
-    
+
     for (const unit of units) {
       const option = document.createElement('option');
       option.value = unit.id;
-      
+
       // 构建消耗描述
       const costParts = [];
       for (const [res, amount] of Object.entries(unit.training.cost)) {
         const resNames = { wood: '木', stone: '石', food: '粮', iron: '铁', crystal: '晶', gold: '金', fish_product: '鱼', fruit: '果', premium_food: '精' };
         costParts.push(`${resNames[res] || res}×${amount}`);
       }
-      
+
       option.textContent = `${unit.name} (${costParts.join('+')})`;
       group.appendChild(option);
     }
-    
+
     if (units.length > 0) {
       select.appendChild(group);
     }
@@ -952,7 +965,7 @@ function updateUnitTypeSelect(unitTypes) {
 
 function updateMyBattleInfo(army) {
   if (!army) return;
-  
+
   // 计算总战力
   let power = 0;
   if (army.formations && army.formations.default) {
@@ -962,9 +975,9 @@ function updateMyBattleInfo(army) {
       power += count * 20;
     }
   }
-  
+
   document.getElementById('myPower').textContent = power;
-  
+
   // 军队状态
   const statusMap = {
     idle: '空闲',
@@ -980,37 +993,37 @@ function loadNpcList() {
     showError('请先连接服务器');
     return;
   }
-  
+
   socket.emit('battle:getAvailableNpcs', { playerId });
 }
 
 function renderNpcList(npcs) {
   const container = document.getElementById('npcList');
   container.innerHTML = '';
-  
+
   const categoryNames = {
     wild: '野生怪物',
     outpost: 'NPC据点',
     city: 'NPC城邦'
   };
-  
+
   const difficultyNames = {
     easy: '简单',
     medium: '中等',
     hard: '困难',
     extreme: '极难'
   };
-  
+
   for (const npc of npcs) {
     const card = document.createElement('div');
     card.className = `npc-card ${npc.difficulty} ${npc.recommended ? 'recommended' : ''}`;
-    
+
     const btnText = npc.recommended ? '发起攻击' : '⚠️ 强行攻击';
     const btnClass = npc.recommended ? 'btn-danger' : 'btn-danger';
-    const riskBadge = npc.recommended 
-      ? '<span class="difficulty-badge" style="background:#4CAF50;">推荐</span>' 
+    const riskBadge = npc.recommended
+      ? '<span class="difficulty-badge" style="background:#4CAF50;">推荐</span>'
       : '<span class="difficulty-badge" style="background:#f44336;">高风险</span>';
-    
+
     card.innerHTML = `
       <h4>
         ${npc.name} (Lv.${npc.level})
@@ -1023,7 +1036,7 @@ function renderNpcList(npcs) {
         ${btnText}
       </button>
     `;
-    
+
     container.appendChild(card);
   }
 }
@@ -1032,16 +1045,16 @@ function showBattleResult(data) {
   const panel = document.getElementById('battleResultPanel');
   const resultDiv = document.getElementById('battleResult');
   const logDiv = document.getElementById('battleLog');
-  
+
   panel.style.display = 'block';
-  
+
   const result = data.result;
   const isVictory = result.winner === 'attacker';
-  
+
   // 战斗结果摘要
   const resourceNames = { wood: '木材', stone: '石材', food: '粮食', iron: '铁矿', crystal: '水晶', gold: '金币', fish_product: '鱼产品', fruit: '水果', premium_food: '精品食材' };
   const unitNames = { infantry: '步兵', archer: '弓兵', cavalry: '骑兵', mage: '魔法兵' };
-  
+
   let lootText = '';
   if (result.loot) {
     lootText = '<h4>战利品:</h4><ul>';
@@ -1050,7 +1063,7 @@ function showBattleResult(data) {
     }
     lootText += '</ul>';
   }
-  
+
   let casualtiesText = '<h4>伤亡情况:</h4><ul>';
   for (const [unit, count] of Object.entries(result.casualties.attacker)) {
     if (count > 0) {
@@ -1058,7 +1071,7 @@ function showBattleResult(data) {
     }
   }
   casualtiesText += '</ul>';
-  
+
   resultDiv.innerHTML = `
     <div class="${isVictory ? 'victory' : 'defeat'}">
       ${isVictory ? '🎉 胜利！' : '💀 战败...'}
@@ -1070,7 +1083,7 @@ function showBattleResult(data) {
     ${isVictory ? lootText : ''}
     ${casualtiesText}
   `;
-  
+
   // 战斗日志
   logDiv.innerHTML = '';
   if (result.battleLog) {
@@ -1081,7 +1094,7 @@ function showBattleResult(data) {
       logDiv.appendChild(entry);
     }
   }
-  
+
   // 更新资源和军队显示
   if (data.resources) {
     renderResources(data.resources);
@@ -1090,7 +1103,7 @@ function showBattleResult(data) {
     renderArmy(data.army);
     updateMyBattleInfo(data.army);
   }
-  
+
   // 滚动到结果面板
   panel.scrollIntoView({ behavior: 'smooth' });
 }
@@ -1131,7 +1144,7 @@ function upgradeBuilding(buildingTypeId) {
 function updateBuildingQueue(queue) {
   currentBuildingQueue = queue || [];
   console.log('Building upgrade queue:', queue);
-  
+
   // 触发重新渲染建筑（显示进度）
   if (empireData && empireData.buildings) {
     renderBuildings(empireData.buildings, currentBuildingQueue);
@@ -1159,10 +1172,10 @@ function previewTraining() {
     showError('请先连接服务器');
     return;
   }
-  
+
   const unitTypeId = document.getElementById('trainUnitType').value;
   const count = parseInt(document.getElementById('trainCount').value);
-  
+
   socket.emit('army:trainingPreview', { playerId, unitTypeId, count });
 }
 
@@ -1171,25 +1184,25 @@ function startTraining() {
     showError('请先连接服务器');
     return;
   }
-  
+
   const unitTypeId = document.getElementById('trainUnitType').value;
   const count = parseInt(document.getElementById('trainCount').value);
-  
+
   // 从 unitTypesData 获取成本
   const unitType = unitTypesData?.[unitTypeId.toUpperCase()];
   if (!unitType) {
     showError('兵种数据未加载');
     return;
   }
-  
+
   const baseCost = unitType.training?.cost || {};
   const totalCost = {};
   for (const [res, amount] of Object.entries(baseCost)) {
     totalCost[res] = amount * count;
   }
-  
+
   const unitName = unitType.name || unitTypeId;
-  
+
   showCostConfirm(`训练${unitName} x${count}`, totalCost, () => {
     socket.emit('army:train', { playerId, unitTypeId, count });
   }, null, currentResources);
@@ -1203,19 +1216,19 @@ function renderGenerals(data) {
     container.innerHTML = '<p style="text-align:center;color:#888;">暂无将领，请前往招募</p>';
     return;
   }
-  
+
   container.innerHTML = '';
   const rarityNames = {
     common: '普通',
-    rare: '稀有', 
+    rare: '稀有',
     epic: '史诗',
     legendary: '传说'
   };
-  
+
   for (const general of data.generals) {
     const card = document.createElement('div');
     card.className = `general-card ${general.rarity}`;
-    
+
     // 技能信息
     let skillsHtml = '';
     if (general.skills && general.skills.length > 0) {
@@ -1230,10 +1243,10 @@ function renderGenerals(data) {
       }
       skillsHtml += '</div>';
     }
-    
+
     // 经验条
     const expPercent = (general.exp / general.expToNext) * 100;
-    
+
     card.innerHTML = `
       <div class="general-name">
         ${general.name}
@@ -1254,7 +1267,7 @@ function renderGenerals(data) {
         <button onclick="assignGeneral('${general.id}', 'default')">分配至默认编队</button>
       </div>
     `;
-    
+
     container.appendChild(card);
   }
 }
@@ -1262,10 +1275,10 @@ function renderGenerals(data) {
 function renderGeneralTemplates(templates) {
   const container = document.getElementById('generalTemplates');
   if (!templates) return;
-  
+
   container.innerHTML = '';
   const rarityNames = { common: '普通', rare: '稀有', epic: '史诗', legendary: '传说' };
-  
+
   for (const template of templates) {
     const div = document.createElement('div');
     div.className = `general-card ${template.rarity}`;
@@ -1280,48 +1293,56 @@ function renderGeneralTemplates(templates) {
   }
 }
 
-function renderRecruitOptions(config) {
+function renderRecruitOptions(data) {
   const container = document.getElementById('recruitOptions');
-  if (!config) return;
-  
+  if (!data || !data.options) return;
+
   container.innerHTML = '';
-  const typeNames = { basic: '普通招募', advanced: '高级招募', legendary: '传说招募' };
-  
+  const typeNames = { BASIC: '普通招募', ADVANCED: '高级招募', PREMIUM: '至尊招募' };
+
   const resourceNames = {
     wood: '木材',
     stone: '石材',
     food: '粮食',
     iron: '铁矿',
     crystal: '水晶',
-    gold: '金币'
+    gold: '金币',
+    fish_product: '鱼产品',
+    fruit: '水果',
+    premium_food: '精品食材'
   };
-  
-  for (const [type, cfg] of Object.entries(config)) {
+
+  for (const cfg of data.options) {
     const div = document.createElement('div');
     div.className = 'recruit-option';
-    
+
     // 消耗显示
     let costHtml = '';
     for (const [res, amount] of Object.entries(cfg.cost)) {
       costHtml += `${resourceNames[res] || res}: ${amount} `;
     }
-    
-    // 概率显示
-    const prob = cfg.probabilities;
-    const probHtml = `
-      传说: ${(prob.legendary * 100).toFixed(0)}% 
-      史诗: ${(prob.epic * 100).toFixed(0)}% 
-      稀有: ${(prob.rare * 100).toFixed(0)}% 
-      普通: ${(prob.common * 100).toFixed(0)}%
-    `;
-    
+
+    // 保底显示
+    let pityHtml = '';
+    if (cfg.guaranteedEpic) {
+      pityHtml += '<p>保底: 10连必出史诗</p>';
+    }
+    if (cfg.guaranteedLegendary) {
+      pityHtml += `<p>保底: ${cfg.guaranteedLegendary}抽必出传说</p>`;
+    }
+
     div.innerHTML = `
-      <h4>${typeNames[type]}</h4>
+      <h4>${typeNames[cfg.id] || cfg.name}</h4>
+      <p>${cfg.description}</p>
       <div class="recruit-cost">消耗: ${costHtml}</div>
-      <button class="btn-secondary" onclick="recruitGeneral('${type}')">立即招募</button>
-      <div class="recruit-probability">概率: ${probHtml}</div>
+      <button class="btn-secondary" onclick="recruitGeneral('${cfg.id}')">招募</button>
+      <button onclick="recruitBatch('${cfg.id}')">10连抽(9折)</button>
+      <div class="recruit-probability">
+        概率: 普通60% 稀有25% 史诗12% 传说3%
+      </div>
+      ${pityHtml}
     `;
-    
+
     container.appendChild(div);
   }
 }
@@ -1331,23 +1352,17 @@ function recruitGeneral(type) {
     showError('请先连接服务器');
     return;
   }
-  
-  const costs = {
-    basic: { gold: 100 },
-    advanced: { gold: 500, crystal: 10 },
-    legendary: { gold: 2000, crystal: 100 }
-  };
-  
-  const names = {
-    basic: '普通招募',
-    advanced: '高级招募',
-    legendary: '传说招募'
-  };
-  
-  const cost = costs[type];
-  showCostConfirm(names[type], cost, () => {
-    socket.emit('general:recruit', { playerId, recruitType: type });
-  }, null, currentResources);
+
+  socket.emit('general:recruit', { playerId, recruitType: type });
+}
+
+function recruitBatch(type) {
+  if (!socket || !playerId) {
+    showError('请先连接服务器');
+    return;
+  }
+
+  socket.emit('general:recruitBatch', { playerId, recruitType: type, count: 10 });
 }
 
 function showRecruitResult(data) {
@@ -1357,11 +1372,18 @@ function showRecruitResult(data) {
   panel.style.display = 'block';
   
   const rarityNames = { common: '普通', rare: '稀有', epic: '史诗', legendary: '传说' };
+  const rarityColors = { 
+    common: '#9e9e9e', 
+    rare: '#2196F3', 
+    epic: '#9c27b0', 
+    legendary: '#ffd700' 
+  };
   const general = data.general;
   
   resultDiv.innerHTML = `
     <div class="general-card ${general.rarity}" style="text-align:center;">
-      <h2 style="color:${data.rarity.color};">🎉 招募成功！</h2>
+      <h2 style="color:${rarityColors[general.rarity]};">🎉 招募成功！</h2>
+      ${data.isPity ? '<p style="color:#ff9800;">✨ 保底触发</p>' : ''}
       <div class="general-name" style="font-size:24px; margin:20px 0;">
         ${general.name}
         <span class="general-rarity rarity-${general.rarity}">${rarityNames[general.rarity]}</span>
@@ -1371,7 +1393,59 @@ function showRecruitResult(data) {
         <span>🛡️ 防御: ${general.stats.defense}</span>
         <span>📖 智力: ${general.stats.intelligence}</span>
       </div>
-      ${general.skills.length > 0 ? `<p style="margin-top:15px;"><strong>技能: </strong>${general.skills.map(s => s.name).join(', ')}</p>` : ''}
+      ${general.skills?.length > 0 ? `<p style="margin-top:15px;"><strong>技能: </strong>${general.skills.map(s => s.name).join(', ')}</p>` : ''}
+    </div>
+  `;
+  
+  panel.scrollIntoView({ behavior: 'smooth' });
+}
+
+function showBatchRecruitResult(data) {
+  const panel = document.getElementById('recruitResultPanel');
+  const resultDiv = document.getElementById('recruitResult');
+  
+  panel.style.display = 'block';
+  
+  const rarityNames = { common: '普通', rare: '稀有', epic: '史诗', legendary: '传说' };
+  const rarityColors = { 
+    common: '#9e9e9e', 
+    rare: '#2196F3', 
+    epic: '#9c27b0', 
+    legendary: '#ffd700' 
+  };
+  
+  let resultsHtml = '';
+  for (const item of data.results) {
+    const general = item.general;
+    resultsHtml += `
+      <div class="general-card ${general.rarity}" style="margin:10px 0; padding:10px;">
+        <span style="color:${rarityColors[general.rarity]}; font-weight:bold;">
+          ${general.name} [${rarityNames[general.rarity]}]
+        </span>
+        ${item.isPity ? '<span style="color:#ff9800;"> (保底)</span>' : ''}
+      </div>
+    `;
+  }
+  
+  // 统计
+  const rarityCount = {};
+  for (const item of data.results) {
+    rarityCount[item.general.rarity] = (rarityCount[item.general.rarity] || 0) + 1;
+  }
+  
+  let statsHtml = '<p><strong>统计: </strong>';
+  for (const [rarity, count] of Object.entries(rarityCount)) {
+    statsHtml += `${rarityNames[rarity]}×${count} `;
+  }
+  statsHtml += '</p>';
+  
+  resultDiv.innerHTML = `
+    <div style="text-align:center;">
+      <h2>🎉 10连招募结果</h2>
+      ${statsHtml}
+      <div style="max-height:300px; overflow-y:auto; margin:15px 0;">
+        ${resultsHtml}
+      </div>
     </div>
   `;
   
@@ -1387,27 +1461,27 @@ function assignGeneral(generalId, formationId) {
     showError('请先连接服务器');
     return;
   }
-  
+
   socket.emit('general:assign', { playerId, generalId, formationId });
 }
 
 function updateGeneralSelect(data) {
   const select = document.getElementById('battleGeneralSelect');
   if (!select || !data || !data.generals) return;
-  
+
   // 保存当前选择
   const currentValue = select.value;
-  
+
   // 重新填充选项
   select.innerHTML = '<option value="">不携带将领</option>';
-  
+
   for (const general of data.generals) {
     const option = document.createElement('option');
     option.value = general.id;
     option.textContent = `${general.name} (Lv.${general.level})`;
     select.appendChild(option);
   }
-  
+
   // 恢复选择
   if (currentValue) {
     select.value = currentValue;
@@ -1424,64 +1498,64 @@ function showCostConfirm(title, cost, onConfirm, extraInfo = null, currentResour
   // 资源名称映射
   const resourceNames = {
     wood: '木材',
-    stone: '石材', 
+    stone: '石材',
     food: '粮食',
     iron: '铁矿',
     crystal: '水晶',
     gold: '金币'
   };
-  
+
   // 构建资源消耗详情
   let costHtml = '<div style="margin: 15px 0; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 8px;">';
-  
+
   // 如果有额外信息，先显示
   if (extraInfo) {
     costHtml += `<p style="margin-bottom: 10px; color: #4CAF50; font-weight: bold;">${extraInfo}</p>`;
   }
-  
+
   costHtml += '<h4 style="margin-bottom: 10px; color: #ffd700;">资源消耗:</h4><ul style="list-style: none; padding: 0;">';
-  
+
   // 检查资源是否足够
   let hasEnoughResources = true;
-  
+
   for (const [resource, amount] of Object.entries(cost)) {
     const resourceName = resourceNames[resource] || resource;
     const currentAmount = currentResources?.[resource]?.amount || currentResources?.[resource] || 0;
     const isEnough = currentAmount >= amount;
-    
+
     if (!isEnough) hasEnoughResources = false;
-    
+
     const color = isEnough ? '#4CAF50' : '#f44336'; // 绿色或红色
     const icon = isEnough ? '✓' : '✗';
-    
+
     costHtml += `<li style="padding: 5px 0; display: flex; justify-content: space-between; align-items: center;">
       <span>${resourceName}:</span>
       <span style="color: ${color}; font-weight: bold;">${icon} -${amount} <span style="font-size: 12px; color: #888;">(拥有: ${Math.floor(currentAmount)})</span></span>
     </li>`;
   }
-  
+
   // 添加人口消耗
   if (populationCost > 0) {
     const currentPop = empireData?.population?.current || 0;
     const isEnoughPop = currentPop >= populationCost;
     if (!isEnoughPop) hasEnoughResources = false;
-    
+
     const popColor = isEnoughPop ? '#4CAF50' : '#f44336';
     const popIcon = isEnoughPop ? '✓' : '✗';
-    
+
     costHtml += `<li style="padding: 5px 0; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,215,0,0.3); margin-top: 8px; padding-top: 8px;">
       <span>👥 人口:</span>
       <span style="color: ${popColor}; font-weight: bold;">${popIcon} -${populationCost} <span style="font-size: 12px; color: #888;">(可用: ${currentPop})</span></span>
     </li>`;
   }
-  
+
   costHtml += '</ul></div>';
-  
+
   // 如果有资源不足，显示警告
   if (!hasEnoughResources) {
     costHtml += '<p style="color: #f44336; font-weight: bold; margin-top: 10px;">⚠️ 资源不足！</p>';
   }
-  
+
   // 创建弹窗
   const modal = document.createElement('div');
   modal.style.cssText = `
@@ -1496,7 +1570,7 @@ function showCostConfirm(title, cost, onConfirm, extraInfo = null, currentResour
     align-items: center;
     z-index: 10000;
   `;
-  
+
   modal.innerHTML = `
     <div style="
       background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
@@ -1509,22 +1583,22 @@ function showCostConfirm(title, cost, onConfirm, extraInfo = null, currentResour
     ">
       <h3 style="color: #ffd700; margin-bottom: 15px;">${title}</h3>
       ${costHtml}
-      
+
       <p style="color: #888; font-size: 14px; margin: 15px 0;">${hasEnoughResources ? '确定要执行此操作吗？' : '资源不足，无法执行此操作'}</p>
-      
+
       <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: center;">
-        <button onclick="this.closest('.cost-confirm-modal').remove()" 
+        <button onclick="this.closest('.cost-confirm-modal').remove()"
                 style="background: #666; padding: 12px 30px;">取消</button>
-        <button id="costConfirmBtn" 
+        <button id="costConfirmBtn"
                 style="background: ${hasEnoughResources ? '#4CAF50' : '#666'}; padding: 12px 30px; ${!hasEnoughResources ? 'cursor: not-allowed; opacity: 0.5;' : ''}"
                 ${!hasEnoughResources ? 'disabled' : ''}>确定</button>
       </div>
     </div>
   `;
-  
+
   modal.className = 'cost-confirm-modal';
   document.body.appendChild(modal);
-  
+
   // 绑定确认按钮（只在资源足够时绑定）
   if (hasEnoughResources) {
     document.getElementById('costConfirmBtn').addEventListener('click', () => {
@@ -1540,7 +1614,7 @@ function startBattle(npcTypeId, isRecommended = true) {
     showError('请先连接服务器');
     return;
   }
-  
+
   // 高风险警告 - 使用自定义弹窗
   if (!isRecommended) {
     showConfirmModal(
@@ -1555,7 +1629,7 @@ function startBattle(npcTypeId, isRecommended = true) {
     );
     return;
   }
-  
+
   // 推荐目标直接执行
   proceedBattle(npcTypeId);
 }
@@ -1567,18 +1641,18 @@ function proceedBattle(npcTypeId) {
   // 获取选择的将领
   const generalSelect = document.getElementById('battleGeneralSelect');
   const selectedGeneralId = generalSelect ? generalSelect.value : null;
-  
+
   // 查找将领信息
   let generalInfo = null;
   if (selectedGeneralId && generalsData && generalsData.generals) {
     generalInfo = generalsData.generals.find(g => g.id === selectedGeneralId);
   }
-  
+
   // 显示攻击确认
-  const confirmMsg = generalInfo 
+  const confirmMsg = generalInfo
     ? `确定要让 ${generalInfo.name} 率军攻打吗？战斗中可能有士兵伤亡！`
     : '确定要发起攻击吗？战斗中可能有士兵伤亡！';
-  
+
   showConfirmModal(
     '确认出征',
     confirmMsg,
@@ -1597,12 +1671,12 @@ function proceedBattle(npcTypeId) {
 function executeBattleStart(npcTypeId, generalInfo) {
   const generalSelect = document.getElementById('battleGeneralSelect');
   const generalId = generalSelect ? generalSelect.value : null;
-  
-  socket.emit('battle:start', { 
-    playerId, 
-    npcTypeId, 
+
+  socket.emit('battle:start', {
+    playerId,
+    npcTypeId,
     formationId: 'default',
-    generalId: generalId 
+    generalId: generalId
   });
 }
 
@@ -1616,7 +1690,7 @@ let tasksData = null;
 
 function renderTasks(data) {
   if (!data) return;
-  
+
   // 主线任务
   const mainContainer = document.getElementById('mainTasks');
   mainContainer.innerHTML = '';
@@ -1627,7 +1701,7 @@ function renderTasks(data) {
   } else {
     mainContainer.innerHTML = '<p style="text-align:center;color:#888;">暂无主线任务</p>';
   }
-  
+
   // 日常任务
   const dailyContainer = document.getElementById('dailyTasks');
   dailyContainer.innerHTML = '';
@@ -1638,7 +1712,7 @@ function renderTasks(data) {
   } else {
     dailyContainer.innerHTML = '<p style="text-align:center;color:#888;">暂无日常任务</p>';
   }
-  
+
   // 成就任务
   const achievementContainer = document.getElementById('achievementTasks');
   achievementContainer.innerHTML = '';
@@ -1655,13 +1729,13 @@ function createTaskCard(task) {
   const card = document.createElement('div');
   card.className = 'unit-card';
   card.style.borderLeft = task.status === 'completed' ? '4px solid #4CAF50' : '4px solid #ffd700';
-  
+
   const statusText = {
     pending: '进行中',
     completed: '已完成（可领取）',
     claimed: '已领取'
   };
-  
+
   let progressHtml = '';
   if (task.progress) {
     progressHtml = '<div style="margin-top:10px;font-size:13px;color:#888;">';
@@ -1678,14 +1752,14 @@ function createTaskCard(task) {
     }
     progressHtml += '</div>';
   }
-  
+
   let rewardsHtml = '<div style="margin-top:10px;">奖励: ';
   const resourceNames = { wood: '木材', stone: '石材', food: '粮食', iron: '铁矿', crystal: '水晶', gold: '金币', exp: '经验' };
   for (const [res, amount] of Object.entries(task.rewards)) {
     rewardsHtml += `${resourceNames[res] || res}:${amount} `;
   }
   rewardsHtml += '</div>';
-  
+
   card.innerHTML = `
     <h4>${task.title} <span style="font-size:12px;color:#888;">(${statusText[task.status]})</span></h4>
     <p style="color:#aaa;font-size:14px;">${task.description}</p>
@@ -1693,7 +1767,7 @@ function createTaskCard(task) {
     ${rewardsHtml}
     ${task.status === 'completed' ? `<button onclick="claimTaskReward('${task.id}')" style="margin-top:10px;">领取奖励</button>` : ''}
   `;
-  
+
   return card;
 }
 
@@ -1702,7 +1776,7 @@ function claimTaskReward(taskId) {
     showError('请先连接服务器');
     return;
   }
-  
+
   socket.emit('task:claimReward', { playerId, taskId });
 }
 
@@ -1711,14 +1785,14 @@ const originalSwitchTab = switchTab;
 switchTab = function(tabName) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-  
+
   event.target.classList.add('active');
   document.getElementById(tabName + 'Tab').classList.add('active');
-  
+
   if (tabName === 'army' && socket && playerId) {
     socket.emit('army:getStatus', { playerId });
   }
-  
+
   if (tabName === 'battle' && socket && playerId) {
     loadNpcList();
     socket.emit('army:getStatus', { playerId });
@@ -1726,12 +1800,12 @@ switchTab = function(tabName) {
       updateGeneralSelect(generalsData);
     }
   }
-  
+
   if (tabName === 'generals' && socket && playerId) {
     socket.emit('general:getList', { playerId });
     socket.emit('general:getRecruitConfig');
   }
-  
+
   if (tabName === 'tasks' && socket && playerId) {
     socket.emit('task:getList', { playerId });
   }
@@ -1741,14 +1815,14 @@ switchTab = function(tabName) {
 
 function updateTimeDisplay(timeData) {
   currentTimeData = timeData;
-  
+
   const gameDateEl = document.getElementById('gameDate');
   const timeOfDayEl = document.getElementById('timeOfDay');
-  
+
   if (gameDateEl) {
     gameDateEl.textContent = timeData.gameDate || '2026年 2月 13日';
   }
-  
+
   if (timeOfDayEl) {
     // 显示时间段 + 现实时分秒
     const timeOfDay = timeData.timeOfDayName || '☀️ 早晨';
@@ -1761,7 +1835,7 @@ function updateTimeDisplay(timeData) {
 function updateStaminaDisplay(staminaData) {
   const currentEl = document.getElementById('globalStamina');
   const maxEl = document.getElementById('maxStamina');
-  
+
   if (currentEl) {
     currentEl.textContent = staminaData.current || 0;
     // 体力低时变红色
@@ -1771,7 +1845,7 @@ function updateStaminaDisplay(staminaData) {
       currentEl.style.color = '';
     }
   }
-  
+
   if (maxEl) {
     maxEl.textContent = staminaData.max || 100;
   }
@@ -1781,7 +1855,7 @@ function updateStaminaDisplay(staminaData) {
 function updatePopulationDisplay(popData) {
   const currentEl = document.getElementById('globalPopulation');
   const maxEl = document.getElementById('maxPopulation');
-  
+
   if (currentEl) {
     currentEl.textContent = popData.current || 0;
     // 人口不足时变红色
@@ -1791,7 +1865,7 @@ function updatePopulationDisplay(popData) {
       currentEl.style.color = '';
     }
   }
-  
+
   if (maxEl) {
     maxEl.textContent = popData.max || 0;
   }
@@ -1802,21 +1876,21 @@ function startTimeUpdateInterval() {
   if (timeUpdateInterval) {
     clearInterval(timeUpdateInterval);
   }
-  
+
   // 每秒更新一次时间显示
   timeUpdateInterval = setInterval(() => {
     if (!currentTimeData) return;
-    
+
     // 使用现实时间的时分秒，但保持游戏日期
     const now = new Date();
     const realTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-    
+
     // 更新显示
     const timeOfDayEl = document.getElementById('timeOfDay');
     if (timeOfDayEl && currentTimeData.timeOfDayName) {
       timeOfDayEl.textContent = `${currentTimeData.timeOfDayName} ${realTime}`;
     }
-    
+
     // 每10秒向服务器请求同步一次游戏日期
     if (now.getSeconds() % 10 === 0 && socket && playerId) {
       socket.emit('time:get', { playerId });
