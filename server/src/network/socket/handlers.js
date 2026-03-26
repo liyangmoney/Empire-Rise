@@ -52,12 +52,7 @@ export function registerSocketHandlers(io, gameWorld) {
 
       // 检查并放置城堡到地图上
       let castlePosition = null;
-      if (gameWorld.worldMap) {
-        castlePosition = gameWorld.worldMap.getCastle(playerId);
-        if (!castlePosition) {
-          castlePosition = gameWorld.worldMap.placeCastle(playerId, empire.name);
-        }
-      }
+      // 地图系统已删除，城堡位置不再使用
 
       socket.emit('empire:init', {
         playerId,
@@ -521,3 +516,87 @@ export function registerSocketHandlers(io, gameWorld) {
       socket.emit('battle:result', battle.getResult());
     });
 
+    socket.on('disconnect', () => {
+      console.log(`👋 Client disconnected: ${socket.id}`);
+    });
+  });
+}
+
+function createNewEmpire(playerId, playerName, socketId, io) {
+  const empire = {
+    id: playerId,
+    name: `${playerName}的帝国`,
+    playerName,
+    socketId,
+    _io: io,
+    createdAt: Date.now(),
+    resources: new ResourceComponent(),
+    buildings: new BuildingComponent(),
+    army: new ArmyComponent(),
+    generals: new GeneralComponent(),
+    tasks: new TaskComponent(),
+    time: new TimeComponent(),
+    stamina: new StaminaComponent(), // 体力系统
+    population: new PopulationComponent(), // 人口系统
+    tech: new TechComponent(), // 科技系统
+  };
+
+  // 添加初始建筑
+  // 添加初始建筑
+  empire.buildings.add('warehouse_basic');
+  empire.buildings.add('lumber_mill');
+  empire.buildings.add('farm');
+  empire.buildings.add('quarry');
+  empire.buildings.add('iron_mine');
+  empire.buildings.add('crystal_mine');
+  empire.buildings.add('barracks');
+  empire.buildings.add('hospital');
+  empire.buildings.add('house');
+  empire.buildings.add('blacksmith');
+  empire.buildings.add('wall');         // 城墙
+  empire.buildings.add('tower');        // 箭塔
+  empire.buildings.add('market');       // 市场
+  empire.buildings.add('fishery');      // 鱼塘
+  empire.buildings.add('orchard');      // 果园
+  empire.buildings.add('stables');      // 马厩
+  empire.buildings.add('arsenal');      // 军械库
+  empire.buildings.add('tavern');       // 酒馆
+  empire.buildings.add('watchtower');   // 瞭望塔
+  empire.buildings.add('moat');         // 护城河
+  
+  // 设置初始人口上限（1级民居 = 50人口）
+  const houseType = BUILDING_TYPES.HOUSE;
+  if (houseType && houseType.populationBonus) {
+    empire.population.addMax(houseType.populationBonus);
+  }
+  // 初始人口填满
+  empire.population.add(empire.population.max);
+  
+  empire.resources.add('wood', 500);
+  empire.resources.add('stone', 300);
+  empire.resources.add('food', 400);
+  empire.resources.add('gold', 200);
+  empire.resources.add('crystal', 10);
+  
+  // 根据建筑等级设置产出速率（从建筑配置读取）
+  const lumberMill = BUILDING_TYPES.LUMBER_MILL;
+  const farm = BUILDING_TYPES.FARM;
+  const quarry = BUILDING_TYPES.QUARRY;
+  const ironMine = BUILDING_TYPES.IRON_MINE;
+  
+  if (lumberMill) empire.resources.setProductionRate('wood', lumberMill.outputBase);
+  if (farm) empire.resources.setProductionRate('food', farm.outputBase);
+  if (quarry) empire.resources.setProductionRate('stone', quarry.outputBase);
+  if (ironMine) empire.resources.setProductionRate('iron', ironMine.outputBase);
+
+  return empire;
+}
+
+/**
+ * 格式化时间显示
+ */
+function formatDuration(seconds) {
+  if (seconds < 60) return `${Math.ceil(seconds)}秒`;
+  if (seconds < 3600) return `${Math.ceil(seconds / 60)}分钟`;
+  return `${Math.floor(seconds / 3600)}小时${Math.ceil((seconds % 3600) / 60)}分钟`;
+}
