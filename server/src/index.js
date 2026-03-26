@@ -7,7 +7,6 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { registerSocketHandlers } from './network/socket/handlers.js';
 import { GameLoop } from './core/systems/GameLoop.js';
-import { WorldMapComponent } from './core/components/WorldMapComponent.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
@@ -35,8 +34,7 @@ const gameWorld = {
   players: new Map(),
   empires: new Map(),
   npcs: new Map(),
-  tick: 0,
-  worldMap: new WorldMapComponent() // 初始化世界地图
+  tick: 0
 };
 
 // 注册 Socket 事件处理器
