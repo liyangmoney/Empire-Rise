@@ -446,6 +446,7 @@ export function registerSocketHandlers(io, gameWorld) {
           general: result.general,
           isPity: result.isPity,
           pityCounters: result.pityCounters,
+          resources: empire.resources.getSnapshot(), // 添加资源更新
         });
       } else {
         socket.emit(SOCKET_EVENTS.S_ERROR, { message: result.error });
@@ -465,6 +466,7 @@ export function registerSocketHandlers(io, gameWorld) {
           results: result.results,
           totalCost: result.totalCost,
           pityCounters: result.pityCounters,
+          resources: empire.resources.getSnapshot(), // 添加资源更新
         });
       } else {
         socket.emit(SOCKET_EVENTS.S_ERROR, { message: result.error });

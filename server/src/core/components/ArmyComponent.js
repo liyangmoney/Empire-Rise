@@ -328,15 +328,22 @@ export class ArmyComponent {
       moraleMultiplier: this.getMoraleMultiplier(),
       resourceConsumption: this.calculateResourceConsumption(),
       foodConsumption: this.calculateFoodConsumption(), // 兼容旧代码
-      trainingQueue: this.trainingQueue.map(t => ({
-        id: t.id,
-        unitTypeId: t.unitTypeId,
-        unitName: t.unitName,
-        count: t.count,
-        category: t.category,
-        progress: Math.min(100, Math.round(((Date.now() - t.startTime) / t.duration) * 100)),
-        completed: t.completed
-      })),
+      trainingQueue: this.trainingQueue.map(t => {
+        const elapsed = Date.now() - t.startTime;
+        const _progress = Math.min(t.duration, elapsed); // 已进行的毫秒数
+        return {
+          id: t.id,
+          unitTypeId: t.unitTypeId,
+          unitName: t.unitName,
+          count: t.count,
+          category: t.category,
+          progress: Math.min(100, Math.round((_progress / t.duration) * 100)), // 百分比
+          _progress, // 毫秒进度(供客户端计算)
+          duration: t.duration,
+          startTime: t.startTime,
+          completed: t.completed
+        };
+      }),
       woundedUnits: this.woundedUnits,
       unitLevels: this.unitLevels,
       status: this.status,

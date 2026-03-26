@@ -202,11 +202,21 @@ function connect() {
     if (data.isPity) {
       showSuccess('🎉 触发保底!');
     }
+    // 更新资源显示
+    if (data.resources) {
+      renderResources(data.resources);
+      currentResources = data.resources;
+    }
   });
 
   socket.on('general:recruitBatchResult', (data) => {
     console.log('Batch recruit:', data);
     showBatchRecruitResult(data);
+    // 更新资源显示
+    if (data.resources) {
+      renderResources(data.resources);
+      currentResources = data.resources;
+    }
   });
 
   socket.on('battle:availableNpcs', (data) => {
