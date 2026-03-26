@@ -1512,7 +1512,10 @@ function showCostConfirm(title, cost, onConfirm, extraInfo = null, currentResour
     food: '粮食',
     iron: '铁矿',
     crystal: '水晶',
-    gold: '金币'
+    gold: '金币',
+    fish_product: '鱼产品',
+    fruit: '水果',
+    premium_food: '精品食材',
   };
 
   // 构建资源消耗详情

@@ -1,6 +1,19 @@
 // server/src/core/systems/RecruitSystem.js
 import { RECRUIT_OPTIONS } from '../../../../shared/generalTypes.js';
 
+// 资源名称映射
+const RESOURCE_NAMES = {
+  wood: '木材',
+  stone: '石材',
+  food: '粮食',
+  iron: '铁矿',
+  crystal: '水晶',
+  gold: '金币',
+  fish_product: '鱼产品',
+  fruit: '水果',
+  premium_food: '精品食材',
+};
+
 /**
  * 招募系统 - 处理将领招募相关的业务逻辑
  */
@@ -21,7 +34,8 @@ export class RecruitSystem {
     // 检查资源
     for (const [resourceId, amount] of Object.entries(config.cost)) {
       if (!empire.resources.has(resourceId, amount)) {
-        return { success: false, error: `${resourceId}不足` };
+        const resName = RESOURCE_NAMES[resourceId] || resourceId;
+        return { success: false, error: `${resName}不足` };
       }
     }
 
@@ -61,7 +75,8 @@ export class RecruitSystem {
 
     for (const [resourceId, amount] of Object.entries(totalCost)) {
       if (!empire.resources.has(resourceId, Math.ceil(amount))) {
-        return { success: false, error: `${resourceId}不足` };
+        const resName = RESOURCE_NAMES[resourceId] || resourceId;
+        return { success: false, error: `${resName}不足` };
       }
     }
 

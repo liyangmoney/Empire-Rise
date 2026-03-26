@@ -1,6 +1,19 @@
 // server/src/core/systems/TrainingSystem.js
 import { UNIT_TYPES, getUnitType } from '../../../../shared/unitTypes.js';
 
+// 资源名称映射
+const RESOURCE_NAMES = {
+  wood: '木材',
+  stone: '石材',
+  food: '粮食',
+  iron: '铁矿',
+  crystal: '水晶',
+  gold: '金币',
+  fish_product: '鱼产品',
+  fruit: '水果',
+  premium_food: '精品食材',
+};
+
 /**
  * 训练系统 v2.0 - 适配9种资源，20+建筑
  * 支持多建筑训练、建筑加成、资源多样化
@@ -43,7 +56,8 @@ export class TrainingSystem {
       for (const [res, amount] of Object.entries(totalCost)) {
         const current = empire.resources.get(res)?.current || 0;
         if (current < amount) {
-          missing.push(`${res}: 需要${amount}, 现有${Math.floor(current)}`);
+          const resName = RESOURCE_NAMES[res] || res;
+          missing.push(`${resName}: 需要${amount}, 现有${Math.floor(current)}`);
         }
       }
       return { success: false, error: '资源不足', missing };
