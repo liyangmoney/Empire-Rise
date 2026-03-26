@@ -131,19 +131,18 @@ Empire-Rise/
 │   │   ├── 📁 network/
 │   │   │   └── socket/handlers.js  # Socket事件处理
 │   │   └── index.js
-│   ├── 📄 package.json
-│   └── 📄 Dockerfile
+│   ├── package.json
+│   └── Dockerfile
 ├── 📁 client/                    # H5客户端
-│   ├── 📄 index.html
-│   ├── 📁 src/
-│   │   └── main.js              # 游戏主逻辑
-│   └── 📁 css/
+│   ├── index.html
+│   └── src/
+│       └── main.js               # 游戏主逻辑
 ├── 📁 shared/                    # 共享配置
-│   ├── constants.js             # 游戏常量
-│   ├── unitTypes.js             # 兵种配置
-│   └── npcTypes.js              # NPC配置
-├── 📄 docker-compose.yml
-└── 📄 README.md
+│   ├── constants.js              # 游戏常量
+│   ├── unitTypes.js              # 兵种配置
+│   └── npcTypes.js               # NPC配置
+├── docker-compose.yml
+└── README.md
 ```
 
 ---
@@ -154,7 +153,7 @@ Empire-Rise/
 | 事件 | 方向 | 说明 |
 |------|------|------|
 | `empire:connect` | C→S | 玩家连接 |
-| `empire:data` | S→C | 返回玩家数据 |
+| `empire:data` | S→C | 帝国数据同步 |
 
 ### 资源系统
 | 事件 | 方向 | 说明 |
@@ -165,17 +164,18 @@ Empire-Rise/
 ### 建筑系统
 | 事件 | 方向 | 说明 |
 |------|------|------|
+| `building:getAll` | C→S | 获取所有建筑 |
 | `building:upgrade` | C→S | 升级建筑 |
-| `building:upgrade:progress` | S→C | 升级进度 |
-| `building:upgrade:complete` | S→C | 升级完成 |
+| `building:upgrade:started` | S→C | 升级开始 |
+| `building:upgrade:completed` | S→C | 升级完成 |
 
 ### 军队系统
 | 事件 | 方向 | 说明 |
 |------|------|------|
 | `army:getUnitTypes` | C→S | 获取兵种信息 |
 | `army:train` | C→S | 训练士兵 |
-| `army:training:progress` | S→C | 训练进度 |
-| `army:training:complete` | S→C | 训练完成 |
+| `army:train:started` | S→C | 训练开始 |
+| `army:train:completed` | S→C | 训练完成 |
 
 ### 战斗系统
 | 事件 | 方向 | 说明 |
@@ -183,40 +183,46 @@ Empire-Rise/
 | `battle:getAvailableNpcs` | C→S | 获取可挑战NPC |
 | `battle:start` | C→S | 发起战斗 |
 | `battle:started` | S→C | 战斗开始 |
-| `battle:finished` | S→C | 战斗结果+战报 |
+| `battle:finished` | S→C | 战斗结果（含战报）|
 
 ---
 
 ## 🗺️ 开发路线图
 
-| 版本 | 功能 | 状态 |
-|------|------|------|
-| v0.1 | 资源系统 MVP | ✅ 已完成 |
-| v0.2 | 建筑系统 + 军队系统 | ✅ 已完成 |
-| v0.3 | 战斗系统 + NPC | ✅ 已完成 |
-| v0.4 | 将领系统 | 🚧 开发中 |
-| v0.5 | 装备系统 | 📋 计划中 |
-| v0.6 | 科技系统 | 📋 计划中 |
-| v1.0 | PVP对战 + 联盟系统 | 📋 计划中 |
+| 优先级 | 功能模块 | 状态 | 说明 |
+|--------|----------|------|------|
+| P0 | 资源系统 | ✅ 已完成 | 6种资源，自动产出 |
+| P0 | 建筑系统 | ✅ 已完成 | 多建筑，升级队列 |
+| P0 | 军队系统 | ✅ 已完成 | 3兵种，克制关系 |
+| P0 | 战斗系统 | ✅ 已完成 | PVE，自动战斗 |
+| P1 | 将领系统 | 🚧 开发中 | 招募、培养、带兵 |
+| P1 | 装备系统 | 🚧 待开发 | 武器、防具、饰品 |
+| P2 | 科技系统 | 🚧 待开发 | 研究加成 |
+| P2 | 疆域扩张 | 🚧 待开发 | 占领地块 |
+| P3 | PVP系统 | 🚧 待开发 | 玩家对战 |
+| P3 | 联盟系统 | 🚧 待开发 | 公会、协作 |
 
 ---
 
 ## 📝 更新日志
 
 ### v0.3.0 (2024-02-12)
-- ✅ 战斗系统 MVP
-- ✅ NPC敌人（野怪/据点/城邦）
-- ✅ 自动战斗与战报
-- ✅ 资源掠夺与掉落
+- ✅ 战斗系统完整版
+- ✅ NPC敌人体系（野怪/据点/城邦）
+- ✅ 自动战斗与详细战报
+- ✅ 资源掠夺与道具掉落
+- ✅ 医院伤兵恢复
 
-### v0.2.0
+### v0.2.0 (2024-02-10)
 - ✅ 军队系统
-- ✅ 兵种克制
+- ✅ 兵种克制三角
 - ✅ 士气系统
+- ✅ 训练队列
 
-### v0.1.0
-- ✅ 资源系统 MVP
-- ✅ 建筑系统 MVP
+### v0.1.0 (2024-02-08)
+- ✅ 资源系统MVP
+- ✅ 建筑系统MVP
+- ✅ Docker部署支持
 
 ---
 
@@ -224,11 +230,10 @@ Empire-Rise/
 
 欢迎提交 Issue 和 PR！
 
-1. Fork 项目
-2. 创建分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送分支 (`git push origin feature/AmazingFeature`)
-5. 创建 Pull Request
+### 提交规范
+- 使用 ESLint 检查代码
+- 提交前确保 `npm run dev` 能正常运行
+- PR 请描述清楚改动内容
 
 ---
 
@@ -236,13 +241,18 @@ Empire-Rise/
 
 MIT License
 
----
-
-## 📮 联系方式
-
-- GitHub Issues: [提交问题](https://github.com/liyangmoney/Empire-Rise/issues)
-- 项目主页: https://github.com/liyangmoney/Empire-Rise
+Copyright (c) 2024 liyangmoney
 
 ---
 
-> 🎮 **开始你的帝国征程吧！**
+## 🔗 相关链接
+
+- 项目主页：https://github.com/liyangmoney/Empire-Rise
+- 问题反馈：https://github.com/liyangmoney/Empire-Rise/issues
+- 游戏演示：（待添加）
+
+---
+
+<p align="center">
+  <b>🏰 建立你的帝国，征服这片大陆！</b>
+</p>
