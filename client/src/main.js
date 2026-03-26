@@ -1809,7 +1809,8 @@ function toggleTimePause() {
   socket.emit('time:togglePause', { playerId });
 }
 
-
+// 切换标签页
+function switchTab(tabName) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   event.target.classList.add('active');
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
