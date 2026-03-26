@@ -1175,22 +1175,22 @@ function startTraining() {
   const unitTypeId = document.getElementById('trainUnitType').value;
   const count = parseInt(document.getElementById('trainCount').value);
   
-  // 获取成本
-  const costs = {
-    infantry: { food: 20 },
-    archer: { food: 25, wood: 10 },
-    cavalry: { food: 40, wood: 20 }
-  };
+  // 从 unitTypesData 获取成本
+  const unitType = unitTypesData?.[unitTypeId.toUpperCase()];
+  if (!unitType) {
+    showError('兵种数据未加载');
+    return;
+  }
   
-  const baseCost = costs[unitTypeId];
+  const baseCost = unitType.training?.cost || {};
   const totalCost = {};
   for (const [res, amount] of Object.entries(baseCost)) {
     totalCost[res] = amount * count;
   }
   
-  const unitNames = { infantry: '步兵', archer: '弓兵', cavalry: '骑兵' };
+  const unitName = unitType.name || unitTypeId;
   
-  showCostConfirm(`训练${unitNames[unitTypeId]} x${count}`, totalCost, () => {
+  showCostConfirm(`训练${unitName} x${count}`, totalCost, () => {
     socket.emit('army:train', { playerId, unitTypeId, count });
   }, null, currentResources);
 }
