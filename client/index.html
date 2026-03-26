@@ -469,6 +469,14 @@
 
       <!-- 将领面板 -->
       <div id="generalsTab" class="tab-content">
+        <!-- 缘分加成 -->
+        <div class="panel">
+          <h3>🔗 缘分羁绊</h3>
+          <div id="activeBonds">
+            <p style="text-align:center;color:#888;">暂无激活的缘分</p>
+          </div>
+        </div>
+
         <!-- 我的将领 -->
         <div class="panel">
           <h3>🎖️ 我的将领</h3>
@@ -480,7 +488,33 @@
         <!-- 招募将领 -->
         <div class="panel">
           <h3>🎲 招募将领</h3>
-          <div id="recruitOptions"></div>
+          <div id="recruitOptions">
+            <div class="recruit-option">
+              <h4>普通招募</h4>
+              <p>消耗粮食招募</p>
+              <p class="recruit-cost">🌾 500</p>
+              <button onclick="recruitGeneral('BASIC')">招募</button>
+              <p class="recruit-probability">概率: 普通60% 稀有25% 史诗12% 传说3%</p>
+            </div>
+            <div class="recruit-option">
+              <h4>高级招募</h4>
+              <p>消耗金币招募（保底史诗）</p>
+              <p class="recruit-cost">💰 100</p>
+              <button onclick="recruitGeneral('ADVANCED')">招募</button>
+              <button onclick="recruitBatch('ADVANCED')">10连抽(9折)</button>
+              <p class="recruit-probability">概率: 普通60% 稀有25% 史诗12% 传说3%</p>
+              <p id="advancedPity">保底进度: 0/10</p>
+            </div>
+            <div class="recruit-option">
+              <h4>至尊招募</h4>
+              <p>消耗水晶招募（保底传说）</p>
+              <p class="recruit-cost">💎 5 + 💰 500</p>
+              <button onclick="recruitGeneral('PREMIUM')">招募</button>
+              <button onclick="recruitBatch('PREMIUM')">10连抽(9折)</button>
+              <p class="recruit-probability">概率: 普通60% 稀有25% 史诗12% 传说3%</p>
+              <p id="premiumPity">保底进度: 0/100</p>
+            </div>
+          </div>
         </div>
 
         <!-- 招募结果 -->
@@ -490,7 +524,7 @@
           <button onclick="closeRecruitResult()">关闭</button>
         </div>
 
-        <!-- 将领详情 -->
+        <!-- 将领图鉴 -->
         <div class="panel">
           <h3>📋 将领图鉴</h3>
           <div id="generalTemplates"></div>

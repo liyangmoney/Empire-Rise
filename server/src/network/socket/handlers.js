@@ -436,18 +436,52 @@ export function registerSocketHandlers(io, gameWorld) {
     // 招募将领
     socket.on('general:recruit', (data) => {
       const { playerId, recruitType } = data;
-      const result = recruitSystem.recruit(playerId, recruitType);
+      const empire = gameWorld.empires.get(playerId);
+      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '帝国不存在' });
+      
+      const result = recruitSystem.recruit(empire, recruitType);
       
       if (result.success) {
         socket.emit('general:recruited', {
           general: result.general,
-          rarity: result.rarity,
-          cost: result.cost,
-          resources: result.remainingResources,
+          isPity: result.isPity,
+          pityCounters: result.pityCounters,
         });
       } else {
         socket.emit(SOCKET_EVENTS.S_ERROR, { message: result.error });
       }
+    });
+
+    // 批量招募（10连抽）
+    socket.on('general:recruitBatch', (data) => {
+      const { playerId, recruitType, count = 10 } = data;
+      const empire = gameWorld.empires.get(playerId);
+      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '帝国不存在' });
+      
+      const result = recruitSystem.recruitBatch(empire, recruitType, count);
+      
+      if (result.success) {
+        socket.emit('general:recruitBatchResult', {
+          results: result.results,
+          totalCost: result.totalCost,
+          pityCounters: result.pityCounters,
+        });
+      } else {
+        socket.emit(SOCKET_EVENTS.S_ERROR, { message: result.error });
+      }
+    });
+
+    // 获取招募预览
+    socket.on('general:getRecruitPreview', (data) => {
+      const { recruitType } = data;
+      const preview = recruitSystem.getRecruitPreview(recruitType);
+      socket.emit('general:recruitPreview', preview);
+    });
+
+    // 获取所有招募选项
+    socket.on('general:getRecruitOptions', () => {
+      const options = recruitSystem.getAllRecruitOptions();
+      socket.emit('general:recruitOptions', options);
     });
 
     // 分配将领到编队
