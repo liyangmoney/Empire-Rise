@@ -367,13 +367,10 @@ export class GeneralComponent {
   }
 
   /**
-   * 获取将领被分配到哪个编队
+   * 获取将领被分配到哪个编队（新版）
    */
   getAssignedFormation(generalId) {
-    for (const [fid, gid] of this.formationAssignments) {
-      if (gid === generalId) return fid;
-    }
-    return null;
+    return this.generalToFormation.get(generalId) || null;
   }
 
   /**
