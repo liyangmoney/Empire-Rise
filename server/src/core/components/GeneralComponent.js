@@ -15,12 +15,14 @@ import {
 export class GeneralComponent {
   constructor() {
     this.generals = new Map(); // generalId -> generalData
-    this.formationAssignments = new Map(); // formationId -> generalId
+    this.formationAssignments = new Map(); // formationId -> Set(generalIds)
+    this.generalToFormation = new Map(); // generalId -> formationId
     this.recruitHistory = []; // 招募记录
     this.pityCounters = { // 保底计数器
       advanced: 0,
       premium: 0,
     };
+    this.maxGeneralsPerFormation = 3; // 每个编队最多3名将领
   }
 
   /**
@@ -144,29 +146,69 @@ export class GeneralComponent {
   }
 
   /**
-   * 分配将领到编队
+   * 分配将领到编队（支持多将领）
    */
   assignToFormation(generalId, formationId) {
     const general = this.generals.get(generalId);
-    if (!general) return false;
-    
-    // 解除之前的分配
-    for (const [fid, gid] of this.formationAssignments) {
-      if (gid === generalId) {
-        this.formationAssignments.delete(fid);
+    if (!general) return { success: false, error: '将领不存在' };
+
+    // 检查编队是否已满
+    const currentAssigns = this.formationAssignments.get(formationId) || new Set();
+    if (currentAssigns.size >= this.maxGeneralsPerFormation) {
+      return { success: false, error: `编队已满，最多${this.maxGeneralsPerFormation}名将领` };
+    }
+
+    // 检查将领是否已在其他编队
+    const oldFormation = this.generalToFormation.get(generalId);
+    if (oldFormation && oldFormation !== formationId) {
+      // 从旧编队移除
+      const oldSet = this.formationAssignments.get(oldFormation);
+      if (oldSet) {
+        oldSet.delete(generalId);
       }
     }
-    
-    this.formationAssignments.set(formationId, generalId);
-    return true;
+
+    // 添加到新编队
+    if (!this.formationAssignments.has(formationId)) {
+      this.formationAssignments.set(formationId, new Set());
+    }
+    this.formationAssignments.get(formationId).add(generalId);
+    this.generalToFormation.set(generalId, formationId);
+
+    return { success: true };
   }
 
   /**
-   * 获取编队的将领
+   * 从编队移除将领
    */
-  getFormationGeneral(formationId) {
-    const generalId = this.formationAssignments.get(formationId);
-    return generalId ? this.generals.get(generalId) : null;
+  removeFromFormation(generalId) {
+    const formationId = this.generalToFormation.get(generalId);
+    if (!formationId) return { success: false, error: '将领未分配编队' };
+
+    const set = this.formationAssignments.get(formationId);
+    if (set) {
+      set.delete(generalId);
+    }
+    this.generalToFormation.delete(generalId);
+
+    return { success: true };
+  }
+
+  /**
+   * 获取编队中的所有将领
+   */
+  getFormationGenerals(formationId) {
+    const generalIds = this.formationAssignments.get(formationId);
+    if (!generalIds || generalIds.size === 0) return [];
+
+    return Array.from(generalIds).map(id => this.generals.get(id)).filter(g => g);
+  }
+
+  /**
+   * 获取单个将领所在编队
+   */
+  getGeneralFormation(generalId) {
+    return this.generalToFormation.get(generalId) || null;
   }
 
   /**
@@ -200,46 +242,74 @@ export class GeneralComponent {
   }
 
   /**
-   * 计算编队总战力加成（含缘分）
+   * 计算编队总战力加成（含羁绊）- 新版支持多将领
    */
-  calculatePowerBonus(formationId, allGenerals = null) {
-    const general = this.getFormationGeneral(formationId);
-    if (!general) return { bonus: 0, bondBonus: {} };
-    
-    // 基础将领战力
-    const generalPower = (general.stats.attack + general.stats.defense + general.stats.intelligence) / 3;
-    
-    // 缘分加成
-    const generals = allGenerals || this.getAll();
+  calculatePowerBonus(formationId) {
+    const generals = this.getFormationGenerals(formationId);
+    if (generals.length === 0) return { bonus: 0, bondBonus: {}, activeBonds: [] };
+
+    // 计算所有将领的基础战力
+    let totalPower = 0;
+    for (const general of generals) {
+      const generalPower = (general.stats.attack + general.stats.defense + general.stats.intelligence) / 3;
+      totalPower += generalPower;
+    }
+
+    // 计算羁绊加成（只计算编队内的将领）
     const activeBonds = calculateBondBonus(generals);
-    
+
     let bondMultiplier = 1.0;
-    const bondBonus = {};
-    
+    const bondBonus = { attack: 0, defense: 0, intelligence: 0, morale: 0 };
+
     for (const bond of activeBonds) {
       if (bond.bonus.attack) {
-        bondMultiplier += bond.bonus.attack;
-        bondBonus.attack = (bondBonus.attack || 0) + bond.bonus.attack;
+        bondMultiplier += bond.bonus.attack * 0.5;
+        bondBonus.attack += bond.bonus.attack;
       }
       if (bond.bonus.defense) {
-        bondMultiplier += bond.bonus.defense * 0.5;
-        bondBonus.defense = (bondBonus.defense || 0) + bond.bonus.defense;
+        bondMultiplier += bond.bonus.defense * 0.3;
+        bondBonus.defense += bond.bonus.defense;
       }
       if (bond.bonus.intelligence) {
-        bondMultiplier += bond.bonus.intelligence * 0.3;
-        bondBonus.intelligence = (bondBonus.intelligence || 0) + bond.bonus.intelligence;
+        bondMultiplier += bond.bonus.intelligence * 0.2;
+        bondBonus.intelligence += bond.bonus.intelligence;
+      }
+      if (bond.bonus.morale) {
+        bondBonus.morale += bond.bonus.morale;
       }
     }
-    
+
     return {
-      bonus: Math.floor(generalPower * bondMultiplier),
+      bonus: Math.floor(totalPower * bondMultiplier),
+      basePower: Math.floor(totalPower),
       bondBonus,
       activeBonds,
+      generalCount: generals.length,
     };
   }
 
   /**
-   * 获取招募预览
+   * 获取编队技能列表
+   */
+  getFormationSkills(formationId) {
+    const generals = this.getFormationGenerals(formationId);
+    const allSkills = [];
+
+    for (const general of generals) {
+      for (const skill of general.skills) {
+        allSkills.push({
+          ...skill,
+          generalName: general.name,
+          generalId: general.id,
+        });
+      }
+    }
+
+    return allSkills;
+  }
+
+  /**
+   * 获取快照
    */
   getRecruitPreview(recruitType) {
     const config = RECRUIT_OPTIONS[recruitType];

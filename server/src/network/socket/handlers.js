@@ -492,16 +492,52 @@ export function registerSocketHandlers(io, gameWorld) {
       const empire = gameWorld.empires.get(playerId);
       if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '帝国不存在' });
       
-      const success = empire.generals.assignToFormation(generalId, formationId);
-      if (success) {
+      const result = empire.generals.assignToFormation(generalId, formationId);
+      if (result.success) {
+        // 获取编队信息和羁绊
+        const formationInfo = empire.generals.calculatePowerBonus(formationId);
         socket.emit('general:assigned', {
           generalId,
           formationId,
           generals: empire.generals.getSnapshot(),
+          formationInfo,
         });
       } else {
-        socket.emit(SOCKET_EVENTS.S_ERROR, { message: '分配失败' });
+        socket.emit(SOCKET_EVENTS.S_ERROR, { message: result.error || '分配失败' });
       }
+    });
+
+    // 从编队移除将领
+    socket.on('general:removeFromFormation', (data) => {
+      const { playerId, generalId } = data;
+      const empire = gameWorld.empires.get(playerId);
+      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '帝国不存在' });
+      
+      const result = empire.generals.removeFromFormation(generalId);
+      if (result.success) {
+        socket.emit('general:removed', {
+          generalId,
+          generals: empire.generals.getSnapshot(),
+        });
+      } else {
+        socket.emit(SOCKET_EVENTS.S_ERROR, { message: result.error || '移除失败' });
+      }
+    });
+
+    // 获取编队信息
+    socket.on('general:getFormationInfo', (data) => {
+      const { playerId, formationId } = data;
+      const empire = gameWorld.empires.get(playerId);
+      if (!empire) return socket.emit(SOCKET_EVENTS.S_ERROR, { message: '帝国不存在' });
+      
+      const formationInfo = empire.generals.calculatePowerBonus(formationId);
+      const skills = empire.generals.getFormationSkills(formationId);
+      
+      socket.emit('general:formationInfo', {
+        formationId,
+        ...formationInfo,
+        skills,
+      });
     });
 
     // 获取招募配置
