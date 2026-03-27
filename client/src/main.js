@@ -1244,10 +1244,11 @@ function renderGenerals(data) {
     if (general.skills && general.skills.length > 0) {
       skillsHtml = '<div class="general-skills"><strong>技能:</strong>';
       for (const skill of general.skills) {
+        const cooldownText = skill.cooldown ? `${skill.cooldown}回合` : '无冷却';
         skillsHtml += `
           <div class="skill-item">
             <strong>${skill.name}</strong> - ${skill.description}<br/>
-            <small>冷却: ${skill.cooldown}回合</small>
+            <small>冷却: ${cooldownText}</small>
           </div>
         `;
       }
@@ -1257,12 +1258,20 @@ function renderGenerals(data) {
     // 经验条
     const expPercent = (general.exp / general.expToNext) * 100;
 
+    // 编队名称映射
+    const formationNames = {
+      default: '默认',
+      attack: '攻击',
+      defense: '防御',
+      support: '辅助',
+    };
+
     card.innerHTML = `
       <div class="general-name">
         ${general.name}
         <span class="general-rarity rarity-${general.rarity}">${rarityNames[general.rarity]}</span>
       </div>
-      <p>等级: ${general.level} <span style="color:#888;">(${general.assignedTo ? '已分配至' + general.assignedTo + '编队' : '未分配'})</span></p>
+      <p>等级: ${general.level} <span style="color:#888;">(${general.assignedTo ? '已分配至' + (formationNames[general.assignedTo] || general.assignedTo) + '编队' : '未分配'})</span></p>
       <div class="exp-bar">
         <div class="exp-fill" style="width: ${expPercent}%"></div>
       </div>
