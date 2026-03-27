@@ -219,6 +219,31 @@ function connect() {
     }
   });
 
+  // 编队相关事件
+  socket.on('general:assigned', (data) => {
+    console.log('General assigned:', data);
+    showSuccess('将领分配成功!');
+    if (data.generals) {
+      renderGenerals(data.generals);
+    }
+    if (data.formationInfo) {
+      updateFormationCards(data.formationInfo);
+    }
+  });
+
+  socket.on('general:removed', (data) => {
+    console.log('General removed:', data);
+    showSuccess('将领已移除');
+    if (data.generals) {
+      renderGenerals(data.generals);
+    }
+  });
+
+  socket.on('general:formationInfo', (data) => {
+    console.log('Formation info:', data);
+    updateFormationCards(data);
+  });
+
   socket.on('battle:availableNpcs', (data) => {
     console.log('Available NPCs:', data);
     renderNpcList(data);
@@ -1282,8 +1307,11 @@ function renderGenerals(data) {
         <span>📖 智力: ${general.stats.intelligence}</span>
       </div>
       ${skillsHtml}
-      <div style="margin-top: 10px;">
-        <button onclick="assignGeneral('${general.id}', 'default')">分配至默认编队</button>
+      <div style="margin-top: 10px; display: flex; gap: 5px; flex-wrap: wrap;">
+        <button onclick="assignGeneral('${general.id}', 'default')">默认编队</button>
+        <button onclick="assignGeneral('${general.id}', 'attack')">攻击编队</button>
+        <button onclick="assignGeneral('${general.id}', 'defense')">防御编队</button>
+        ${general.assignedTo ? `<button class="btn-danger" onclick="removeGeneralFromFormation('${general.id}')">移除</button>` : ''}
       </div>
     `;
 
@@ -1482,6 +1510,82 @@ function assignGeneral(generalId, formationId) {
   }
 
   socket.emit('general:assign', { playerId, generalId, formationId });
+}
+
+function removeGeneralFromFormation(generalId) {
+  if (!socket || !playerId) {
+    showError('请先连接服务器');
+    return;
+  }
+
+  socket.emit('general:removeFromFormation', { playerId, generalId });
+}
+
+function updateFormationDisplay(data) {
+  const formationList = document.getElementById('formationList');
+  if (!formationList || !data) return;
+
+  const formationNames = {
+    default: '默认编队',
+    attack: '攻击编队',
+    defense: '防御编队',
+  };
+
+  // 更新每个编队卡片
+  const cards = formationList.querySelectorAll('.formation-card');
+  for (const card of cards) {
+    const formationId = card.dataset.formation;
+    const generalsSpan = card.querySelector('.formation-generals span');
+    const powerSpan = card.querySelector('.formation-power span');
+    const bondsSpan = card.querySelector('.formation-bonds span');
+
+    // 这里需要从服务端获取编队信息
+    // 暂时显示加载中
+    if (generalsSpan) generalsSpan.textContent = '加载中...';
+  }
+}
+
+function updateFormationCards(data) {
+  const formationList = document.getElementById('formationList');
+  if (!formationList || !data) return;
+
+  const formationNames = {
+    default: '🛡️ 默认编队',
+    attack: '⚔️ 攻击编队',
+    defense: '🛡️ 防御编队',
+  };
+
+  // 清空并重新渲染
+  formationList.innerHTML = '';
+
+  const formations = ['default', 'attack', 'defense'];
+  for (const formationId of formations) {
+    const card = document.createElement('div');
+    card.className = 'formation-card';
+    card.dataset.formation = formationId;
+    
+    // 获取该编队的信息
+    const info = data[formationId] || {
+      generals: [],
+      generalCount: 0,
+      bonus: 0,
+      activeBonds: [],
+    };
+
+    const generalNames = info.generals?.map(g => g.name).join(', ') || '无';
+    const bondsText = info.activeBonds?.length > 0 
+      ? info.activeBonds.map(b => b.name).join(', ')
+      : '无';
+
+    card.innerHTML = `
+      <h4>${formationNames[formationId]}</h4>
+      <p class="formation-generals">将领: <span>${generalNames}</span> (${info.generalCount || 0}/3)</p>
+      <p class="formation-power">战力加成: <span>${info.bonus || 0}</span></p>
+      <p class="formation-bonds">激活羁绊: <span>${bondsText}</span></p>
+    `;
+
+    formationList.appendChild(card);
+  }
 }
 
 function updateGeneralSelect(data) {
