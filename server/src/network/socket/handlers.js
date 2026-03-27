@@ -494,13 +494,16 @@ export function registerSocketHandlers(io, gameWorld) {
       
       const result = empire.generals.assignToFormation(generalId, formationId);
       if (result.success) {
-        // 获取编队信息和羁绊
-        const formationInfo = empire.generals.calculatePowerBonus(formationId);
+        // 获取所有编队信息
+        const allFormations = {};
+        for (const fid of ['default', 'attack', 'defense']) {
+          allFormations[fid] = empire.generals.calculatePowerBonus(fid);
+        }
         socket.emit('general:assigned', {
           generalId,
           formationId,
           generals: empire.generals.getSnapshot(),
-          formationInfo,
+          formations: allFormations,
         });
       } else {
         socket.emit(SOCKET_EVENTS.S_ERROR, { message: result.error || '分配失败' });
@@ -515,9 +518,15 @@ export function registerSocketHandlers(io, gameWorld) {
       
       const result = empire.generals.removeFromFormation(generalId);
       if (result.success) {
+        // 获取所有编队信息
+        const allFormations = {};
+        for (const fid of ['default', 'attack', 'defense']) {
+          allFormations[fid] = empire.generals.calculatePowerBonus(fid);
+        }
         socket.emit('general:removed', {
           generalId,
           generals: empire.generals.getSnapshot(),
+          formations: allFormations,
         });
       } else {
         socket.emit(SOCKET_EVENTS.S_ERROR, { message: result.error || '移除失败' });

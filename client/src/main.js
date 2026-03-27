@@ -189,9 +189,9 @@ function connect() {
     generalsData = data.generals;
     renderGenerals(data.generals);
     updateGeneralSelect(data.generals);
-    // 更新编队显示
-    if (data.formationId && data.formationInfo) {
-      updateFormationCards({ [data.formationId]: data.formationInfo });
+    // 更新所有编队显示
+    if (data.formations) {
+      updateFormationCards(data.formations);
     }
   });
 
@@ -229,6 +229,10 @@ function connect() {
     showSuccess('将领已移除');
     if (data.generals) {
       renderGenerals(data.generals);
+    }
+    // 更新所有编队显示
+    if (data.formations) {
+      updateFormationCards(data.formations);
     }
   });
 
