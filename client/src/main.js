@@ -189,6 +189,10 @@ function connect() {
     generalsData = data.generals;
     renderGenerals(data.generals);
     updateGeneralSelect(data.generals);
+    // 更新编队显示
+    if (data.formationId && data.formationInfo) {
+      updateFormationCards({ [data.formationId]: data.formationInfo });
+    }
   });
 
   socket.on('general:recruitConfig', (data) => {
@@ -220,17 +224,6 @@ function connect() {
   });
 
   // 编队相关事件
-  socket.on('general:assigned', (data) => {
-    console.log('General assigned:', data);
-    showSuccess('将领分配成功!');
-    if (data.generals) {
-      renderGenerals(data.generals);
-    }
-    if (data.formationInfo) {
-      updateFormationCards(data.formationInfo);
-    }
-  });
-
   socket.on('general:removed', (data) => {
     console.log('General removed:', data);
     showSuccess('将领已移除');
@@ -1555,22 +1548,17 @@ function updateFormationCards(data) {
     defense: '🛡️ 防御编队',
   };
 
-  // 清空并重新渲染
-  formationList.innerHTML = '';
-
-  const formations = ['default', 'attack', 'defense'];
-  for (const formationId of formations) {
-    const card = document.createElement('div');
-    card.className = 'formation-card';
-    card.dataset.formation = formationId;
+  // 只更新指定的编队，不清空全部
+  for (const [formationId, info] of Object.entries(data)) {
+    let card = formationList.querySelector(`[data-formation="${formationId}"]`);
     
-    // 获取该编队的信息
-    const info = data[formationId] || {
-      generals: [],
-      generalCount: 0,
-      bonus: 0,
-      activeBonds: [],
-    };
+    // 如果卡片不存在，创建新的
+    if (!card) {
+      card = document.createElement('div');
+      card.className = 'formation-card';
+      card.dataset.formation = formationId;
+      formationList.appendChild(card);
+    }
 
     const generalNames = info.generals?.map(g => g.name).join(', ') || '无';
     const bondsText = info.activeBonds?.length > 0 
@@ -1583,8 +1571,6 @@ function updateFormationCards(data) {
       <p class="formation-power">战力加成: <span>${info.bonus || 0}</span></p>
       <p class="formation-bonds">激活羁绊: <span>${bondsText}</span></p>
     `;
-
-    formationList.appendChild(card);
   }
 }
 
